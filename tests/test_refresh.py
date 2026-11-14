@@ -41,6 +41,19 @@ class RefreshTests(unittest.TestCase):
                 refresh(path, fetcher=lambda location: "<html>broken</html>")
             self.assertEqual(path.read_text(), '{"saved": true}')
 
+    def test_duplicate_id_with_alternate_title_is_retained_once(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "catalog.json"
+            def fetch_with_alias(location=None):
+                html = fake_fetch(location)
+                if location == "python-village":
+                    html += '<a href="/problems/p000/">Alternate scientific title</a>'
+                return html
+            result = refresh(path, fetcher=fetch_with_alias)
+            self.assertEqual(len(result["entries"]), 275)
+            self.assertEqual(result["alternate_title_count"], 1)
+            self.assertEqual(result["alternate_titles"][0]["id"], "rosalind-p000")
+
     def test_missing_track_preserves_cache(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "catalog.json"
