@@ -4,17 +4,18 @@ BIOQRA is an open-source project for Android and the web. It aims to help resear
 
 ## Android APK: download, install, and use
 
-**Development status: no APK is available yet.** Once an Android build has been tested and published, downloads will appear in the [GitHub Releases](https://github.com/blas-llavero/bioqra/releases) section.
+**Development status: an experimental Android source build is now configured.** Debug APKs are produced by GitHub Actions when the build succeeds; there is not yet a reviewed official GitHub Release. Check [Android Debug APK Actions](https://github.com/blas-llavero/bioqra/actions/workflows/android.yml).
 
-When a release is available:
+To install the current experimental build on Android **if GitHub Actions shows a successful build**:
 
-1. Open the Releases page on your Android phone.
-2. Download the APK attached to the chosen release, verifying its version and publisher.
-3. Open the downloaded APK. If Android asks for permission to install apps from your browser or file manager, grant that permission only for this installation and disable it afterward.
-4. Follow the Android installer instructions and launch BIOQRA.
-5. Select **Bioinformatics Challenges** to browse and validate research tasks. Patient features will only be enabled after their privacy and safety protections have been implemented and reviewed.
+1. Open [Android Debug APK Actions](https://github.com/blas-llavero/bioqra/actions/workflows/android.yml) in your Android browser while signed into GitHub.
+2. Open the latest **successful** run of **Android Debug APK**.
+3. At the bottom under **Artifacts**, download **bioqra-debug-apk** (a ZIP archive). Extract the ZIP with Android's Files app.
+4. Locate **app-debug.apk** in the extracted files. Open it. If prompted, allow installation from that source for this operation; revoke the permission afterward.
+5. Launch **BIOQRA**. The home screen places **Cancer Research** top left and **Refresh** top right. **Challenges** searches the Rosalind index; **Hackathons** and **Cancer Research** currently provide clearly identified official links, not automated event feeds. **Help** explains the pilot.
+6. On launch the app attempts to update the five official Rosalind tracks; without connectivity it uses its locally saved catalog or a six-item starter list. No medical or patient records are collected.
 
-Do not download APKs from unofficial mirrors. This section will be updated with the exact asset filename and detailed screenshots when the first APK is published.
+The debug APK is unsigned for store distribution and signed with a development key by Android tooling; it is only for testing and is not a vetted production release. No media is included. Do not download APKs from unofficial mirrors.
 
 ## Author and purpose
 
@@ -62,7 +63,15 @@ Project setup / requirements definition. The Android application, website, scien
 
 ## Build from source
 
-The Android application has not yet been implemented, so an APK cannot be built yet. The first Python catalog utility can already be run from a local clone (requires Python 3.10+):
+The native Android prototype uses Java 17, Android Gradle Plugin 8.9.2, SDK 35 and Gradle 8.11.1. Build it with a compatible Android SDK and Gradle installation:
+
+```bash
+gradle :app:assembleDebug
+```
+
+Expected debug APK output (after a successful build): `app/build/outputs/apk/debug/app-debug.apk`.
+
+The Python catalog utility can also be run from a local clone (requires Python 3.10+):
 
 ```bash
 git clone https://github.com/blas-llavero/bioqra.git
@@ -73,4 +82,4 @@ python tools/list_challenges.py --search DNA
 python -m unittest discover -s tests -v
 ```
 
-These commands are offline after cloning and use only the Python standard library. Android and web build commands will be added here when buildable source code exists.
+These Python catalog commands are offline after cloning and use only the Python standard library. The refresh script requires Internet access. The website, clinical patient module, scientific solving engine, localized UI, reviewed logo and videos remain future milestones.
