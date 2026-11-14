@@ -12,10 +12,10 @@ To install the current experimental build on Android **if GitHub Actions shows a
 2. Open the latest **successful** run of **Android Debug APK**.
 3. At the bottom under **Artifacts**, download **bioqra-debug-apk** (a ZIP archive). Extract the ZIP with Android's Files app.
 4. Locate **app-debug.apk** in the extracted files. Open it. If prompted, allow installation from that source for this operation; revoke the permission afterward.
-5. Launch **BIOQRA**. The home screen places **Cancer Research** top left and **Refresh** top right. **Challenges** searches the Rosalind index; **Hackathons** and **Cancer Research** currently provide clearly identified official links, not automated event feeds. **Help** explains the pilot.
+5. Launch **BIOQRA**. The home screen places **Cancer Research** top left and **Refresh** top right. **Challenges** searches the Rosalind index; **Hackathons** and **Cancer Research** currently provide clearly identified official links, not automated event feeds. **Help** explains the pilot. **App Description** and **How to Use** are separate video entry buttons; until media approval they show clearly labeled informational placeholders, not playable videos.
 6. On launch the app attempts to update the five official Rosalind tracks; without connectivity it uses its locally saved catalog or a six-item starter list. No medical or patient records are collected.
 
-The debug APK is unsigned for store distribution and signed with a development key by Android tooling; it is only for testing and is not a vetted production release. No media is included. Do not download APKs from unofficial mirrors.
+The debug APK is unsigned for store distribution and signed with a development key by Android tooling; it is only for testing and is not a vetted production release. No media is included. The two video buttons will use reviewed, approved videos only. Do not download APKs from unofficial mirrors.
 
 ## Author and purpose
 
