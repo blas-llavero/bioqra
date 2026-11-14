@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-11-14",
+  "sources": [
+    {
+      "id": "drug-target-review",
+      "url": "https://www.drugtargetreview.com/oncology",
+      "type": "research_news",
+      "topics": [
+        "cancer",
+        "oncology",
+        "drug-discovery"
+      ],
+      "include_in_challenge_feed": false,
+      "reason": "Research reporting rather than a formal scored challenge; link for contextual reading only."
+    },
+    {
+      "id": "ml-contests",
+      "url": "https://mlcontests.com/",
+      "type": "competition_aggregator",
+      "topics": [
+        "bioinformatics",
+        "healthcare",
+        "machine-learning"
+      ],
+      "include_in_challenge_feed": true,
+      "qualification": "Only entries with a direct organizer challenge URL and relevance to biology/medicine; verify official deadline and registration."
+    },
+    {
+      "id": "neural-interfaces-2026",
+      "url": "https://neural-interfaces26.github.io/",
+      "type": "challenge_event",
+      "topics": [
+        "eeg",
+        "emg",
+        "biosignal"
+      ],
+      "include_in_challenge_feed": true,
+      "event_start": "2026-09-01",
+      "submission_deadline": "2026-11-01",
+      "status_as_of_review": "submission_closed",
+      "qualification": "Five specific tracks; not a cancer cure or prevention challenge."
+    },
+    {
+      "id": "tc-matchmakers",
+      "url": "https://tcmatchmakers.org/",
+      "type": "unverified",
+      "include_in_challenge_feed": false,
+      "reason": "Website content could not be verified on review; do not claim a challenge or ingest automatically."
+    },
+    {
+      "id": "cancer-grand-challenges",
+      "url": "https://www.cancergrandchallenges.org/challenges/active-challenges",
+      "type": "research_grand_challenges",
+      "topics": [
+        "cancer",
+        "prevention",
+        "drug-discovery"
+      ],
+      "include_in_challenge_feed": true,
+      "qualification": "Research challenge topics with funded teams; not necessarily open competitions or hackathons. Include with distinct label."
+    }
+  ]
+}
