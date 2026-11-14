@@ -1,0 +1,281 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-11-14",
+  "description": "Curated discovery snapshot; not an automatic live feed and not evidence of solved challenges.",
+  "entries": [
+    {
+      "id": "rosalind-dna",
+      "title": "Counting DNA Nucleotides",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/dna/",
+      "category": "sequences",
+      "difficulty": "beginner",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-rna",
+      "title": "Transcribing DNA into RNA",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/rna/",
+      "category": "sequences",
+      "difficulty": "beginner",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-revc",
+      "title": "Complementing a Strand of DNA",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/revc/",
+      "category": "sequences",
+      "difficulty": "beginner",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-gc",
+      "title": "Computing GC Content",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/gc/",
+      "category": "sequences",
+      "difficulty": "beginner",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-hamm",
+      "title": "Counting Point Mutations",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/hamm/",
+      "category": "sequences",
+      "difficulty": "beginner",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-subs",
+      "title": "Finding a Motif in DNA",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/subs/",
+      "category": "motifs",
+      "difficulty": "beginner",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-cons",
+      "title": "Consensus and Profile",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/cons/",
+      "category": "sequences",
+      "difficulty": "intermediate",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-grph",
+      "title": "Overlap Graphs",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/grph/",
+      "category": "genome-assembly",
+      "difficulty": "intermediate",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-orf",
+      "title": "Open Reading Frames",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/orf/",
+      "category": "gene-prediction",
+      "difficulty": "intermediate",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-lcsm",
+      "title": "Finding a Shared Motif",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/lcsm/",
+      "category": "motifs",
+      "difficulty": "intermediate",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-ba5g",
+      "title": "Compute the Edit Distance Between Two Strings",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/ba5g/",
+      "category": "alignment",
+      "difficulty": "intermediate",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "rosalind-ba3d",
+      "title": "Construct the De Bruijn Graph of a String",
+      "source": "Rosalind",
+      "source_url": "https://rosalind.info/problems/ba3d/",
+      "category": "genome-assembly",
+      "difficulty": "advanced",
+      "kind": "educational",
+      "status": "not_attempted"
+    },
+    {
+      "id": "openproblems-batch-integration",
+      "title": "Batch Integration",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "integration",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-cell-cell-communication",
+      "title": "Cell-Cell Communication",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "regulation",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-cyto-batch-integration",
+      "title": "Cyto Batch Integration",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "cytometry",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-denoising",
+      "title": "Denoising",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "preprocessing",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-dimensionality-reduction-for-visualisation",
+      "title": "Dimensionality Reduction for Visualisation",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "embedding",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-foundation-models",
+      "title": "Foundation Models",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "foundation-models",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-ist-preprocessing",
+      "title": "iST Preprocessing",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "spatial",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-label-projection",
+      "title": "Label Projection",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "annotation",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-match-modalities",
+      "title": "Match Modalities",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "multimodal",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-perturbation-prediction",
+      "title": "Perturbation Prediction",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "prediction",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-predict-modality",
+      "title": "Predict Modality",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "multimodal",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-spatial-decomposition",
+      "title": "Spatial Decomposition",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "spatial",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-spatial-simulators",
+      "title": "Spatial Simulators",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "simulation",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    },
+    {
+      "id": "openproblems-spatially-variable-genes",
+      "title": "Spatially Variable Genes",
+      "source": "Open Problems",
+      "source_url": "https://www.openproblems.bio/benchmarks/",
+      "category": "spatial",
+      "difficulty": "research",
+      "kind": "benchmark",
+      "status": "not_attempted",
+      "note": "Some benchmarks are marked in development; check the live site for availability."
+    }
+  ]
+}
