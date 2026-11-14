@@ -41,6 +41,19 @@ BIOQRA is intended as open-source software that everyone can study, modify, and 
 
 The initial catalog contains 12 selected Rosalind exercises and 14 Open Problems benchmarks. It can be searched offline without AI calls or paid APIs. See [catalog instructions](docs/CHALLENGE_CATALOG.md). No challenge has been solved or validated by BIOQRA yet.
 
+## Challenge catalog refresh (experimental)
+
+BIOQRA now includes a Python refresh utility for the official Rosalind problem index. It downloads public problem titles and URLs from one trusted source, validates a minimum count, and replaces the local JSON cache atomically; on a failed refresh the previously saved cache is preserved. It uses no ChatGPT API and does not send patient data. Other sources (hackathons, DREAM, Open Problems, oncology) are not yet synchronized automatically. **The Android app has not been built; automatic refresh on app launch is a planned integration, not an active feature.**
+
+Run after cloning:
+
+```bash
+python tools/refresh_challenges.py
+python -m unittest discover -s tests -v
+```
+
+This command requires Internet access for refreshing, but the resulting JSON can be read offline. An initial cache is created only after a successful fetch.
+
 ## Current status
 
 Project setup / requirements definition. The Android application, website, scientific challenge integration, and patient module have **not yet been implemented**.
