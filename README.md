@@ -43,16 +43,18 @@ The initial catalog contains 12 selected Rosalind exercises and 14 Open Problems
 
 ## Challenge catalog refresh (experimental)
 
-BIOQRA now includes a Python refresh utility for the official Rosalind problem index. It downloads public problem titles and URLs from one trusted source, validates a minimum count, and replaces the local JSON cache atomically; on a failed refresh the previously saved cache is preserved. It uses no ChatGPT API and does not send patient data. Other sources (hackathons, DREAM, Open Problems, oncology) are not yet synchronized automatically. **The Android app has not been built; automatic refresh on app launch is a planned integration, not an active feature.**
+BIOQRA includes a Python refresh utility for the five official Rosalind problem tracks. The original one-track downloader retrieved only part of the public catalog; the revised synchronizer fetches and merges all five sections. It downloads public problem titles and URLs from one trusted source, validates a minimum count, and replaces the local JSON cache atomically; on a failed refresh the previously saved cache is preserved. It uses no ChatGPT API and does not send patient data. Other sources (hackathons, DREAM, Open Problems, oncology) are not yet synchronized automatically. **The Android app has not been built; automatic refresh on app launch is a planned integration, not an active feature.**
 
 Run after cloning:
 
 ```bash
 python tools/refresh_challenges.py
+python tools/list_challenges.py --live
+python tools/list_challenges.py --live --search cancer
 python -m unittest discover -s tests -v
 ```
 
-This command requires Internet access for refreshing, but the resulting JSON can be read offline. An initial cache is created only after a successful fetch.
+The refresh command requires Internet access, while the resulting JSON can be read offline using --live. The catalog count is not guaranteed to equal the website's displayed total if the site changes. A refresh is rejected if any track is empty or fewer than 200 unique problems are gathered. An initial cache is created only after a successful fetch.
 
 ## Current status
 
