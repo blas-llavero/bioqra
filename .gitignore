@@ -1,0 +1,9 @@
+/build/
+/app/build/
+/.gradle/
+/.idea/
+*.iml
+local.properties
+data/live_challenges.json
+__pycache__/
+*.pyc
