@@ -158,7 +158,6 @@ public class MainActivity extends Activity {
         TextView subtitle = text("Open Bioinformatics Research & Patient Assistance", 13, false);
         subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(subtitle);
-        row("Cancer Research", "Refresh", () -> showSection("Cancer Research"), this::refresh);
         status = text("Loading verified public challenges...", 13, false);
         status.setPadding(0, dp(12), 0, dp(12));
         root.addView(status);
@@ -172,6 +171,7 @@ public class MainActivity extends Activity {
             public void onTextChanged(CharSequence s, int start, int before, int count) { showItems(); }
             public void afterTextChanged(Editable s) {}
         });
+        row("Cancer Research", "Refresh", () -> showSection("Cancer Research"), this::refresh);
         row("Challenges", "Hackathons", () -> showSection("Challenges"),
                 () -> showSection("Hackathons"));
         heading = text("Challenges", 22, true);
