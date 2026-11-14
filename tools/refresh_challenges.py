@@ -88,13 +88,17 @@ def fetch_index(location=None):
 def refresh(cache_path=CACHE_PATH, fetcher=fetch_index):
     by_id = {}
     counts = {}
+    title_conflicts = []
     for name, location in TRACKS.items():
         entries = parse_rosalind(fetcher(location), minimum=1)
         counts[name] = len(entries)
         for entry in entries:
             if entry["id"] in by_id:
                 if by_id[entry["id"]]["title"] != entry["title"]:
-                    raise ValueError("Conflicting titles for " + entry["id"])
+                    # The same official problem may be labelled differently across tracks.
+                    # Keep the first label; retain evidence without duplicating the problem.
+                    title_conflicts.append({"id": entry["id"], "track": name,
+                                            "alternate_title": entry["title"]})
                 continue
             entry["track"] = name
             by_id[entry["id"]] = entry
@@ -106,6 +110,8 @@ def refresh(cache_path=CACHE_PATH, fetcher=fetch_index):
         "source_url": SOURCE_URL,
         "status": "verified_source_fetch",
         "track_counts": counts,
+        "alternate_title_count": len(title_conflicts),
+        "alternate_titles": title_conflicts,
         "entries": sorted(by_id.values(), key=lambda x: x["id"]),
     }
     cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -123,6 +129,7 @@ def main():
     try:
         result = refresh(args.cache)
         print("Updated %d unique Rosalind challenges" % len(result["entries"]))
+        print("Alternate labels for duplicated problem IDs: %d" % result["alternate_title_count"])
         for track, count in result["track_counts"].items():
             print("  %s: %d" % (track, count))
     except (URLError, TimeoutError, OSError, ValueError) as exc:
