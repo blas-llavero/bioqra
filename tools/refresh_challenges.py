@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Refresh a public BIOQRA challenge cache from an official source.
+"""Refresh all five official Rosalind tracks; retain previous cache on failures.
 
-No patient data, AI API, credentials, third-party dependencies, or scraping
-of arbitrary URLs. Only the explicit trusted official Rosalind index is fetched.
+Public challenge data only. Standard-library networking; no AI key or patient data.
 """
 import argparse
 import json
@@ -13,14 +12,22 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.error import URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_URL = "https://rosalind.info/problems/list-view/"
 CACHE_PATH = ROOT / "data" / "live_challenges.json"
 MAX_BYTES = 2_000_000
+TRACKS = {
+    "bioinformatics-stronghold": None,
+    "python-village": "python-village",
+    "bioinformatics-armory": "bioinformatics-armory",
+    "bioinformatics-textbook-track": "bioinformatics-textbook-track",
+    "algorithmic-heights": "algorithmic-heights",
+}
 PROBLEM_RE = re.compile(r"^/problems/([a-z0-9]+)/?$")
-BLOCKED_PATHS = {"list-view", "tree-view", "topics", "locations", "bioinformatics-stronghold"}
+BLOCKED_PATHS = {"list-view", "tree-view", "topics", "locations"}
 
 class RosalindParser(HTMLParser):
     def __init__(self):
@@ -37,11 +44,11 @@ class RosalindParser(HTMLParser):
             self.link_text = []
 
     def handle_data(self, data):
-        if self.problem_id:
+        if self.problem_id is not None:
             self.link_text.append(data)
 
     def handle_endtag(self, tag):
-        if tag == "a" and self.problem_id:
+        if tag == "a" and self.problem_id is not None:
             title = " ".join(" ".join(self.link_text).split())
             if 4 <= len(title) <= 160 and any(c.isalpha() for c in title):
                 pid = self.problem_id
@@ -58,38 +65,51 @@ class RosalindParser(HTMLParser):
             self.problem_id = None
             self.link_text = []
 
-def parse_rosalind(html):
+def parse_rosalind(html, minimum=50):
     parser = RosalindParser()
     parser.feed(html)
     entries = sorted(parser.entries.values(), key=lambda x: x["id"])
-    # A drastic drop often indicates a site redesign or access error.
-    if len(entries) < 50:
-        raise ValueError("Only %d problems parsed; refusing to overwrite cache" % len(entries))
+    if len(entries) < minimum:
+        raise ValueError("Only %d problems parsed (minimum %d)" % (len(entries), minimum))
     return entries
 
-def fetch_index():
-    request = Request(SOURCE_URL, headers={"User-Agent": "BIOQRA/0.1 (research challenge catalog)"})
-    with urlopen(request, timeout=15) as response:
-        if response.geturl().split("?")[0].rstrip("/") != SOURCE_URL.rstrip("/"):
-            raise ValueError("Unexpected redirect away from trusted source")
+def fetch_index(location=None):
+    url = SOURCE_URL + ("?location=" + location if location else "")
+    request = Request(url, headers={"User-Agent": "BIOQRA/0.2 (public scientific challenge discovery)"})
+    with urlopen(request, timeout=20) as response:
+        final = urlparse(response.geturl())
+        if final.scheme != "https" or final.hostname != "rosalind.info" or final.path.rstrip("/") != "/problems/list-view":
+            raise ValueError("Unexpected redirect away from official Rosalind index")
         content = response.read(MAX_BYTES + 1)
     if len(content) > MAX_BYTES:
         raise ValueError("Official index exceeds safety size limit")
     return content.decode("utf-8", errors="replace")
 
 def refresh(cache_path=CACHE_PATH, fetcher=fetch_index):
-    entries = parse_rosalind(fetcher())
+    by_id = {}
+    counts = {}
+    for name, location in TRACKS.items():
+        entries = parse_rosalind(fetcher(location), minimum=1)
+        counts[name] = len(entries)
+        for entry in entries:
+            if entry["id"] in by_id:
+                if by_id[entry["id"]]["title"] != entry["title"]:
+                    raise ValueError("Conflicting titles for " + entry["id"])
+                continue
+            entry["track"] = name
+            by_id[entry["id"]] = entry
+    if len(by_id) < 200:
+        raise ValueError("Only %d unique problems across tracks; keeping previous cache" % len(by_id))
     result = {
-        "schema_version": 1,
+        "schema_version": 2,
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "source_url": SOURCE_URL,
         "status": "verified_source_fetch",
-        "entries": entries,
+        "track_counts": counts,
+        "entries": sorted(by_id.values(), key=lambda x: x["id"]),
     }
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    # Never leave a partially written cache.
-    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=cache_path.parent,
-                                     delete=False) as handle:
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=cache_path.parent, delete=False) as handle:
         tmp_path = Path(handle.name)
         json.dump(result, handle, ensure_ascii=False, indent=2)
         handle.write("\n")
@@ -97,12 +117,14 @@ def refresh(cache_path=CACHE_PATH, fetcher=fetch_index):
     return result
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch the official Rosalind catalog and cache it")
-    parser.add_argument("--cache", type=Path, default=CACHE_PATH, help="Local JSON cache path")
+    parser = argparse.ArgumentParser(description="Refresh all five official Rosalind tracks")
+    parser.add_argument("--cache", type=Path, default=CACHE_PATH)
     args = parser.parse_args()
     try:
         result = refresh(args.cache)
-        print("Updated %d Rosalind challenges at %s" % (len(result["entries"]), result["fetched_at"]))
+        print("Updated %d unique Rosalind challenges" % len(result["entries"]))
+        for track, count in result["track_counts"].items():
+            print("  %s: %d" % (track, count))
     except (URLError, TimeoutError, OSError, ValueError) as exc:
         print("Refresh unavailable; existing cache retained: %s" % exc, file=sys.stderr)
         return 1
