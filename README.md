@@ -37,10 +37,25 @@ BIOQRA is intended as open-source software that everyone can study, modify, and 
 
 **Media approval rule:** Do not commit or upload images, video or audio files to this repository until Blas Llavero has explicitly reviewed and approved them.
 
+## First functionality: offline challenge catalog
+
+The initial catalog contains 12 selected Rosalind exercises and 14 Open Problems benchmarks. It can be searched offline without AI calls or paid APIs. See [catalog instructions](docs/CHALLENGE_CATALOG.md). No challenge has been solved or validated by BIOQRA yet.
+
 ## Current status
 
 Project setup / requirements definition. The Android application, website, scientific challenge integration, and patient module have **not yet been implemented**.
 
 ## Build from source
 
-Source-build instructions will be added at the end of this README once the Android/web technology stack and the first buildable codebase have been committed. No working build commands are available at this stage.
+The Android application has not yet been implemented, so an APK cannot be built yet. The first Python catalog utility can already be run from a local clone (requires Python 3.10+):
+
+```bash
+git clone https://github.com/blas-llavero/bioqra.git
+cd bioqra
+python tools/list_challenges.py
+python tools/list_challenges.py --source Rosalind
+python tools/list_challenges.py --search DNA
+python -m unittest discover -s tests -v
+```
+
+These commands are offline after cloning and use only the Python standard library. Android and web build commands will be added here when buildable source code exists.
