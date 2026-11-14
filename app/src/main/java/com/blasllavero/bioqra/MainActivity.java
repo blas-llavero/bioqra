@@ -1,6 +1,7 @@
 package com.blasllavero.bioqra;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.Build;
 import android.graphics.Color;
@@ -174,6 +175,9 @@ public class MainActivity extends Activity {
         row("Cancer Research", "Refresh", () -> showSection("Cancer Research"), this::refresh);
         row("Challenges", "Hackathons", () -> showSection("Challenges"),
                 () -> showSection("Hackathons"));
+        row("App Description", "How to Use",
+                () -> showVideoNotice("App Description"),
+                () -> showVideoNotice("How to Use"));
         heading = text("Challenges", 22, true);
         heading.setPadding(0, dp(14), 0, dp(10));
         root.addView(heading);
@@ -197,6 +201,17 @@ public class MainActivity extends Activity {
         r.addView(b, q);
         a.setOnClickListener(v -> first.run()); b.setOnClickListener(v -> second.run());
         root.addView(r);
+    }
+
+    private void showVideoNotice(String videoType) {
+        String description = videoType.equals("App Description")
+                ? "This video will explain BIOQRA's mission: helping researchers explore and verify bioinformatics challenges, including cancer research, while making scientific knowledge more accessible."
+                : "This video will demonstrate how to search challenges, refresh Rosalind data, open cancer research resources and navigate hackathon listings, using real screenshots from the application.";
+        new AlertDialog.Builder(this)
+                .setTitle(videoType + " — Video coming soon")
+                .setMessage(description + "\\n\\nA narrated, captioned video of up to 30 seconds will be available after the project owner has reviewed and approved the media. No video is included in this build.")
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     private void showSection(String sectionName) {
