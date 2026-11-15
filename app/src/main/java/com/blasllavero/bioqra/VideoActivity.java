@@ -1,21 +1,29 @@
 package com.blasllavero.bioqra;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.MediaController;
 import android.widget.TextView;
 import android.widget.VideoView;
 
-/** Plays the user-approved local introduction; no external player or account required. */
+/**
+ * The owner-approved introduction can play either from an APK resource or
+ * from a user-selected local MP4. Nothing is uploaded or sent to a server.
+ */
 public final class VideoActivity extends Activity {
+    private static final int PICK_INTRO = 431;
+    private static final String PREFS = "bioqra_video";
+    private static final String SAVED_URI = "approved_en_uri";
     private VideoView video;
+    private TextView title, note;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -34,7 +42,7 @@ public final class VideoActivity extends Activity {
         back.setOnClickListener(v -> finish());
         screen.addView(back, new LinearLayout.LayoutParams(-1, dp(54)));
 
-        TextView title = new TextView(this);
+        title = new TextView(this);
         title.setText("BIOQRA — App Description");
         title.setTextSize(21);
         title.setTypeface(null, Typeface.BOLD);
@@ -44,27 +52,76 @@ public final class VideoActivity extends Activity {
 
         video = new VideoView(this);
         video.setKeepScreenOn(true);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, 0, 1);
-        screen.addView(video, params);
+        screen.addView(video, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        TextView note = new TextView(this);
-        note.setText("English narration · 30 seconds · Captions included in video");
+        note = new TextView(this);
         note.setTextColor(Color.WHITE);
         note.setGravity(Gravity.CENTER);
-        note.setPadding(dp(4), dp(12), dp(4), 0);
+        note.setPadding(dp(4), dp(8), dp(4), dp(8));
         screen.addView(note);
 
-        setContentView(screen);
+        Button choose = new Button(this);
+        choose.setText("Select approved English video (MP4)");
+        choose.setAllCaps(false);
+        choose.setOnClickListener(v -> chooseVideo());
+        screen.addView(choose, new LinearLayout.LayoutParams(-1, dp(56)));
 
+        setContentView(screen);
+        loadAvailableVideo();
+    }
+
+    private void loadAvailableVideo() {
+        // A reviewed video bundled in the APK takes priority. The optional
+        // document picker enables testing without committing multimedia.
         int resource = getResources().getIdentifier(
                 "bioqra_app_description_en", "raw", getPackageName());
-        if (resource == 0) {
-            title.setText("Video not included in this build");
-            note.setText("The approved video must be added to the Android project before compiling the APK.");
+        if (resource != 0) {
+            play(Uri.parse("android.resource://" + getPackageName() + "/" + resource));
             return;
         }
+        String saved = getPreferencesUri();
+        if (saved != null) {
+            play(Uri.parse(saved));
+        } else {
+            note.setText("No video bundled in this build. Select your approved BIOQRA MP4 from Downloads to watch it offline.");
+        }
+    }
 
-        Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + resource);
+    private String getPreferencesUri() {
+        return getSharedPreferences(PREFS, MODE_PRIVATE).getString(SAVED_URI, null);
+    }
+
+    private void chooseVideo() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("video/mp4");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(intent, PICK_INTRO);
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != PICK_INTRO || resultCode != RESULT_OK || data == null) return;
+        Uri uri = data.getData();
+        if (uri == null || !"content".equals(uri.getScheme())) {
+            note.setText("Please select a local MP4 using Android's file picker.");
+            return;
+        }
+        try {
+            getContentResolver().takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .putString(SAVED_URI, uri.toString()).apply();
+            play(uri);
+        } catch (SecurityException e) {
+            note.setText("Access to the selected video was denied. Please try another local file.");
+        }
+    }
+
+    private void play(Uri uri) {
+        note.setText("English narration · 30 seconds · Captions included in video");
+        video.stopPlayback();
         video.setVideoURI(uri);
         MediaController controls = new MediaController(this);
         controls.setAnchorView(video);
@@ -74,8 +131,7 @@ public final class VideoActivity extends Activity {
             video.start();
         });
         video.setOnErrorListener((player, what, extra) -> {
-            title.setText("Unable to play video");
-            note.setText("Please check that the approved MP4 was packaged correctly.");
+            note.setText("Unable to play this MP4. Use Select approved English video to choose a valid file.");
             return true;
         });
     }
