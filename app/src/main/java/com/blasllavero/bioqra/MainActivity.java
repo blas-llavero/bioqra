@@ -176,7 +176,7 @@ public class MainActivity extends Activity {
         row("Challenges", "Hackathons", () -> showSection("Challenges"),
                 () -> showSection("Hackathons"));
         row("App Description", "How to Use",
-                () -> showVideoNotice("App Description"),
+                this::playApprovedIntroduction,
                 () -> showVideoNotice("How to Use"));
         heading = text("Challenges", 22, true);
         heading.setPadding(0, dp(14), 0, dp(10));
@@ -201,6 +201,10 @@ public class MainActivity extends Activity {
         r.addView(b, q);
         a.setOnClickListener(v -> first.run()); b.setOnClickListener(v -> second.run());
         root.addView(r);
+    }
+
+    private void playApprovedIntroduction() {
+        startActivity(new Intent(this, VideoActivity.class));
     }
 
     private void showVideoNotice(String videoType) {
