@@ -12,10 +12,10 @@ To install the current experimental build on Android **if GitHub Actions shows a
 2. Open the latest **successful** run of **Android Debug APK**.
 3. At the bottom under **Artifacts**, download **bioqra-debug-apk** (a ZIP archive). Extract the ZIP with Android's Files app.
 4. Locate **app-debug.apk** in the extracted files. Open it. If prompted, allow installation from that source for this operation; revoke the permission afterward.
-5. Launch **BIOQRA**. The home screen places **Cancer Research** top left and **Refresh** top right. **Challenges** searches the Rosalind index; **Hackathons** and **Cancer Research** currently provide clearly identified official links, not automated event feeds. **Help** explains the pilot. **App Description** and **How to Use** are separate video entry buttons; until media approval they show clearly labeled informational placeholders, not playable videos.
+5. Launch **BIOQRA**. The home screen places **Cancer Research** top left and **Refresh** top right. **Challenges** searches the Rosalind index; **Hackathons** and **Cancer Research** currently provide clearly identified official links, not automated event feeds. **Help** explains the pilot. **App Description** opens an in-app video player for the approved English introduction once the approved MP4 is bundled with the APK. **How to Use** still shows a placeholder until its separate tutorial is reviewed.
 6. On launch the app attempts to update the five official Rosalind tracks; without connectivity it uses its locally saved catalog or a six-item starter list. No medical or patient records are collected.
 
-The debug APK is unsigned for store distribution and signed with a development key by Android tooling; it is only for testing and is not a vetted production release. No media is included. The two video buttons will use reviewed, approved videos only. Do not download APKs from unofficial mirrors.
+The debug APK is unsigned for store distribution and signed with a development key by Android tooling; it is only for testing and is not a vetted production release. The approved English introduction is not yet bundled into the GitHub build; the player displays a clear message if the file is absent. The How to Use tutorial has not yet been approved. Do not download APKs from unofficial mirrors.
 
 ## Author and purpose
 
@@ -37,6 +37,14 @@ BIOQRA is intended as open-source software that everyone can study, modify, and 
 - Avoid interpreting patient anecdotes as proof of causation, treatment efficacy or vaccine safety. Encourage formal reporting of suspected adverse reactions to healthcare professionals and competent pharmacovigilance authorities.
 
 **Media approval rule:** Do not commit or upload images, video or audio files to this repository until Blas Llavero has explicitly reviewed and approved them.
+
+## Approved introductory video (English)
+
+The English 30-second Piper-narrated introduction has been reviewed and approved by the project owner. The Android player code is implemented in `VideoActivity.java`; the actual MP4 must be placed in:
+
+`app/src/main/res/raw/bioqra_app_description_en.mp4`
+
+Android packaging uses the resource name without the file extension (`R.raw.bioqra_app_description_en`). Use exactly that filename (lowercase letters and underscores) and create the `raw` directory if necessary. **The MP4 is not yet committed to this repository**; do not assume GitHub Actions artifacts include it. When it is added, subsequent APK builds will contain the offline video. The distinct `How to Use` video will use real screenshots after that tutorial has been approved.
 
 ## First functionality: offline challenge catalog
 
