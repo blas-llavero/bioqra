@@ -4,11 +4,22 @@
 
 BIOQRA is an open-source project for Android and the web. It aims to help researchers discover bioinformatics challenges, develop reproducible computational approaches, and verify results with scientific software. A separate, privacy-first patient research module is planned to help people document their experiences, securely manage health records, and optionally contribute de-identified information to ethically reviewed research. BIOQRA is not a diagnostic, treatment, vaccine-testing, or medication-safety determination tool.
 
+## Interactive challenge workspace: Manual and Automatic (experimental)
+
+Choose **Manual** or **Automatic** on the BIOQRA Android home screen, then tap a challenge result to open its workbench instead of going directly to the external website. Both modes provide a separate button to open the organizer's official page in the browser.
+
+- **Manual** (default): retrieve publicly readable HTML from an allowlisted HTTPS research site and inspect it. Paste *public* DNA/RNA sample sequences and use the local/offline sequence calculator for nucleotide counts, GC%, RNA transcription, and reverse complement. No ChatGPT request is sent.
+- **Automatic**: requires an authorized ChatGPT account. BIOQRA first retrieves only public HTML from approved HTTPS research domains; it does not log in to challenge websites, bypass paywalls, follow redirects, execute downloaded code, retrieve private data, or upload files. After showing the retrieved text, it requests explicit confirmation before transmitting the public statement and any user-pasted public example to ChatGPT and choosing a model. The model is asked for a **reproducible draft** and suggested checks, not to claim scientific or clinical validation.
+
+**Limitations:** A source URL or HTTPS certificate is not sufficient to prove its contents safe or scientifically valid. Some challenges are JS-rendered, multi-page, private, dataset-based, require registration, have explicit AI restrictions or prohibit automated assistance; BIOQRA cannot currently solve those automatically. Local sequence checks are narrow educational helpers, not general solution validators. AI-generated Python is displayed as text and is **not executed** in the Android app. BIOQRA does not submit solutions, modify external accounts, run third-party online tools automatically, or assert that a challenge is solved. AI use is subject to the connected plan's limits and permissions. Do not paste patient records, private datasets, credentials, protected research data, or other sensitive material.
+
+The trusted source reader is implemented in `TrustedChallengeReader.java` and the workbench in `ChallengeActivity.java`. The offline calculator is `LocalBioinformatics.java`. All operations are user-initiated and limited to a single selected challenge; continuous autonomous execution is not part of this milestone. Real device testing of the full login → model selection → draft response path is still required.
+
 ## ChatGPT account sign-in (experimental)
 
 The Android home screen has a **ChatGPT login** button in the upper-right corner. It opens an account dialog and then an official browser-based OAuth/PKCE consent flow for eligible ChatGPT plans, without accepting or storing the user's ChatGPT password. The account button subsequently displays **ChatGPT ✓** and offers account status, reauthorization and local sign-out. Authorization is separate from challenge participation.
 
-The current release implements the login UI and the underlying experimental Sign in with ChatGPT connection class, but does **not yet** automatically solve challenges; Manual and Automatic solver mode screens and scientific validation remain separate development milestones. Plan-linked access is subject to availability, explicit authorization and usage limits. Real-world OAuth success must still be verified on a test device; a successful APK build alone is not proof that an account can connect.
+The current release includes the login UI, Manual and Automatic workbench views, and an experimental ChatGPT draft-generation path. Automatic mode still requires per-attempt consent, and does **not** independently execute or validate AI-produced solutions. Plan-linked access is subject to availability, explicit authorization and usage limits. Real-world OAuth success must still be verified on a test device; a successful APK build alone is not proof that an account can connect.
 
 BIOQRA must not send private medical data, submit solutions to competitions, or incur AI usage without explicit user authorization. It does not support entering a ChatGPT password or scraping a browser session.
 
