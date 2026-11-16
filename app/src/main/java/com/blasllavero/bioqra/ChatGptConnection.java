@@ -296,6 +296,8 @@ public final class ChatGptConnection {
                     authorize.append(enc(pair[0])).append('=').append(enc(pair[1]));
                 }
                 if(first)authorize.append("&agent_name_hint=BIOQRA");
+                else if(previous!=null && !previous.optString("id_token","").isEmpty())
+                    authorize.append("&id_token_hint=").append(enc(previous.getString("id_token")));
                 activity.runOnUiThread(()->activity.startActivity(new Intent(
                         Intent.ACTION_VIEW,Uri.parse(authorize.toString()))));
                 String code=null, returnedClient=null;
@@ -415,8 +417,14 @@ public final class ChatGptConnection {
         JSONObject request=new JSONObject();
         request.put("model",model);
         request.put("instructions",instructions);
-        request.put("input","Challenge: "+challenge+"\\n\\nOfficial problem statement:\\n"+statement
-                +"\\n\\nPublic sample data (no patient information):\\n"+input);
+        // Sign in with ChatGPT uses the structured Responses input array.
+        JSONArray messages=new JSONArray();
+        JSONObject message=new JSONObject();
+        message.put("role","user");
+        message.put("content","Challenge: "+challenge+"\\n\\nOfficial problem statement:\\n"
+                +statement+"\\n\\nPublic sample data (no patient information):\\n"+input);
+        messages.put(message);
+        request.put("input",messages);
         request.put("store",false);
         request.put("stream",true);
         HttpURLConnection con=(HttpURLConnection)new URL(RESOURCE+"/responses").openConnection();
