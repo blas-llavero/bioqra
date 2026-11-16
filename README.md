@@ -48,6 +48,22 @@ The English 30-second Piper-narrated introduction has been reviewed and approved
 
 Android packaging uses the resource name without the file extension (`R.raw.bioqra_app_description_en`). Use exactly that filename (lowercase letters and underscores) and create the `raw` directory if necessary. **The MP4 is not yet committed to this repository**; do not assume GitHub Actions artifacts include it. Until it is added, the Android video player provides a local MP4 document picker and remembers read access on compatible Android versions. The file remains on the user's device; BIOQRA does not upload the video. When it is added, subsequent APK builds will contain the offline video. The distinct `How to Use` video will use real screenshots after that tutorial has been approved.
 
+## Competition status and complete pagination (November 2026)
+
+The **Challenges** screen now defaults to **Open / Upcoming** and prioritizes competitions or funding calls with a concrete research task. Use the separate **source** and **availability** selectors to switch between:
+
+- **Open / Upcoming**: verified research competitions and upcoming submission phases. Each status is based on an official source review dated 16 November 2026. Seven days after that date, records without an authoritative live status check are automatically downgraded to **Needs verification** rather than falsely marked open.
+- **Research benchmarks**: Open Problems benchmarks for reproducible research, not time-limited contests.
+- **Educational exercises**: Rosalind exercises.
+- **Needs verification**: directories, uncertain or stale opportunities.
+- **All records**: every entry, including funded research, historical events and restricted competitions. These entries are clearly labeled and are **not** presented as open.
+
+Use **Previous** and **Next** below the list. The interface displays 25 records per page, with a correct result count and page number; there is no 100-result truncation. Searches and source/filter changes reset to page one.
+
+Examples of actual research competitions include OWL (prostate cancer recurrence explanation), Light My Cells 2 (fluorescence microscopy prediction), COBRA (radiotherapy CT reconstruction; validation begins 1 December 2026), and TopBrain V2 (brain vessel segmentation; final-test phase opens 11 December 2026). Lung Nodule Volumetry is restricted to vendors with CE-certified products and is **not** included in the general open-competition view. Grand Challenge organizers must be consulted for eligibility and submission rules.
+
+**Important:** As of this milestone, live automatic refresh covers Rosalind and checks the Open Problems index; the other competitions use a dated official-source review and conservative staleness logic, not an automated live registration check. The application cannot guarantee a place remains open after the review date.
+
 ## Multi-source challenge directory (Android prototype)
 
 The Android challenge source filter now includes:
@@ -67,7 +83,7 @@ The initial catalog contains 12 selected Rosalind exercises and 14 Open Problems
 
 ## Challenge catalog refresh (experimental)
 
-BIOQRA includes a Python refresh utility for the five official Rosalind problem tracks. The original one-track downloader retrieved only part of the public catalog; the revised synchronizer fetches and merges all five sections. It downloads public problem titles and URLs from one trusted source, validates a minimum count, and replaces the local JSON cache atomically; on a failed refresh the previously saved cache is preserved. It uses no ChatGPT API and does not send patient data. Other sources (hackathons, DREAM, Open Problems, oncology) are not yet synchronized automatically. **The Android app has not been built; automatic refresh on app launch is a planned integration, not an active feature.**
+BIOQRA includes a Python refresh utility for the five official Rosalind problem tracks. The original one-track downloader retrieved only part of the public catalog; the revised synchronizer fetches and merges all five sections. It downloads public problem titles and URLs from one trusted source, validates a minimum count, and replaces the local JSON cache atomically; on a failed refresh the previously saved cache is preserved. It uses no ChatGPT API and does not send patient data. Other sources (hackathons, DREAM, Open Problems, oncology) are not yet synchronized automatically. **The Android app is buildable and attempts Rosalind and Open Problems refresh on launch; other competition sources still require a dedicated live-status synchronizer.**
 
 Run after cloning:
 
@@ -82,7 +98,7 @@ The refresh command requires Internet access, while the resulting JSON can be re
 
 ## Current status
 
-Project setup / requirements definition. The Android application, website, scientific challenge integration, and patient module have **not yet been implemented**.
+Project setup / requirements definition. The Android prototype and limited challenge index integration are implemented and buildable. The full website, automatic competition status sync, scientific solver, and patient module are not yet implemented.
 
 ## Build from source
 
