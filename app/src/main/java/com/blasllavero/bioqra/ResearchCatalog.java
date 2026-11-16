@@ -1,6 +1,5 @@
 package com.blasllavero.bioqra;
 
-import android.text.Html;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -75,11 +74,11 @@ public final class ResearchCatalog {
 
         add(result,"cgc-gastro-transformation","Gastroesophageal transformation into cancer",CANCER,
                 "Study early tissue changes with the aim of preventing stomach and oesophageal cancer",
-                "https://www.cancergrandchallenges.org/apply-for-a-challenge/gastroesophageal-transformation-into-cancer",
+                "https://www.cancergrandchallenges.org/apply-for-a-challenge",
                 "funding","cancer prevention","2026-11-24");
         add(result,"cgc-global-variation","Global variation in gastroesophageal cancer",CANCER,
                 "Find biological mechanisms behind differences in incidence between populations",
-                "https://www.cancergrandchallenges.org/apply-for-a-challenge/global-variation-in-gastroesophageal-cancer",
+                "https://www.cancergrandchallenges.org/apply-for-a-challenge",
                 "funding","cancer prevention","2026-11-24");
 
         String active="https://www.cancergrandchallenges.org/challenges/active-challenges";
@@ -93,6 +92,18 @@ public final class ResearchCatalog {
         for(String[] item:cgc) add(result,"cgc-"+item[0],item[1],CANCER,item[2],active,
                                    "funded_research","cancer",null);
 
+        add(result,"dream-drug-discovery","DREAM x CACHE Target 2035 Drug Discovery",DREAM,
+                "Machine learning for drug discovery; confirm registration and evaluation on the official organizer page",
+                "https://dreamchallenges.org/open-challenges/","directory","drug discovery",null);
+        add(result,"dream-quantum","DREAM-Q Target 2035 Quantum Challenge",DREAM,
+                "Quantum-inspired approaches for biomedical target challenges; verify eligibility",
+                "https://dreamchallenges.org/open-challenges/","directory","drug discovery",null);
+        add(result,"dream-digital-pen","Digital Pen Feature Extraction Challenge",DREAM,
+                "Analyze cognitive-assessment pen signals; check organizer dates",
+                "https://dreamchallenges.org/open-challenges/","directory","biomedical",null);
+        add(result,"hack-genedis-lung-cancer","GENEDIS 2026 NSCLC multi-omics challenge",HACK,
+                "Reproducible multi-omics integration or knowledge-mining workflow for non-small-cell lung cancer; hybrid event 21 November 2026, applications closed",
+                "https://2026.genedis.org/hackathon/","directory","cancer multi-omics",null);
         add(result,"dream-directory","DREAM open biomedical challenges",DREAM,
                 "Crowdsourced prediction competitions; inspect official open listings",
                 "https://dreamchallenges.org/open-challenges/","directory","biomedical",null);
