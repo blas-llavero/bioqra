@@ -52,6 +52,7 @@ public class MainActivity extends Activity {
 
     private final List<Challenge> challenges = new ArrayList<>();
     private LinearLayout root, list;
+    private ScrollView mainScroll;
     private TextView status, heading;
     private EditText search;
     private Spinner sourcePicker, availabilityPicker;
@@ -144,6 +145,7 @@ public class MainActivity extends Activity {
 
     private void buildUi() {
         ScrollView scroll = new ScrollView(this);
+        mainScroll = scroll;
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(Color.rgb(248, 251, 250));
         root = new LinearLayout(this);
@@ -315,9 +317,15 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams r=new LinearLayout.LayoutParams(0,dp(52),1);
         r.setMargins(dp(6),0,0,0);
         nav.addView(next,r);
-        prev.setOnClickListener(v -> { currentPage--; showItems(); });
-        next.setOnClickListener(v -> { currentPage++; showItems(); });
+        prev.setOnClickListener(v -> { currentPage--; showItems(); scrollToResults(); });
+        next.setOnClickListener(v -> { currentPage++; showItems(); scrollToResults(); });
         list.addView(nav);
+    }
+
+    private void scrollToResults() {
+        if (mainScroll != null) {
+            mainScroll.post(() -> mainScroll.smoothScrollTo(0, heading.getTop()));
+        }
     }
 
     private void showItems() {
