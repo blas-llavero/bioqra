@@ -35,7 +35,7 @@ public final class ChallengeActivity extends Activity {
     private EditText sample;
     private Button aiButton, loadButton, offlineButton;
     private String fetchedText="";
-    private final ChatGptConnection connection=new ChatGptConnection(this);
+    private ChatGptConnection connection;
     private volatile boolean busy=false;
 
     private int dp(int x){return Math.round(x*getResources().getDisplayMetrics().density);}
@@ -63,6 +63,7 @@ public final class ChallengeActivity extends Activity {
     }
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
+        connection=new ChatGptConnection(this);
         title=getIntent().getStringExtra(TITLE);
         url=getIntent().getStringExtra(URL);
         mode=getIntent().getStringExtra(MODE);
