@@ -1,5 +1,7 @@
 # BIOQRA — Open Bioinformatics Research & Patient Assistance
 
+![BIOQRA — Official full logo](docs/images/bioqra_full_logo.png)
+
 BIOQRA is an open-source project for Android and the web. It aims to help researchers discover bioinformatics challenges, develop reproducible computational approaches, and verify results with scientific software. A separate, privacy-first patient research module is planned to help people document their experiences, securely manage health records, and optionally contribute de-identified information to ethically reviewed research. BIOQRA is not a diagnostic, treatment, vaccine-testing, or medication-safety determination tool.
 
 ## Android APK: download, install, and use
