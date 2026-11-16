@@ -156,6 +156,37 @@ public final class ChatGptConnection {
         }finally{con.disconnect();}
     }
 
+    /**
+     * Inform Chrome that the loopback authorization code reached BIOQRA.
+     * This does NOT claim the token exchange succeeded; the Android app reports
+     * the final result after verifying the signed identity and permissions.
+     */
+    private static void sendBrowserCallback(Socket socket) throws Exception {
+        String html="<!doctype html><html lang=\"en\"><head>"
+                +"<meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                +"<title>BIOQRA sign-in</title></head>"
+                +"<body style=\"margin:2rem;font:1.2rem sans-serif;color:#123b47\">"
+                +"<h1>BIOQRA</h1><p>Authorization received.</p>"
+                +"<p>Return to the BIOQRA app to check whether your ChatGPT connection completed.</p>"
+                +"<p>You can close this browser tab.</p></body></html>";
+        byte[] body=html.getBytes(StandardCharsets.UTF_8);
+        // HTTP/1.1 requires actual CRLF line endings and a blank line before
+        // the body; escaped backslash characters caused Chrome's blank page.
+        String headers="HTTP/1.1 200 OK\r\n"
+                +"Content-Type: text/html; charset=UTF-8\r\n"
+                +"Content-Length: "+body.length+"\r\n"
+                +"Cache-Control: no-store, no-cache, must-revalidate\r\n"
+                +"Pragma: no-cache\r\n"
+                +"Referrer-Policy: no-referrer\r\n"
+                +"X-Content-Type-Options: nosniff\r\n"
+                +"Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'\r\n"
+                +"Connection: close\r\n\r\n";
+        OutputStream output=socket.getOutputStream();
+        output.write(headers.getBytes(StandardCharsets.US_ASCII));
+        output.write(body);
+        output.flush();
+    }
+
     private static byte[] base64url(String s) {
         return Base64.decode(s,Base64.NO_PADDING|Base64.URL_SAFE|Base64.NO_WRAP);
     }
@@ -318,12 +349,9 @@ public final class ChatGptConnection {
                     code=callbackUrl.getQueryParameter("code");
                     returnedClient=callbackUrl.getQueryParameter("client_id");
                     if(code==null || code.isEmpty())throw new Exception("No authorization code");
-                    byte[] body=("HTTP/1.1 200 OK\\r\\nContent-Type: text/html; charset=UTF-8\\r\\n"+
-                            "Cache-Control: no-store\\r\\nConnection: close\\r\\n\\r\\n"+
-                            "<html><body><h2>BIOQRA</h2>Sign-in received. You can return to BIOQRA.</body></html>")
-                            .getBytes(StandardCharsets.UTF_8);
-                    socket.getOutputStream().write(body);
-                    socket.getOutputStream().flush();
+                    // Send a valid HTTP reply before exchanging tokens. Do not
+                    // echo the sensitive authorization code or state in HTML.
+                    sendBrowserCallback(socket);
                 }
                 if(first){
                     if(returnedClient==null || !returnedClient.startsWith("oaiapp_"))
