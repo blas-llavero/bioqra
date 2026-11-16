@@ -12,6 +12,9 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
+import java.util.Locale;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -51,6 +54,8 @@ public class MainActivity extends Activity {
     private LinearLayout root, list;
     private TextView status, heading;
     private EditText search;
+    private Spinner sourcePicker;
+    private final List<ResearchCatalog.Item> researchItems = new ArrayList<>();
     private String section = "Challenges";
 
     private static class Challenge {
@@ -65,6 +70,7 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(BLUE);
         getWindow().setNavigationBarColor(Color.BLACK);
         seed();
+        researchItems.addAll(ResearchCatalog.initial());
         loadCached();
         buildUi();
         refresh();
@@ -172,6 +178,18 @@ public class MainActivity extends Activity {
             public void onTextChanged(CharSequence s, int start, int before, int count) { showItems(); }
             public void afterTextChanged(Editable s) {}
         });
+        sourcePicker = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item,
+                ResearchCatalog.FILTERS);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        sourcePicker.setAdapter(adapter);
+        sourcePicker.setContentDescription("Filter bioinformatics challenges by source");
+        root.addView(sourcePicker, new LinearLayout.LayoutParams(-1, dp(52)));
+        sourcePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view,
+                    int position, long id) { showItems(); }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
         row("Cancer Research", "Refresh", () -> showSection("Cancer Research"), this::refresh);
         row("Challenges", "Hackathons", () -> showSection("Challenges"),
                 () -> showSection("Hackathons"));
@@ -220,7 +238,9 @@ public class MainActivity extends Activity {
 
     private void showSection(String sectionName) {
         section = sectionName;
+        // Both the source filter and search apply throughout the research catalog.
         search.setVisibility("Challenges".equals(section) ? View.VISIBLE : View.GONE);
+        sourcePicker.setVisibility("Challenges".equals(section) ? View.VISIBLE : View.GONE);
         showItems();
     }
 
@@ -239,25 +259,50 @@ public class MainActivity extends Activity {
         list.removeAllViews();
         heading.setText(section);
         if (section.equals("Challenges")) {
-            String query = search.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+            String query = search.getText().toString().trim().toLowerCase(Locale.ROOT);
+            String source = (String) sourcePicker.getSelectedItem();
+            if (source == null) source = "All sources";
             int displayed = 0;
-            for (Challenge c : challenges) {
-                if (!(c.title.toLowerCase(java.util.Locale.ROOT).contains(query) ||
-                        c.id.toLowerCase(java.util.Locale.ROOT).contains(query))) continue;
-                addLink(c.title, "Rosalind · " + c.id.toUpperCase(java.util.Locale.ROOT), c.url);
-                displayed++;
-                if (displayed >= 100) break;
+            int matched = 0;
+            if ("All sources".equals(source) || ResearchCatalog.ROSALIND.equals(source)) {
+                for (Challenge challenge : challenges) {
+                    if (!(challenge.title.toLowerCase(Locale.ROOT).contains(query)
+                            || challenge.id.toLowerCase(Locale.ROOT).contains(query)
+                            || "rosalind".contains(query))) continue;
+                    if (++matched <= 90) {
+                        addLink(challenge.title, "Rosalind · Educational problem · "
+                                + challenge.id.toUpperCase(Locale.ROOT), challenge.url);
+                        displayed++;
+                    }
+                }
             }
-            if (displayed == 0) list.addView(text("No matching challenges in the current catalog.", 15, false));
-            if (displayed == 100) list.addView(text("Showing first 100 matches. Narrow your search for more.", 13, false));
+            for (ResearchCatalog.Item item : researchItems) {
+                if (!"All sources".equals(source) && !item.source.equals(source)) continue;
+                String searchable = (item.title+" "+item.source+" "+item.summary+" "+item.topic)
+                                    .toLowerCase(Locale.ROOT);
+                if (!searchable.contains(query)) continue;
+                matched++;
+                if (displayed >= 100) continue;
+                addLink(item.title, item.source+" · "+item.label()+"\n"+item.summary, item.url);
+                displayed++;
+            }
+            if (matched == 0) list.addView(text("No matching challenges in the current catalog.",15,false));
+            if (matched > displayed) list.addView(text("Showing "+displayed+" of "+matched+
+                " results. Narrow your search or choose a source.",13,false));
         } else if (section.equals("Cancer Research")) {
-            list.addView(text("Research topics are not clinical treatments or confirmed cures.", 15, false));
-            addLink("Cancer Grand Challenges", "Active research themes: prevention, tumor biology, and treatments", "https://www.cancergrandchallenges.org/challenges/active-challenges");
-            addLink("DREAM Challenges", "Research competitions and biomedical prediction", "https://dreamchallenges.org/");
+            list.addView(text("Cancer research findings are not validated medical treatments. Check organizer dates and eligibility.", 15, false));
+            for (ResearchCatalog.Item item : researchItems) {
+                if (ResearchCatalog.CANCER.equals(item.source) || item.topic.contains("cancer")) {
+                    addLink(item.title, item.source+" · "+item.label()+"\n"+item.summary, item.url);
+                }
+            }
         } else if (section.equals("Hackathons")) {
-            list.addView(text("Check organizers for current dates, registration and remote eligibility.", 15, false));
-            addLink("BioHackathon Europe", "Organizer's project-based bioinformatics hackathon", "https://biohackathon-europe.org/");
-            addLink("Bioinformatics Hackathon Directory", "Community event listing; verify each organizer", "https://biohackathons.github.io/");
+            list.addView(text("Check organizer dates, registration and online eligibility. Directory entries are not confirmed open events.", 15, false));
+            for (ResearchCatalog.Item item : researchItems) {
+                if (ResearchCatalog.HACK.equals(item.source) || ResearchCatalog.ML.equals(item.source)) {
+                    addLink(item.title,item.source+" · "+item.label()+"\n"+item.summary,item.url);
+                }
+            }
         } else {
             list.addView(text("BIOQRA is an experimental open-source catalog of public bioinformatics challenges. It is not a medical device.\n\n"
                     + "Challenge links open in your browser. The app attempts to refresh the public Rosalind catalog at launch. If offline, it uses the saved copy.\n\n"
@@ -268,7 +313,7 @@ public class MainActivity extends Activity {
 
     private void refresh() {
         if (status == null) return;
-        status.setText("Refreshing Rosalind (5 tracks)...");
+        status.setText("Refreshing Rosalind and Open Problems...");
         WORKER.execute(() -> {
             try {
                 Map<String, Challenge> all = new LinkedHashMap<>();
@@ -311,10 +356,40 @@ public class MainActivity extends Activity {
                 try (java.io.OutputStream output = openFileOutput("rosalind.json", MODE_PRIVATE)) {
                     output.write(array.toString().getBytes(StandardCharsets.UTF_8));
                 }
+                // Open Problems is checked independently. An unavailable official page
+                // must not invalidate a successful Rosalind update.
+                List<ResearchCatalog.Item> openUpdated = null;
+                String openStatus = "Open Problems: reviewed catalog";
+                try {
+                    HttpURLConnection conn = (HttpURLConnection) new URL(
+                            "https://openproblems.bio/benchmarks/").openConnection();
+                    conn.setConnectTimeout(10000);
+                    conn.setReadTimeout(15000);
+                    conn.setInstanceFollowRedirects(false);
+                    if (conn.getResponseCode()!=200) throw new Exception("HTTP "+conn.getResponseCode());
+                    ByteArrayOutputStream data = new ByteArrayOutputStream();
+                    try (InputStream input=conn.getInputStream()) {
+                        byte[] buf=new byte[8192]; int n;
+                        while ((n=input.read(buf))!=-1) {
+                            data.write(buf,0,n);
+                            if (data.size()>2_000_000) throw new Exception("Response too large");
+                        }
+                    } finally { conn.disconnect(); }
+                    openUpdated=ResearchCatalog.parseOpenProblems(data.toString("UTF-8"));
+                    openStatus="Open Problems: "+openUpdated.size()+" verified index links";
+                } catch (Exception ignored) {
+                    // Keep pre-reviewed entries; no unsupported real-time claims.
+                }
+                final List<ResearchCatalog.Item> updatedOpen = openUpdated;
+                final String finalOpenStatus = openStatus;
                 runOnUiThread(() -> {
                     challenges.clear();
                     challenges.addAll(all.values());
-                    status.setText(challenges.size() + " verified Rosalind challenges · updated now");
+                    if (updatedOpen != null) {
+                        researchItems.removeIf(item -> ResearchCatalog.OPEN.equals(item.source));
+                        researchItems.addAll(updatedOpen);
+                    }
+                    status.setText(challenges.size() + " Rosalind challenges · " + finalOpenStatus);
                     showItems();
                 });
             } catch (Exception e) {
