@@ -29,6 +29,19 @@ jobs:
           gradle-version: '8.11.1'
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
+      - name: Verify approved video is packaged in APK
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          apk = "app/build/outputs/apk/debug/app-debug.apk"
+          resource = "res/raw/bioqra_app_description_en.mp4"
+          with zipfile.ZipFile(apk) as archive:
+              files = {entry.filename: entry.file_size for entry in archive.infolist()}
+              size = files.get(resource, 0)
+              if size < 100_000:
+                  raise SystemExit(f"ERROR: Approved video missing or too small: {resource} ({size} bytes)")
+              print(f"Verified approved introduction inside APK: {resource} ({size} bytes)")
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: bioqra-debug-apk
