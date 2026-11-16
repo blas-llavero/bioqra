@@ -14,10 +14,10 @@ To install the current experimental build on Android **if GitHub Actions shows a
 2. Open the latest **successful** run of **Android Debug APK**.
 3. At the bottom under **Artifacts**, download **bioqra-debug-apk** (a ZIP archive). Extract the ZIP with Android's Files app.
 4. Locate **app-debug.apk** in the extracted files. Open it. If prompted, allow installation from that source for this operation; revoke the permission afterward.
-5. Launch **BIOQRA**. The home screen places **Cancer Research** top left and **Refresh** top right. **Challenges** now includes a source selector for Rosalind, Open Problems, Cancer Grand Challenges, DREAM, hackathons and ML Contests. **Hackathons** and **Cancer Research** contain curated, sourced listings with clear participation labels; they are not automatically certified as open competitions. **Help** explains the pilot. **App Description** opens an in-app video player for the approved English introduction. If the MP4 is not bundled with the APK, select **Select approved English video (MP4)** and choose the approved file from the Android Files app; the selected file is read locally and its access is remembered. **How to Use** still shows a placeholder until its separate tutorial is reviewed.
+5. Launch **BIOQRA**. The home screen places **Cancer Research** top left and **Refresh** top right. **Challenges** now includes a source selector for Rosalind, Open Problems, Cancer Grand Challenges, DREAM, hackathons and ML Contests. **Hackathons** and **Cancer Research** contain curated, sourced listings with clear participation labels; they are not automatically certified as open competitions. **Help** explains the pilot. **App Description** opens an in-app video player for the approved English introduction. The approved English MP4 is now bundled with the APK and automatically plays within the centered video player; no file selection is required. **How to Use** still shows a placeholder until its separate tutorial is reviewed.
 6. On launch the app attempts to update the five official Rosalind tracks and checks the Open Problems benchmark index. If Open Problems cannot be verified, a reviewed directory remains visible; Rosalind retains its own local cache or a six-item starter list. No medical or patient records are collected.
 
-The debug APK is unsigned for store distribution and signed with a development key by Android tooling; it is only for testing and is not a vetted production release. The approved English introduction is not yet bundled into the GitHub build; the player displays a clear message if the file is absent. The How to Use tutorial has not yet been approved. Do not download APKs from unofficial mirrors.
+The debug APK is unsigned for store distribution and signed with a development key by Android tooling; it is only for testing and is not a vetted production release. The approved English introduction is bundled into the GitHub build, and the workflow verifies its presence inside the assembled APK. The How to Use tutorial has not yet been approved. Do not download APKs from unofficial mirrors.
 
 ## Author and purpose
 
@@ -46,7 +46,7 @@ The English 30-second Piper-narrated introduction has been reviewed and approved
 
 `app/src/main/res/raw/bioqra_app_description_en.mp4`
 
-Android packaging uses the resource name without the file extension (`R.raw.bioqra_app_description_en`). Use exactly that filename (lowercase letters and underscores) and create the `raw` directory if necessary. **The MP4 is not yet committed to this repository**; do not assume GitHub Actions artifacts include it. Until it is added, the Android video player provides a local MP4 document picker and remembers read access on compatible Android versions. The file remains on the user's device; BIOQRA does not upload the video. When it is added, subsequent APK builds will contain the offline video. The distinct `How to Use` video will use real screenshots after that tutorial has been approved.
+Android packaging uses the resource name without the file extension (`R.raw.bioqra_app_description_en`). Use exactly that filename (lowercase letters and underscores) and create the `raw` directory if necessary. **The owner-approved MP4 is committed to this repository** and is packaged into the APK for offline playback. GitHub Actions verifies its presence in the APK. The standalone file picker and redundant narration caption have been removed from the playback screen; video is centered while retaining the source aspect ratio. The distinct `How to Use` video will use real screenshots after that tutorial has been approved.
 
 ## Live discovery across official biomedical challenge pages
 
@@ -56,7 +56,7 @@ BIOQRA 0.3 adds **Grand Challenge index discovery** on app startup and when the 
 
 ## Bundling the approved App Description video
 
-The owner-approved **30-second English Piper video** can be packaged directly into the Android APK by copying the exact approved `bioqra_with_piper_english_v3.mp4` to `app/src/main/res/raw/bioqra_app_description_en.mp4`, then committing that file. The in-app player automatically chooses this bundled resource and plays it offline when **App Description** is tapped. The video is **not yet in GitHub** until this binary commit has been made. The local-video picker remains available for experimental builds without the asset.
+The owner-approved **30-second English Piper video** is already committed as `app/src/main/res/raw/bioqra_app_description_en.mp4`. The in-app player automatically plays this bundled resource offline when **App Description** is tapped. It is centered on the screen at the original aspect ratio, with no redundant narration caption or local file picker.
 
 ## Competition status and complete pagination (November 2026)
 
