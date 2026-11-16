@@ -54,7 +54,8 @@ public class MainActivity extends Activity {
     private LinearLayout root, list;
     private TextView status, heading;
     private EditText search;
-    private Spinner sourcePicker;
+    private Spinner sourcePicker, availabilityPicker;
+    private int currentPage = 0;
     private final List<ResearchCatalog.Item> researchItems = new ArrayList<>();
     private String section = "Challenges";
 
@@ -175,7 +176,7 @@ public class MainActivity extends Activity {
         root.addView(search);
         search.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            public void onTextChanged(CharSequence s, int start, int before, int count) { showItems(); }
+            public void onTextChanged(CharSequence s, int start, int before, int count) { currentPage = 0; showItems(); }
             public void afterTextChanged(Editable s) {}
         });
         sourcePicker = new Spinner(this);
@@ -187,7 +188,19 @@ public class MainActivity extends Activity {
         root.addView(sourcePicker, new LinearLayout.LayoutParams(-1, dp(52)));
         sourcePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view,
-                    int position, long id) { showItems(); }
+                    int position, long id) { currentPage = 0; showItems(); }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+        availabilityPicker = new Spinner(this);
+        ArrayAdapter<String> availabilityAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, ResearchCatalog.AVAILABILITY_FILTERS);
+        availabilityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        availabilityPicker.setAdapter(availabilityAdapter);
+        availabilityPicker.setContentDescription("Filter by competition availability");
+        root.addView(availabilityPicker, new LinearLayout.LayoutParams(-1, dp(52)));
+        availabilityPicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view,
+                    int position, long id) { currentPage = 0; showItems(); }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
         row("Cancer Research", "Refresh", () -> showSection("Cancer Research"), this::refresh);
@@ -238,9 +251,11 @@ public class MainActivity extends Activity {
 
     private void showSection(String sectionName) {
         section = sectionName;
+        currentPage = 0;
         // Both the source filter and search apply throughout the research catalog.
         search.setVisibility("Challenges".equals(section) ? View.VISIBLE : View.GONE);
         sourcePicker.setVisibility("Challenges".equals(section) ? View.VISIBLE : View.GONE);
+        availabilityPicker.setVisibility("Challenges".equals(section) ? View.VISIBLE : View.GONE);
         showItems();
     }
 
@@ -254,61 +269,121 @@ public class MainActivity extends Activity {
         t.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
     }
 
+    private static class ResultRow {
+        final String title, description, url;
+        ResultRow(String title, String description, String url) {
+            this.title=title; this.description=description; this.url=url;
+        }
+    }
+
+    private void addResearch(List<ResultRow> rows, ResearchCatalog.Item item) {
+        rows.add(new ResultRow(item.title, item.source+" · "+item.label()
+                +"\\n"+item.summary, item.url));
+    }
+
+    private void displayPage(List<ResultRow> rows) {
+        int total=rows.size();
+        int pageCount=Math.max(1, (total + ResearchCatalog.PAGE_SIZE - 1)
+                / ResearchCatalog.PAGE_SIZE);
+        currentPage=Math.max(0,Math.min(currentPage,pageCount-1));
+        if(total==0) {
+            list.addView(text("No matching challenges. Change the filters or refresh.",15,false));
+            return;
+        }
+        int start=currentPage * ResearchCatalog.PAGE_SIZE;
+        int end=Math.min(total,start + ResearchCatalog.PAGE_SIZE);
+        TextView summary=text("Showing "+(start+1)+"–"+end+" of "+total+
+                " · Page "+(currentPage+1)+" / "+pageCount,14,true);
+        summary.setPadding(0,dp(8),0,dp(12));
+        list.addView(summary);
+        for (int i=start; i<end; i++) {
+            ResultRow row=rows.get(i);
+            addLink(row.title,row.description,row.url);
+        }
+        LinearLayout nav=new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setPadding(0,dp(12),0,dp(12));
+        Button prev=button("Previous");
+        Button next=button("Next");
+        prev.setEnabled(currentPage>0);
+        next.setEnabled(currentPage+1<pageCount);
+        prev.setAlpha(prev.isEnabled() ? 1f : 0.45f);
+        next.setAlpha(next.isEnabled() ? 1f : 0.45f);
+        LinearLayout.LayoutParams l=new LinearLayout.LayoutParams(0,dp(52),1);
+        l.setMargins(0,0,dp(6),0);
+        nav.addView(prev,l);
+        LinearLayout.LayoutParams r=new LinearLayout.LayoutParams(0,dp(52),1);
+        r.setMargins(dp(6),0,0,0);
+        nav.addView(next,r);
+        prev.setOnClickListener(v -> { currentPage--; showItems(); });
+        next.setOnClickListener(v -> { currentPage++; showItems(); });
+        list.addView(nav);
+    }
+
     private void showItems() {
         if (list == null) return;
         list.removeAllViews();
         heading.setText(section);
+        List<ResultRow> rows=new ArrayList<>();
         if (section.equals("Challenges")) {
-            String query = search.getText().toString().trim().toLowerCase(Locale.ROOT);
-            String source = (String) sourcePicker.getSelectedItem();
-            if (source == null) source = "All sources";
-            int displayed = 0;
-            int matched = 0;
-            if ("All sources".equals(source) || ResearchCatalog.ROSALIND.equals(source)) {
-                for (Challenge challenge : challenges) {
-                    if (!(challenge.title.toLowerCase(Locale.ROOT).contains(query)
-                            || challenge.id.toLowerCase(Locale.ROOT).contains(query)
-                            || "rosalind".contains(query))) continue;
-                    if (++matched <= 90) {
-                        addLink(challenge.title, "Rosalind · Educational problem · "
-                                + challenge.id.toUpperCase(Locale.ROOT), challenge.url);
-                        displayed++;
+            String query=search.getText().toString().trim().toLowerCase(Locale.ROOT);
+            String source=(String) sourcePicker.getSelectedItem();
+            if (source==null) source="All sources";
+            String availability=(String) availabilityPicker.getSelectedItem();
+            if (availability==null) availability="Open / Upcoming";
+
+            // Real competitions, research benchmarks and education are separated.
+            if (availability.equals("Educational exercises") || availability.equals("All records")) {
+                if (source.equals("All sources") || source.equals(ResearchCatalog.ROSALIND)) {
+                    for (Challenge challenge:challenges) {
+                        String haystack=(challenge.title+" "+challenge.id+" Rosalind").toLowerCase(Locale.ROOT);
+                        if(haystack.contains(query)) rows.add(new ResultRow(challenge.title,
+                                "Rosalind · Educational exercise · "+challenge.id.toUpperCase(Locale.ROOT),
+                                challenge.url));
                     }
                 }
             }
-            for (ResearchCatalog.Item item : researchItems) {
-                if (!"All sources".equals(source) && !item.source.equals(source)) continue;
-                String searchable = (item.title+" "+item.source+" "+item.summary+" "+item.topic)
-                                    .toLowerCase(Locale.ROOT);
-                if (!searchable.contains(query)) continue;
-                matched++;
-                if (displayed >= 100) continue;
-                addLink(item.title, item.source+" · "+item.label()+"\n"+item.summary, item.url);
-                displayed++;
+            for(ResearchCatalog.Item item:researchItems) {
+                if(!source.equals("All sources") && !source.equals(item.source)) continue;
+                String haystack=(item.title+" "+item.source+" "+item.summary+" "+item.topic)
+                        .toLowerCase(Locale.ROOT);
+                if(!haystack.contains(query)) continue;
+                String state=item.availability();
+                boolean include=false;
+                if(availability.equals("Open / Upcoming"))
+                    include=state.equals("OPEN") || state.equals("UPCOMING");
+                else if(availability.equals("Research benchmarks"))
+                    include=state.equals("BENCHMARK");
+                else if(availability.equals("Needs verification"))
+                    include=state.equals("CHECK");
+                else if(availability.equals("All records"))
+                    include=true;
+                if(include) addResearch(rows,item);
             }
-            if (matched == 0) list.addView(text("No matching challenges in the current catalog.",15,false));
-            if (matched > displayed) list.addView(text("Showing "+displayed+" of "+matched+
-                " results. Narrow your search or choose a source.",13,false));
+            TextView context=text("Current competitions are prioritized. Open / Upcoming is a dated snapshot, not a guarantee of registration. Use All records to include educational and historical entries.",13,false);
+            context.setPadding(0,dp(8),0,dp(8));
+            list.addView(context);
         } else if (section.equals("Cancer Research")) {
-            list.addView(text("Cancer research findings are not validated medical treatments. Check organizer dates and eligibility.", 15, false));
-            for (ResearchCatalog.Item item : researchItems) {
-                if (ResearchCatalog.CANCER.equals(item.source) || item.topic.contains("cancer")) {
-                    addLink(item.title, item.source+" · "+item.label()+"\n"+item.summary, item.url);
-                }
+            list.addView(text("Priority: real cancer research opportunities. Projects already funded are hidden; use All records in Challenges to see historical projects. Confirm applications with each organizer.",15,false));
+            for(ResearchCatalog.Item item:researchItems) {
+                if(!item.topic.contains("cancer") && !ResearchCatalog.CANCER.equals(item.source)) continue;
+                if(item.availability().equals("OPEN") || item.availability().equals("UPCOMING"))
+                    addResearch(rows,item);
             }
         } else if (section.equals("Hackathons")) {
-            list.addView(text("Check organizer dates, registration and online eligibility. Directory entries are not confirmed open events.", 15, false));
-            for (ResearchCatalog.Item item : researchItems) {
-                if (ResearchCatalog.HACK.equals(item.source) || ResearchCatalog.ML.equals(item.source)) {
-                    addLink(item.title,item.source+" · "+item.label()+"\n"+item.summary,item.url);
-                }
+            list.addView(text("Showing confirmed open/upcoming opportunities only. Historical hackathons and unverified directories are available under Challenges → All records.",15,false));
+            for(ResearchCatalog.Item item:researchItems) {
+                if(!ResearchCatalog.HACK.equals(item.source) && !ResearchCatalog.ML.equals(item.source)) continue;
+                if(item.availability().equals("OPEN") || item.availability().equals("UPCOMING"))
+                    addResearch(rows,item);
             }
         } else {
-            list.addView(text("BIOQRA is an experimental open-source catalog of public bioinformatics challenges. It is not a medical device.\n\n"
-                    + "Challenge links open in your browser. The app attempts to refresh the public Rosalind catalog at launch. If offline, it uses the saved copy.\n\n"
-                    + "Conceived and programmed by Blas Llavero · blasllavero.com\n\n"
-                    + "Multilingual accessibility, scientific solvers, patient features and videos are planned; they are not yet included.", 16, false));
+            list.addView(text("BIOQRA is an experimental open-source research catalog, not a medical device. Challenge links open in your browser.\\n\\n"
+                    +"The app checks Rosalind and Open Problems automatically. Competition availability is reviewed periodically and may change; always check registration with the official organizer.\\n\\n"
+                    +"Conceived and programmed by Blas Llavero · blasllavero.com",16,false));
+            return;
         }
+        displayPage(rows);
     }
 
     private void refresh() {
