@@ -4,6 +4,14 @@
 
 BIOQRA is an open-source project for Android and the web. It aims to help researchers discover bioinformatics challenges, develop reproducible computational approaches, and verify results with scientific software. A separate, privacy-first patient research module is planned to help people document their experiences, securely manage health records, and optionally contribute de-identified information to ethically reviewed research. BIOQRA is not a diagnostic, treatment, vaccine-testing, or medication-safety determination tool.
 
+## ChatGPT account sign-in (experimental)
+
+The Android home screen has a **ChatGPT login** button in the upper-right corner. It opens an account dialog and then an official browser-based OAuth/PKCE consent flow for eligible ChatGPT plans, without accepting or storing the user's ChatGPT password. The account button subsequently displays **ChatGPT ✓** and offers account status, reauthorization and local sign-out. Authorization is separate from challenge participation.
+
+The current release implements the login UI and the underlying experimental Sign in with ChatGPT connection class, but does **not yet** automatically solve challenges; Manual and Automatic solver mode screens and scientific validation remain separate development milestones. Plan-linked access is subject to availability, explicit authorization and usage limits. Real-world OAuth success must still be verified on a test device; a successful APK build alone is not proof that an account can connect.
+
+BIOQRA must not send private medical data, submit solutions to competitions, or incur AI usage without explicit user authorization. It does not support entering a ChatGPT password or scraping a browser session.
+
 ## Android APK: download, install, and use
 
 **Development status: an experimental Android source build is now configured.** Debug APKs are produced by GitHub Actions when the build succeeds; there is not yet a reviewed official GitHub Release. Check [Android Debug APK Actions](https://github.com/blas-llavero/bioqra/actions/workflows/android.yml).
