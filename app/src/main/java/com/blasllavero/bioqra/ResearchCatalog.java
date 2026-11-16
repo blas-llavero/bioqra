@@ -47,6 +47,7 @@ public final class ResearchCatalog {
             if ("benchmark".equals(kind)) return "BENCHMARK";
             if ("educational".equals(kind)) return "EDUCATIONAL";
             if ("historical".equals(kind)) return "CLOSED";
+            if ("restricted".equals(kind)) return "RESTRICTED";
             if ("funding".equals(kind) && deadline != null
                     && LocalDate.now().isAfter(LocalDate.parse(deadline))) return "CLOSED";
             if ("competition_upcoming".equals(kind) && deadline != null
@@ -71,12 +72,13 @@ public final class ResearchCatalog {
             }
             if ("UPCOMING".equals(state)) {
                 return "UPCOMING · " + ("preregister".equals(kind)
-                        ? "pre-register with organizer" : "opens " + deadline);
+                        ? "pre-register with organizer" : "next submission phase opens " + deadline);
             }
             if ("BENCHMARK".equals(state)) return "Research benchmark · not a timed contest";
             if ("EDUCATIONAL".equals(state)) return "Educational exercise";
             if ("RESEARCH".equals(state)) return "Funded project · applications closed";
             if ("CLOSED".equals(state)) return "Closed · no longer accepting applications";
+            if ("RESTRICTED".equals(state)) return "Restricted eligibility · check organizer conditions";
             return "Status unverified or stale · check organizer (last review " + REVIEWED + ")";
         }
     }
@@ -161,15 +163,15 @@ public final class ResearchCatalog {
                 "https://owl.grand-challenge.org/", "competition_open", "cancer pathology", "2026-11-30");
         add(result, "grand-lmc2", "Light My Cells 2", GRAND,
                 "Predict fluorescence microscopy channels from transmitted-light images; submissions listed as accepted.",
-                "https://lightmycells2.grand-challenge.org/", "competition_open", "bioimaging", null);
+                "https://lightmycells2.grand-challenge.org/lightmycells2/", "competition_open", "bioimaging", "2026-12-13");
         add(result, "grand-lung", "Lung Nodule Volumetry 2026", GRAND,
-                "Evaluate algorithms for measuring pulmonary nodule volume from CT; organizer lists accepting submissions.",
-                "https://lunovo26.grand-challenge.org/", "competition_open", "lung cancer imaging", null);
+                "Measure pulmonary nodule volume from CT. Restricted to vendors with CE-certified products; participation agreement required.",
+                "https://lunovo26.grand-challenge.org/how-to-participate/", "restricted", "lung cancer imaging", null);
         add(result, "grand-cobra", "COBRA: Radiotherapy Cone-Beam CT Reconstruction", GRAND,
-                "Build automated CT reconstruction for radiation planning. Training is underway; validation starts Dec 2026; test starts Jan 2027.",
+                "Build automated CT reconstruction for radiation planning. Training now; validation 1 Dec 2026 and final testing 29 Jan–15 Feb 2027.",
                 "https://cobra2026.grand-challenge.org/", "competition_open", "cancer radiotherapy", "2027-02-15");
         add(result, "grand-topbrain", "TopBrain Segmentation Challenge V2", GRAND,
-                "Segment brain vascular structures; final test submission phase scheduled for 11 Dec 2026.",
+                "Segment brain vascular structures; final-test submission phase opens 11 Dec 2026.",
                 "https://topbrain2026.grand-challenge.org/", "competition_upcoming", "neuroimaging", "2026-12-11");
         return result;
     }
