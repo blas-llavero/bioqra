@@ -287,7 +287,7 @@ public class MainActivity extends Activity {
             if (isFinishing() || isDestroyed()) return;
             new AlertDialog.Builder(this)
                     .setTitle("ChatGPT connection")
-                    .setMessage(message + "\\n\\nBIOQRA will not submit solutions to external contests automatically.")
+                    .setMessage(message + "\n\nBIOQRA will not submit solutions to external contests automatically.")
                     .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
                     .show();
         });
@@ -301,7 +301,7 @@ public class MainActivity extends Activity {
             new AlertDialog.Builder(this)
                     .setTitle("Connect with ChatGPT")
                     .setMessage("Sign in using the official ChatGPT website in your browser. "
-                            + "BIOQRA never asks for your password or reads your conversations.\\n\\n"
+                            + "BIOQRA never asks for your password or reads your conversations.\n\n"
                             + "Eligible users can separately authorize AI requests using their ChatGPT plan. "
                             + "Usage is subject to plan limits and your approval.")
                     .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
@@ -315,8 +315,8 @@ public class MainActivity extends Activity {
                 : "ChatGPT plan use: not authorized";
         new AlertDialog.Builder(this)
                 .setTitle("ChatGPT account")
-                .setMessage("Connected account: " + account + "\\n" + permission
-                        + "\\n\\nYou can reconnect to update authorization, or sign out of BIOQRA.")
+                .setMessage("Connected account: " + account + "\n" + permission
+                        + "\n\nYou can reconnect to update authorization, or sign out of BIOQRA.")
                 .setPositiveButton("Close", (dialog, which) -> dialog.dismiss())
                 .setNeutralButton("Reconnect", (dialog, which) -> startChatGptSignIn())
                 .setNegativeButton("Sign out", (dialog, which) ->
@@ -342,7 +342,7 @@ public class MainActivity extends Activity {
                 : "This video will demonstrate how to search challenges, refresh Rosalind data, open cancer research resources and navigate hackathon listings, using real screenshots from the application.";
         new AlertDialog.Builder(this)
                 .setTitle(videoType + " — Video coming soon")
-                .setMessage(description + "\\n\\nA narrated, captioned video of up to 30 seconds will be available after the project owner has reviewed and approved the media. No video is included in this build.")
+                .setMessage(description + "\n\nA narrated, captioned video of up to 30 seconds will be available after the project owner has reviewed and approved the media. No video is included in this build.")
                 .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
                 .show();
     }
@@ -376,7 +376,7 @@ public class MainActivity extends Activity {
 
     private void addResearch(List<ResultRow> rows, ResearchCatalog.Item item) {
         rows.add(new ResultRow(item.title, item.source+" · "+item.label()
-                +"\\n"+item.summary, item.url));
+                +"\n"+item.summary, item.url));
     }
 
     private void displayPage(List<ResultRow> rows) {
@@ -482,8 +482,8 @@ public class MainActivity extends Activity {
                     addResearch(rows,item);
             }
         } else {
-            list.addView(text("BIOQRA is an experimental open-source research catalog, not a medical device. Challenge links open in your browser.\\n\\n"
-                    +"The app checks Rosalind and Open Problems automatically. Competition availability is reviewed periodically and may change; always check registration with the official organizer.\\n\\n"
+            list.addView(text("BIOQRA is an experimental open-source research catalog, not a medical device. Challenge links open in your browser.\n\n"
+                    +"The app checks Rosalind and Open Problems automatically. Competition availability is reviewed periodically and may change; always check registration with the official organizer.\n\n"
                     +"Conceived and programmed by Blas Llavero · blasllavero.com",16,false));
             return;
         }
