@@ -18,9 +18,22 @@ public final class ResearchCatalog {
     public static final String DREAM = "DREAM";
     public static final String HACK = "Hackathons";
     public static final String ML = "ML Contests";
+    public static final String GRAND = "Grand Challenge";
+    public static final String REVIEWED = "2026-11-16";
     public static final String[] FILTERS = {
-        "All sources", ROSALIND, OPEN, CANCER, DREAM, HACK, ML
+        "All sources", GRAND, CANCER, DREAM, OPEN, HACK, ML, ROSALIND
     };
+
+    public static final String[] AVAILABILITY_FILTERS = {
+        "Open / Upcoming", "Research benchmarks", "Educational exercises",
+        "Needs verification", "All records"
+    };
+    public static final int PAGE_SIZE = 25;
+
+    /** Verified is a snapshot, not a guarantee: stale records are downgraded. */
+    private static boolean freshSnapshot() {
+        return !LocalDate.now().isAfter(LocalDate.parse(REVIEWED).plusDays(7));
+    }
 
     public static final class Item {
         public final String id, title, source, summary, url, kind, topic, deadline;
@@ -29,17 +42,42 @@ public final class ResearchCatalog {
             this.id=id; this.title=title; this.source=source; this.summary=summary;
             this.url=url; this.kind=kind; this.topic=topic; this.deadline=deadline;
         }
+        public String availability() {
+            if ("funded_research".equals(kind)) return "RESEARCH";
+            if ("benchmark".equals(kind)) return "BENCHMARK";
+            if ("educational".equals(kind)) return "EDUCATIONAL";
+            if ("historical".equals(kind)) return "CLOSED";
+            if ("funding".equals(kind) && deadline != null
+                    && LocalDate.now().isAfter(LocalDate.parse(deadline))) return "CLOSED";
+            if ("competition_upcoming".equals(kind) && deadline != null
+                    && LocalDate.now().isBefore(LocalDate.parse(deadline))) return "UPCOMING";
+            if ("competition_upcoming".equals(kind) && deadline != null
+                    && !LocalDate.now().isBefore(LocalDate.parse(deadline))) return "CHECK";
+            if ("competition_open".equals(kind) && deadline != null
+                    && LocalDate.now().isAfter(LocalDate.parse(deadline))) return "CLOSED";
+            if ("competition_open".equals(kind) || "funding".equals(kind))
+                return freshSnapshot() ? "OPEN" : "CHECK";
+            if ("preregister".equals(kind)) return freshSnapshot() ? "UPCOMING" : "CHECK";
+            return "CHECK";
+        }
+
         public String label() {
-            if ("funding".equals(kind)) {
-                if (deadline != null && LocalDate.now().isAfter(LocalDate.parse(deadline))) {
-                    return "Funding call closed · verify organizer";
-                }
-                return "Funding call · closes 24 Nov 2026 · team eligibility applies";
+            String state = availability();
+            if ("OPEN".equals(state)) {
+                if ("funding".equals(kind))
+                    return "Funding applications · deadline " + deadline
+                            + " · eligibility and pre-screening required · checked " + REVIEWED;
+                return "Accepting submissions (checked " + REVIEWED + ") · confirm on organizer site";
             }
-            if ("funded_research".equals(kind)) return "Funded research topic · not an open competition";
-            if ("benchmark".equals(kind)) return "Reproducible computational benchmark";
-            if ("directory".equals(kind)) return "Challenge directory · verify participation";
-            return "Organizer event · verify dates and eligibility";
+            if ("UPCOMING".equals(state)) {
+                return "UPCOMING · " + ("preregister".equals(kind)
+                        ? "pre-register with organizer" : "opens " + deadline);
+            }
+            if ("BENCHMARK".equals(state)) return "Research benchmark · not a timed contest";
+            if ("EDUCATIONAL".equals(state)) return "Educational exercise";
+            if ("RESEARCH".equals(state)) return "Funded project · applications closed";
+            if ("CLOSED".equals(state)) return "Closed · no longer accepting applications";
+            return "Status unverified or stale · check organizer (last review " + REVIEWED + ")";
         }
     }
 
@@ -94,28 +132,45 @@ public final class ResearchCatalog {
 
         add(result,"dream-drug-discovery","DREAM x CACHE Target 2035 Drug Discovery",DREAM,
                 "Machine learning for drug discovery; confirm registration and evaluation on the official organizer page",
-                "https://dreamchallenges.org/open-challenges/","directory","drug discovery",null);
+                "https://dreamchallenges.org/open-challenges/","historical","drug discovery",null);
         add(result,"dream-quantum","DREAM-Q Target 2035 Quantum Challenge",DREAM,
                 "Quantum-inspired approaches for biomedical target challenges; verify eligibility",
                 "https://dreamchallenges.org/open-challenges/","directory","drug discovery",null);
         add(result,"dream-digital-pen","Digital Pen Feature Extraction Challenge",DREAM,
                 "Analyze cognitive-assessment pen signals; check organizer dates",
-                "https://dreamchallenges.org/open-challenges/","directory","biomedical",null);
+                "https://dreamchallenges.org/the-digital-pen-feature-extraction-challenge/","preregister","biomedical",null);
         add(result,"hack-genedis-lung-cancer","GENEDIS 2026 NSCLC multi-omics challenge",HACK,
                 "Reproducible multi-omics integration or knowledge-mining workflow for non-small-cell lung cancer; hybrid event 21 November 2026, applications closed",
-                "https://2026.genedis.org/hackathon/","directory","cancer multi-omics",null);
+                "https://2026.genedis.org/hackathon/","historical","cancer multi-omics",null);
         add(result,"dream-directory","DREAM open biomedical challenges",DREAM,
                 "Crowdsourced prediction competitions; inspect official open listings",
                 "https://dreamchallenges.org/open-challenges/","directory","biomedical",null);
         add(result,"hack-biohacking","BioHackathon Europe",HACK,
                 "Annual ELIXIR bioinformatics coding projects; 2026 event has concluded",
-                "https://biohackathon-europe.org/","directory","bioinformatics",null);
+                "https://biohackathon-europe.org/","historical","bioinformatics",null);
         add(result,"hack-genedis","GENEDIS 2026 hybrid hackathon",HACK,
                 "Biomedical challenge day; application deadline has passed",
-                "https://2026.genedis.org/hackathon/","directory","biomedical",null);
+                "https://2026.genedis.org/hackathon/","historical","biomedical",null);
         add(result,"ml-list","ML Contests — healthcare and science",ML,
                 "Public machine learning competitions; check source organizer before applying",
                 "https://mlcontests.com/","directory","biomedical",null);
+        // Public, non-educational challenges. Availability checked 16 Nov 2026.
+        // Source websites must be opened for entry requirements; statuses expire.
+        add(result, "grand-owl", "Observing What Models Learn (OWL)", GRAND,
+                "Predict recurrence after prostate cancer surgery and explain the AI predictions; testing deadline 30 Nov 2026.",
+                "https://owl.grand-challenge.org/", "competition_open", "cancer pathology", "2026-11-30");
+        add(result, "grand-lmc2", "Light My Cells 2", GRAND,
+                "Predict fluorescence microscopy channels from transmitted-light images; submissions listed as accepted.",
+                "https://lightmycells2.grand-challenge.org/", "competition_open", "bioimaging", null);
+        add(result, "grand-lung", "Lung Nodule Volumetry 2026", GRAND,
+                "Evaluate algorithms for measuring pulmonary nodule volume from CT; organizer lists accepting submissions.",
+                "https://lunovo26.grand-challenge.org/", "competition_open", "lung cancer imaging", null);
+        add(result, "grand-cobra", "COBRA: Radiotherapy Cone-Beam CT Reconstruction", GRAND,
+                "Build automated CT reconstruction for radiation planning. Training is underway; validation starts Dec 2026; test starts Jan 2027.",
+                "https://cobra2026.grand-challenge.org/", "competition_open", "cancer radiotherapy", "2027-02-15");
+        add(result, "grand-topbrain", "TopBrain Segmentation Challenge V2", GRAND,
+                "Segment brain vascular structures; final test submission phase scheduled for 11 Dec 2026.",
+                "https://topbrain2026.grand-challenge.org/", "competition_upcoming", "neuroimaging", "2026-12-11");
         return result;
     }
 
