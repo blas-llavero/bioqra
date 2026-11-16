@@ -73,9 +73,11 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(Color.BLACK);
         seed();
         researchItems.addAll(ResearchCatalog.initial());
+        mergeGrand(GrandChallengeDiscovery.load(this));
         loadCached();
         buildUi();
         refresh();
+        refreshGrand();
     }
 
     private void seed() {
@@ -205,7 +207,10 @@ public class MainActivity extends Activity {
                     int position, long id) { currentPage = 0; showItems(); }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
-        row("Cancer Research", "Refresh", () -> showSection("Cancer Research"), this::refresh);
+        row("Cancer Research", "Refresh", () -> showSection("Cancer Research"), () -> {
+            refresh();
+            refreshGrand();
+        });
         row("Challenges", "Hackathons", () -> showSection("Challenges"),
                 () -> showSection("Hackathons"));
         row("App Description", "How to Use",
@@ -392,6 +397,35 @@ public class MainActivity extends Activity {
             return;
         }
         displayPage(rows);
+    }
+
+    private void mergeGrand(List<ResearchCatalog.Item> live) {
+        if(live == null || live.isEmpty()) return;
+        // The official live index supersedes curated Grand Challenge snapshots.
+        // Keep all non-Grand sources unchanged and avoid duplicate challenge URLs.
+        researchItems.removeIf(item -> ResearchCatalog.GRAND.equals(item.source));
+        researchItems.addAll(live);
+    }
+
+    private void refreshGrand() {
+        WORKER.execute(() -> {
+            try {
+                List<ResearchCatalog.Item> updated=GrandChallengeDiscovery.discover();
+                GrandChallengeDiscovery.save(this,updated);
+                runOnUiThread(() -> {
+                    mergeGrand(updated);
+                    status.setText("Official Grand Challenge index refreshed: "
+                            + updated.size()+" accepting/upcoming entries · Rosalind and Open Problems available");
+                    showItems();
+                });
+            } catch(Exception e) {
+                runOnUiThread(() -> {
+                    status.setText("Grand Challenge live search unavailable; saved list kept. "
+                            + "Use Refresh to retry.");
+                    showItems();
+                });
+            }
+        });
     }
 
     private void refresh() {
