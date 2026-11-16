@@ -57,6 +57,8 @@ public class MainActivity extends Activity {
     private Button chatGptLoginButton;
     private ChatGptConnection chatGptConnection;
     private boolean chatGptSigningIn = false;
+    private String challengeMode = "manual";
+    private Button manualModeButton, automaticModeButton;
     private EditText search;
     private Spinner sourcePicker, availabilityPicker;
     private int currentPage = 0;
@@ -75,6 +77,8 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(BLUE);
         getWindow().setNavigationBarColor(Color.BLACK);
         chatGptConnection = new ChatGptConnection(this);
+        challengeMode = getSharedPreferences("bioqra_mode", MODE_PRIVATE)
+                .getString("mode","manual");
         seed();
         researchItems.addAll(ResearchCatalog.initial());
         mergeGrand(GrandChallengeDiscovery.load(this));
@@ -223,6 +227,10 @@ public class MainActivity extends Activity {
                     int position, long id) { currentPage = 0; showItems(); }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
+        row("Manual", "Automatic",
+                () -> setChallengeMode("manual"),
+                () -> setChallengeMode("automatic"));
+        updateModeControls();
         row("Cancer Research", "Refresh", () -> showSection("Cancer Research"), () -> {
             refresh();
             refreshGrand();
@@ -254,6 +262,11 @@ public class MainActivity extends Activity {
         q.setMargins(dp(6), 0, 0, 0);
         r.addView(b, q);
         a.setOnClickListener(v -> first.run()); b.setOnClickListener(v -> second.run());
+        if("Manual".equals(left) && "Automatic".equals(right)) {
+            manualModeButton=a; automaticModeButton=b;
+            a.setAlpha("manual".equals(challengeMode)?1f:0.56f);
+            b.setAlpha("automatic".equals(challengeMode)?1f:0.56f);
+        }
         root.addView(r);
     }
 
@@ -332,6 +345,43 @@ public class MainActivity extends Activity {
                 .show();
     }
 
+    private void setChallengeMode(String next) {
+        if ("automatic".equals(next) && !chatGptConnection.canUsePlan()) {
+            new AlertDialog.Builder(this)
+                .setTitle("Connect ChatGPT first")
+                .setMessage("Automatic mode requires an eligible ChatGPT account with permission to use plan capacity. Sign in using ChatGPT login above. Manual mode always works without AI.")
+                .setPositiveButton("OK",null).show();
+            return;
+        }
+        challengeMode = "automatic".equals(next) ? "automatic" : "manual";
+        getSharedPreferences("bioqra_mode",MODE_PRIVATE).edit()
+                .putString("mode",challengeMode).apply();
+        updateModeControls();
+    }
+
+    private void updateModeControls() {
+        if(manualModeButton!=null && automaticModeButton!=null){
+            manualModeButton.setAlpha("manual".equals(challengeMode)?1f:0.55f);
+            automaticModeButton.setAlpha("automatic".equals(challengeMode)?1f:0.55f);
+            manualModeButton.setContentDescription("Manual mode, no AI usage"+
+                    ("manual".equals(challengeMode)?", selected":""));
+            automaticModeButton.setContentDescription("Automatic mode, ChatGPT analysis"+
+                    ("automatic".equals(challengeMode)?", selected":""));
+        }
+        // Use a short and readable confirmation in the existing status line.
+        if(status!=null && status.getText().toString().startsWith("Mode:"))
+            status.setText("Mode: "+("automatic".equals(challengeMode)
+                    ? "Automatic — AI draft after explicit consent" : "Manual — offline tools and no AI usage"));
+    }
+
+    private void openChallenge(String title,String url){
+        Intent intent=new Intent(this,ChallengeActivity.class);
+        intent.putExtra(ChallengeActivity.TITLE,title);
+        intent.putExtra(ChallengeActivity.URL,url);
+        intent.putExtra(ChallengeActivity.MODE,challengeMode);
+        startActivity(intent);
+    }
+
     private void playApprovedIntroduction() {
         startActivity(new Intent(this, VideoActivity.class));
     }
@@ -364,7 +414,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.setMargins(0, dp(4), 0, dp(8));
         list.addView(t, lp);
-        t.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+        t.setOnClickListener(v -> openChallenge(title,url));
     }
 
     private static class ResultRow {
