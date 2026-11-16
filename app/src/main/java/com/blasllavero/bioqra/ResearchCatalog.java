@@ -36,13 +36,29 @@ public final class ResearchCatalog {
     }
 
     public static final class Item {
-        public final String id, title, source, summary, url, kind, topic, deadline;
+        public final String id, title, source, summary, url, kind, topic, deadline, verifiedOn;
         public Item(String id, String title, String source, String summary, String url,
                     String kind, String topic, String deadline) {
+            this(id,title,source,summary,url,kind,topic,deadline,REVIEWED);
+        }
+        public Item(String id, String title, String source, String summary, String url,
+                    String kind, String topic, String deadline, String verifiedOn) {
             this.id=id; this.title=title; this.source=source; this.summary=summary;
             this.url=url; this.kind=kind; this.topic=topic; this.deadline=deadline;
+            this.verifiedOn=verifiedOn;
         }
         public String availability() {
+            if ("live_open".equals(kind) || "live_upcoming".equals(kind)) {
+                try {
+                    if (verifiedOn==null || LocalDate.now().isAfter(
+                            LocalDate.parse(verifiedOn).plusDays(2))) return "CHECK";
+                    if ("live_upcoming".equals(kind) && deadline!=null
+                            && !LocalDate.now().isBefore(LocalDate.parse(deadline))) return "CHECK";
+                    if ("live_open".equals(kind) && deadline!=null
+                            && LocalDate.now().isAfter(LocalDate.parse(deadline))) return "CLOSED";
+                    return "live_open".equals(kind)?"OPEN":"UPCOMING";
+                } catch(Exception ex) {return "CHECK";}
+            }
             if ("funded_research".equals(kind)) return "RESEARCH";
             if ("benchmark".equals(kind)) return "BENCHMARK";
             if ("educational".equals(kind)) return "EDUCATIONAL";
@@ -68,7 +84,7 @@ public final class ResearchCatalog {
                 if ("funding".equals(kind))
                     return "Funding applications · deadline " + deadline
                             + " · eligibility and pre-screening required · checked " + REVIEWED;
-                return "Accepting submissions (checked " + REVIEWED + ") · confirm on organizer site";
+                return "Accepting submissions (checked " + verifiedOn + ") · confirm on organizer site";
             }
             if ("UPCOMING".equals(state)) {
                 return "UPCOMING · " + ("preregister".equals(kind)
@@ -79,7 +95,7 @@ public final class ResearchCatalog {
             if ("RESEARCH".equals(state)) return "Funded project · applications closed";
             if ("CLOSED".equals(state)) return "Closed · no longer accepting applications";
             if ("RESTRICTED".equals(state)) return "Restricted eligibility · check organizer conditions";
-            return "Status unverified or stale · check organizer (last review " + REVIEWED + ")";
+            return "Status unverified or stale · check organizer (last review " + verifiedOn + ")";
         }
     }
 
