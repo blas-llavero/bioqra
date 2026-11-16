@@ -48,6 +48,16 @@ The English 30-second Piper-narrated introduction has been reviewed and approved
 
 Android packaging uses the resource name without the file extension (`R.raw.bioqra_app_description_en`). Use exactly that filename (lowercase letters and underscores) and create the `raw` directory if necessary. **The MP4 is not yet committed to this repository**; do not assume GitHub Actions artifacts include it. Until it is added, the Android video player provides a local MP4 document picker and remembers read access on compatible Android versions. The file remains on the user's device; BIOQRA does not upload the video. When it is added, subsequent APK builds will contain the offline video. The distinct `How to Use` video will use real screenshots after that tutorial has been approved.
 
+## Live discovery across official biomedical challenge pages
+
+BIOQRA 0.3 adds **Grand Challenge index discovery** on app startup and when the user presses **Refresh**. It scans each page of the official [medical-image analysis challenge index](https://grand-challenge.org/challenges/), not only a short manually written list. The index contains hundreds of historical challenges, but BIOQRA only treats a listing as open/upcoming if the index explicitly states **Accepting submissions** or **Opening submissions**, and rejects known expired deadlines. It keeps an offline cache after a successful scan. The scan may fail if the site's HTML changes, access is blocked or the network is unavailable; in this case the previous entries remain and their verification dates expire rather than silently claiming availability.
+
+**Scope and limitations:** Neither the internet nor Grand Challenge offers a universal registry of every bioinformatics competition worldwide. This iteration significantly broadens discovery through Grand Challenge and keeps the Rosalind and Open Problems integrations, but it does **not** guarantee worldwide exhaustive coverage, automatically verify eligibility, or guarantee that the submission page remains open. Some events allow ongoing post-challenge algorithm submissions rather than new competition entries; always confirm with the organizer. Further official-platform adapters (DREAM, CodaBench and other registries) are planned. No ChatGPT API, AI credits or patient information is required for this public index scan.
+
+## Bundling the approved App Description video
+
+The owner-approved **30-second English Piper video** can be packaged directly into the Android APK by copying the exact approved `bioqra_with_piper_english_v3.mp4` to `app/src/main/res/raw/bioqra_app_description_en.mp4`, then committing that file. The in-app player automatically chooses this bundled resource and plays it offline when **App Description** is tapped. The video is **not yet in GitHub** until this binary commit has been made. The local-video picker remains available for experimental builds without the asset.
+
 ## Competition status and complete pagination (November 2026)
 
 The **Challenges** screen now defaults to **Open / Upcoming** and prioritizes competitions or funding calls with a concrete research task. Use the separate **source** and **availability** selectors to switch between:
