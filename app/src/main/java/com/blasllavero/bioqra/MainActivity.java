@@ -54,6 +54,9 @@ public class MainActivity extends Activity {
     private LinearLayout root, list;
     private ScrollView mainScroll;
     private TextView status, heading;
+    private Button chatGptLoginButton;
+    private ChatGptConnection chatGptConnection;
+    private boolean chatGptSigningIn = false;
     private EditText search;
     private Spinner sourcePicker, availabilityPicker;
     private int currentPage = 0;
@@ -71,6 +74,7 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(BLUE);
         getWindow().setNavigationBarColor(Color.BLACK);
+        chatGptConnection = new ChatGptConnection(this);
         seed();
         researchItems.addAll(ResearchCatalog.initial());
         mergeGrand(GrandChallengeDiscovery.load(this));
@@ -164,9 +168,21 @@ public class MainActivity extends Activity {
         });
         scroll.addView(root);
         setContentView(scroll);
+        // Persistent account entry in the upper-right corner of the main screen.
+        // The button starts the official browser-based Sign in with ChatGPT flow.
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = text("BIOQRA", 30, true);
-        title.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.addView(title);
+        title.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        header.addView(title, new LinearLayout.LayoutParams(0, dp(58), 1));
+        chatGptLoginButton = button("ChatGPT login");
+        chatGptLoginButton.setContentDescription("Log in with ChatGPT");
+        chatGptLoginButton.setTextSize(13);
+        header.addView(chatGptLoginButton, new LinearLayout.LayoutParams(dp(144), dp(52)));
+        chatGptLoginButton.setOnClickListener(v -> showChatGptAccount());
+        root.addView(header);
+        updateChatGptButton();
         TextView subtitle = text("Open Bioinformatics Research & Patient Assistance", 13, false);
         subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(subtitle);
@@ -239,6 +255,81 @@ public class MainActivity extends Activity {
         r.addView(b, q);
         a.setOnClickListener(v -> first.run()); b.setOnClickListener(v -> second.run());
         root.addView(r);
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (!chatGptSigningIn) updateChatGptButton();
+    }
+
+    private void updateChatGptButton() {
+        if (chatGptLoginButton == null || chatGptConnection == null) return;
+        if (chatGptSigningIn) {
+            chatGptLoginButton.setText("Connecting...");
+            chatGptLoginButton.setEnabled(false);
+        } else {
+            boolean connected = !"Not connected".equals(chatGptConnection.accountLabel());
+            chatGptLoginButton.setText(connected ? "ChatGPT ✓" : "ChatGPT login");
+            chatGptLoginButton.setContentDescription(connected
+                    ? "ChatGPT connected. Open account options."
+                    : "Log in with ChatGPT");
+            chatGptLoginButton.setEnabled(true);
+        }
+    }
+
+    private void startChatGptSignIn() {
+        if (chatGptSigningIn) return;
+        chatGptSigningIn = true;
+        updateChatGptButton();
+        chatGptConnection.signIn(this, (success, message) -> {
+            chatGptSigningIn = false;
+            updateChatGptButton();
+            if (isFinishing() || isDestroyed()) return;
+            new AlertDialog.Builder(this)
+                    .setTitle("ChatGPT connection")
+                    .setMessage(message + "\\n\\nBIOQRA will not submit solutions to external contests automatically.")
+                    .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                    .show();
+        });
+    }
+
+    private void showChatGptAccount() {
+        if (chatGptSigningIn) return;
+        String account = chatGptConnection.accountLabel();
+        boolean connected = !"Not connected".equals(account);
+        if (!connected) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Connect with ChatGPT")
+                    .setMessage("Sign in using the official ChatGPT website in your browser. "
+                            + "BIOQRA never asks for your password or reads your conversations.\\n\\n"
+                            + "Eligible users can separately authorize AI requests using their ChatGPT plan. "
+                            + "Usage is subject to plan limits and your approval.")
+                    .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton("Continue with ChatGPT",
+                            (dialog, which) -> startChatGptSignIn())
+                    .show();
+            return;
+        }
+        String permission = chatGptConnection.canUsePlan()
+                ? "ChatGPT plan use: authorized"
+                : "ChatGPT plan use: not authorized";
+        new AlertDialog.Builder(this)
+                .setTitle("ChatGPT account")
+                .setMessage("Connected account: " + account + "\\n" + permission
+                        + "\\n\\nYou can reconnect to update authorization, or sign out of BIOQRA.")
+                .setPositiveButton("Close", (dialog, which) -> dialog.dismiss())
+                .setNeutralButton("Reconnect", (dialog, which) -> startChatGptSignIn())
+                .setNegativeButton("Sign out", (dialog, which) ->
+                        new AlertDialog.Builder(this)
+                            .setTitle("Sign out from BIOQRA?")
+                            .setMessage("BIOQRA will stop using this account. "
+                                    + "You can also manage app permissions in ChatGPT settings.")
+                            .setNegativeButton("Cancel", (d, w) -> d.dismiss())
+                            .setPositiveButton("Sign out", (d, w) -> {
+                                chatGptConnection.signOut();
+                                updateChatGptButton();
+                            }).show())
+                .show();
     }
 
     private void playApprovedIntroduction() {
