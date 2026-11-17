@@ -41,7 +41,7 @@ The trusted source reader is implemented in `TrustedChallengeReader.java` and th
 
 ## ChatGPT account sign-in (experimental)
 
-The Android home screen has a **ChatGPT login** button in the upper-right corner. It opens an account dialog and then an official browser-based OAuth/PKCE consent flow for eligible ChatGPT plans, without accepting or storing the user's ChatGPT password. The account button subsequently displays **ChatGPT ✓** and offers account status, reauthorization and local sign-out. Authorization is separate from challenge participation.
+The Android **AI Settings · models & automation** screen has a **ChatGPT login** button, account status, reconnect and local sign-out controls. The login button is no longer shown in the home-screen header. It opens an account dialog and then an official browser-based OAuth/PKCE consent flow for eligible ChatGPT plans, without accepting or storing the user's ChatGPT password. Once connected, the account button inside AI Settings displays **ChatGPT ✓** and offers account status, reauthorization and local sign-out. Authorization is separate from challenge participation.
 
 The current release includes the login UI, Manual and Automatic workbench views, and an experimental ChatGPT draft-generation path. Automatic mode still requires per-attempt consent, and does **not** independently execute or validate AI-produced solutions. Plan-linked access is subject to availability, explicit authorization and usage limits. Real-world OAuth success must still be verified on a test device; a successful APK build alone is not proof that an account can connect.
 
