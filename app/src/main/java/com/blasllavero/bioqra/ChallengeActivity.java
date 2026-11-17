@@ -29,8 +29,9 @@ public final class ChallengeActivity extends Activity {
     public static final String TITLE="challenge_title";
     public static final String URL="challenge_url";
     public static final String MODE="challenge_mode";
+    public static final String KIND="challenge_kind";
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
-    private String title, url, mode;
+    private String title, url, mode, kind;
     private TextView status, output, statement;
     private EditText sample;
     private Button aiButton, loadButton, offlineButton;
@@ -67,6 +68,8 @@ public final class ChallengeActivity extends Activity {
         title=getIntent().getStringExtra(TITLE);
         url=getIntent().getStringExtra(URL);
         mode=getIntent().getStringExtra(MODE);
+        kind=getIntent().getStringExtra(KIND);
+        if(kind==null)kind="directory";
         if(title==null)title="Challenge";
         if(url==null)url="";
         if(!"automatic".equals(mode))mode="manual";
@@ -96,6 +99,14 @@ public final class ChallengeActivity extends Activity {
         root.addView(text("Mode: "+("automatic".equals(mode)?"Automatic (ChatGPT)":"Manual (no AI)")
                 +" · Read-only · No contest submissions",14,false));
         root.addView(text(url,12,false));
+        if(isFunding()) {
+            root.addView(text("Research funding opportunity · Not a programming contest",17,true));
+            root.addView(text("ChatGPT can prepare a research proposal and an unexecuted methodology, but it cannot establish that this cancer research challenge is solved. The organizer may require an eligible research team, experimental data and scientific validation.",14,false));
+        } else if("benchmark".equals(kind)) {
+            root.addView(text("Scientific benchmark · Results require real evaluation data and metrics",15,true));
+        } else if("directory".equals(kind)) {
+            root.addView(text("Source listing · Check that the retrieved webpage contains the actual challenge rules and dataset.",14,false));
+        }
 
         status=text("Ready. Only public HTML from an approved HTTPS source can be retrieved.",14,false);
         root.addView(status);
@@ -131,10 +142,14 @@ public final class ChallengeActivity extends Activity {
             status.setText("Local checks completed. No network/AI usage.");
         });
 
-        aiButton=button("3 · Ask ChatGPT for a solution proposal");
+        aiButton=button(isFunding()
+                ? "3 · Ask ChatGPT for a research proposal"
+                : "3 · Ask ChatGPT for a solution proposal");
         root.addView(aiButton,new LinearLayout.LayoutParams(-1,dp(55)));
         aiButton.setOnClickListener(v->confirmAI());
-        output=text("No solution proposal or independent verification yet.",14,false);
+        output=text(isFunding()
+                ? "No research proposal or independent validation yet."
+                : "No solution proposal or independent verification yet.",14,false);
         output.setTextIsSelectable(true);
         root.addView(text("Results and limitations",18,true));
         root.addView(output);
@@ -143,6 +158,10 @@ public final class ChallengeActivity extends Activity {
         // Automatic mode retrieves the public challenge on opening.
         // Actual ChatGPT usage still requires consent to transmit each statement.
         if("automatic".equals(mode))retrieve();
+    }
+
+    private boolean isFunding() {
+        return "funding".equals(kind) || "funded_research".equals(kind);
     }
 
     private void retrieve(){
@@ -188,7 +207,7 @@ public final class ChallengeActivity extends Activity {
         }
         if(fetchedText.length()<100){showError("Retrieve and review a complete public statement first.");return;}
         new AlertDialog.Builder(this)
-            .setTitle("Send public challenge to ChatGPT?")
+            .setTitle(isFunding() ? "Prepare research proposal with ChatGPT?" : "Send public challenge to ChatGPT?")
             .setMessage("BIOQRA will send this publicly available statement and any PUBLIC sequence you entered to your authorized ChatGPT account. This uses plan capacity and may be subject to limits. Do not include patient records or private competition data.\n\nThe result is a proposal, NOT a verified solution. Nothing will be submitted externally.")
             .setNegativeButton("Cancel",null)
             .setPositiveButton("Authorize this attempt",(d,w)->chooseModelAndRun())
@@ -228,13 +247,17 @@ public final class ChallengeActivity extends Activity {
         final String input=sample.getText().toString();
         EXEC.execute(()->{
             try{
-                String answer=connection.respond(model,title,fetchedText,input);
+                String answer=connection.respond(model,title,fetchedText,input,kind);
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     busy=false;
-                    output.setText("AI DRAFT — UNVERIFIED\n\n"+answer
+                    output.setText((isFunding()
+                            ? "AI RESEARCH PROPOSAL — UNVERIFIED"
+                            : "AI DRAFT — UNVERIFIED")+"\n\n"+answer
                         +"\n\nBIOQRA did not run generated code, submit results or validate any external benchmark.");
-                    status.setText("AI draft ready. Independently check algorithms, data and organizer requirements.");
+                    status.setText(isFunding()
+                            ? "Research proposal drafted. Data and independent scientific validation are still required."
+                            : "AI draft ready. Independently check algorithms, data and organizer requirements.");
                     updateButtons();
                 });
             }catch(Exception e){
