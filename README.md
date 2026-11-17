@@ -4,6 +4,16 @@
 
 BIOQRA is an open-source project for Android and the web. It aims to help researchers discover bioinformatics challenges, develop reproducible computational approaches, and verify results with scientific software. A separate, privacy-first patient research module is planned to help people document their experiences, securely manage health records, and optionally contribute de-identified information to ethically reviewed research. BIOQRA is not a diagnostic, treatment, vaccine-testing, or medication-safety determination tool.
 
+## AI model preferences and low-interaction Automatic Mode
+
+**AI Settings** on the main screen manages the authenticated account's model list. Every challenge card has its own **AI model** dropdown. Each challenge initially inherits the global model; selecting a model there saves an override locally. Selecting **Apply this model to ALL challenges** from AI Settings replaces all saved overrides and applies the selected global default to existing and future challenge cards. Choices survive app restart on the same device.
+
+The default **Auto · preferred high-capability model** selects among models *actually returned by the connected account*, using transparent model-name hints (prioritizing known full/Pro/high variants over mini/nano); this is **not a guaranteed capability ranking** and model availability or limits can change. If a specifically saved model is unavailable, the attempt stops with a message rather than silently substituting another model.
+
+**Automatic Mode, with optional once-only consent:** When the user explicitly enables **Automatically analyze selected public challenges** in AI Settings, opening an individual challenge automatically resolves its public details and uses the saved model without repeated model or consent dialogs. The setting is **off by default**; users can disable it at any time. No private user-pasted input is transmitted in unattended mode; only retrieved public organizer text. The application imposes a **local limit of 3 attempts/day by default**, configurable to 1, 3, 5 or 10 attempts, and avoids automatic repeat attempts on the same challenge during the same local day. Failed attempts may count toward the limit. AI drafts can be re-opened from local app preferences; no third-party result submission is performed. The manual AI button can still request a single attempt with a separate confirmation.
+
+This is **user-triggered per-selected-challenge automation**, not a background agent processing every listing without the app open. Daily limits are local safeguards, not a guarantee of available ChatGPT plan capacity or a financial quota. No model or plan promises unlimited free usage. The AI's analysis is **unverified** until independent tools and suitable real data have been used.
+
 ## Automatic discovery of the detailed challenge brief
 
 BIOQRA no longer assumes that a catalog URL is the actual problem statement. In **Automatic Mode**, when a challenge is selected, its public HTTPS page is inspected and BIOQRA searches for relevant, challenge-title-matching links **on the same approved organizer site**. It evaluates at most four follow-up pages (from up to eight potential links), extracts the public statement and shows the exact selected source URL. No ChatGPT capacity is consumed during link discovery, which relies on local HTML parsing and ranking.
@@ -20,7 +30,7 @@ The project owner's example AI draft is a **proposal**, not a validated result: 
 
 ## Interactive challenge workspace: Manual and Automatic (experimental)
 
-Choose **Manual** or **Automatic** on the BIOQRA Android home screen, then tap a challenge result to open its workbench instead of going directly to the external website. Both modes provide a separate button to open the organizer's official page in the browser.
+Choose **Manual Mode** or **Automatic Mode** on the BIOQRA Android home screen, then tap a challenge result to open its workbench instead of going directly to the external website. Both modes provide a separate button to open the organizer's official page in the browser.
 
 - **Manual** (default): retrieve publicly readable HTML from an allowlisted HTTPS research site and inspect it. Paste *public* DNA/RNA sample sequences and use the local/offline sequence calculator for nucleotide counts, GC%, RNA transcription, and reverse complement. No ChatGPT request is sent.
 - **Automatic**: requires an authorized ChatGPT account. BIOQRA first retrieves only public HTML from approved HTTPS research domains; it does not log in to challenge websites, bypass paywalls, follow redirects, execute downloaded code, retrieve private data, or upload files. After showing the retrieved text, it requests explicit confirmation before transmitting the public statement and any user-pasted public example to ChatGPT and choosing a model. The model is asked for a **reproducible draft** and suggested checks, not to claim scientific or clinical validation.
