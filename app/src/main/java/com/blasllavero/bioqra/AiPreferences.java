@@ -199,7 +199,85 @@ public final class AiPreferences {
         if(!edit.commit())throw new Exception("Could not save restored settings.");
     }
     public void storeResult(String key,String answer){
-        if(answer!=null && answer.length()<=90000)
-            prefs.edit().putString("latest_"+key,answer).putString("last_date_"+key,today()).apply();
+        storeResult(key,"Challenge",null,null,answer);
+    }
+    public void storeResult(String key,String title,String url,String model,String answer){
+        if(answer!=null && answer.length()<=90000){
+            SharedPreferences.Editor edit=prefs.edit().putString("latest_"+key,answer)
+                .putString("last_date_"+key,today()).putString("title_"+key,
+                    title==null?"Challenge":title);
+            if(url!=null)edit.putString("source_"+key,url);
+            if(model!=null)edit.putString("ai_model_"+key,model);
+            edit.apply();
+        }
+    }
+
+    public static final class SavedResult {
+        public final String key,title,date,source,model,answer;
+        SavedResult(String key,String title,String date,String source,String model,String answer){
+            this.key=key;this.title=title;this.date=date;this.source=source;
+            this.model=model;this.answer=answer;
+        }
+    }
+
+    public java.util.List<SavedResult> savedResults(){
+        java.util.List<SavedResult> found=new java.util.ArrayList<>();
+        for(java.util.Map.Entry<String,?> e:prefs.getAll().entrySet()){
+            if(!e.getKey().matches("latest_[a-f0-9]{32}") || !(e.getValue() instanceof String))continue;
+            String key=e.getKey().substring(7);
+            found.add(new SavedResult(key,prefs.getString("title_"+key,"Challenge"),
+                prefs.getString("last_date_"+key,today()),
+                prefs.getString("source_"+key,""),prefs.getString("ai_model_"+key,""),
+                (String)e.getValue()));
+        }
+        found.sort((a,b)->b.date.compareTo(a.date));
+        return found;
+    }
+
+    public org.json.JSONObject exportResults(){
+        org.json.JSONObject root=new org.json.JSONObject();
+        try{
+            root.put("type","bioqra-results");root.put("version",1);
+            org.json.JSONArray items=new org.json.JSONArray();
+            for(SavedResult item:savedResults()){
+                org.json.JSONObject obj=new org.json.JSONObject();
+                obj.put("key",item.key);obj.put("title",item.title);
+                obj.put("date",item.date);obj.put("source",item.source);
+                obj.put("model",item.model);obj.put("answer",item.answer);
+                items.put(obj);
+            }
+            root.put("results",items);
+        }catch(org.json.JSONException e){throw new IllegalStateException(e);}
+        return root;
+    }
+
+    public int importResults(org.json.JSONObject root) throws Exception{
+        if(!"bioqra-results".equals(root.optString("type")) || root.optInt("version")!=1)
+            throw new Exception("Unsupported BIOQRA results archive.");
+        org.json.JSONArray items=root.getJSONArray("results");
+        if(items.length()>1500)throw new Exception("Too many results.");
+        java.util.List<SavedResult> validated=new java.util.ArrayList<>();
+        for(int i=0;i<items.length();i++){
+            org.json.JSONObject obj=items.getJSONObject(i);
+            String key=obj.getString("key"),title=obj.getString("title");
+            String date=obj.getString("date"),answer=obj.getString("answer");
+            String source=obj.optString("source",""),model=obj.optString("model","");
+            if(!key.matches("[a-f0-9]{32}") || title.length()>250 || title.isEmpty()
+                || !date.matches("\\d{4}-\\d{2}-\\d{2}")
+                || answer.length()>90000 || source.length()>1000 || model.length()>160)
+                throw new Exception("Invalid archive entry #"+(i+1));
+            validated.add(new SavedResult(key,title,date,source,model,answer));
+        }
+        SharedPreferences.Editor edit=prefs.edit();
+        for(SavedResult item:validated){
+            if(prefs.getString("last_date_"+item.key,"").compareTo(item.date)>0)continue;
+            edit.putString("latest_"+item.key,item.answer)
+                .putString("title_"+item.key,item.title)
+                .putString("last_date_"+item.key,item.date)
+                .putString("source_"+item.key,item.source)
+                .putString("ai_model_"+item.key,item.model);
+        }
+        if(!edit.commit())throw new Exception("Unable to restore results.");
+        return validated.size();
     }
 }
