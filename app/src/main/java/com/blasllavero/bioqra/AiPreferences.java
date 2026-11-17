@@ -212,6 +212,14 @@ public final class AiPreferences {
         }
     }
 
+    public void updateLegacyMetadata(String key,String title,String source){
+        if(!prefs.contains("latest_"+key))return;
+        SharedPreferences.Editor e=prefs.edit();
+        if(!prefs.contains("title_"+key) && title!=null)e.putString("title_"+key,title);
+        if(!prefs.contains("source_"+key) && source!=null)e.putString("source_"+key,source);
+        e.apply();
+    }
+
     public static final class SavedResult {
         public final String key,title,date,source,model,answer;
         SavedResult(String key,String title,String date,String source,String model,String answer){
