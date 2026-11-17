@@ -267,6 +267,9 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         if(list!=null){
+            if(chatGptConnection!=null && !chatGptConnection.canUsePlan()){
+                aiModels.clear();
+            }
             showItems();
             refreshAiModels();
         }
