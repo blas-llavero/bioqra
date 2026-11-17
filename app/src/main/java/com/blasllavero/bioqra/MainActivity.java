@@ -468,6 +468,11 @@ public class MainActivity extends Activity {
         picker.setAdapter(adapter);
         String key=AiPreferences.stableKey(title,title);
         String override=aiPreferences.override(key);
+        if(override!=null && !keys.contains(override)){
+            names.add("Unavailable saved model: "+override);
+            keys.add(override);
+            adapter.notifyDataSetChanged();
+        }
         int selected=override==null?0:keys.indexOf(override);
         picker.setSelection(Math.max(0,selected));
         picker.setEnabled(!aiModels.isEmpty());
