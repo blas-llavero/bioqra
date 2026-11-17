@@ -160,6 +160,10 @@ public final class AiSettingsActivity extends Activity {
             titles.add(m.title);modelKeys.add(m.slug);
         }
         String chosen=settings.globalModel();
+        if(!modelKeys.contains(chosen)){
+            titles.add("Unavailable saved global model: "+chosen);
+            modelKeys.add(chosen);
+        }
         ArrayAdapter<String> adapter=new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,titles);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
