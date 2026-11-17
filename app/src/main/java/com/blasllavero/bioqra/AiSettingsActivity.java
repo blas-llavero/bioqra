@@ -2,6 +2,11 @@ package com.blasllavero.bioqra;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.DocumentsContract;
+import android.content.ContentResolver;
+import org.json.JSONObject;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Build;
@@ -24,6 +29,9 @@ import java.util.concurrent.Executors;
 /** On-device settings for account-specific model choices and automatic AI usage. */
 public final class AiSettingsActivity extends Activity {
     private static final ExecutorService WORKER=Executors.newSingleThreadExecutor();
+    private static final int SAVE_SETTINGS=2101,RESTORE_SETTINGS=2102;
+    private static final int SAVE_RESULTS=2103,RESTORE_RESULTS=2104;
+    private static final int PICK_PDF_FOLDER=2105;
     private AiPreferences settings;
     private ChatGptConnection account;
     private Spinner models,limitPicker;
@@ -31,6 +39,7 @@ public final class AiSettingsActivity extends Activity {
     private CheckBox consent;
     private Button accountButton;
     private TextView accountStatus;
+    private TextView backupStatus,pdfFolderStatus;
     private boolean signingIn=false;
     private List<ChatGptConnection.Model> available=new ArrayList<>();
     private List<String> modelKeys=new ArrayList<>();
@@ -153,7 +162,138 @@ public final class AiSettingsActivity extends Activity {
         Button reload=button("Refresh models from ChatGPT");
         root.addView(reload,new LinearLayout.LayoutParams(-1,dp(52)));
         reload.setOnClickListener(v->loadModels());
+        TextView backupHeading=label("Backup, Restore & PDF",20);
+        backupHeading.setTypeface(null,Typeface.BOLD);
+        root.addView(backupHeading);
+        root.addView(label("Export portable settings or challenge results as JSON. "
+                +"Restore them later on this or another Android device. "
+                +"ChatGPT credentials and automatic consent are never included.",14));
+        Button exportSettings=button("Export settings (.json)");
+        root.addView(exportSettings,new LinearLayout.LayoutParams(-1,dp(50)));
+        exportSettings.setOnClickListener(v->createJsonFile(SAVE_SETTINGS,"bioqra-settings.json"));
+        Button importSettings=button("Import settings (.json)");
+        root.addView(importSettings,new LinearLayout.LayoutParams(-1,dp(50)));
+        importSettings.setOnClickListener(v->openJsonFile(RESTORE_SETTINGS));
+        Button exportResults=button("Export saved AI results (.json)");
+        root.addView(exportResults,new LinearLayout.LayoutParams(-1,dp(50)));
+        exportResults.setOnClickListener(v->createJsonFile(SAVE_RESULTS,"bioqra-results.json"));
+        Button importResults=button("Import saved AI results (.json)");
+        root.addView(importResults,new LinearLayout.LayoutParams(-1,dp(50)));
+        importResults.setOnClickListener(v->openJsonFile(RESTORE_RESULTS));
+
+        pdfFolderStatus=label("",13);
+        root.addView(pdfFolderStatus);
+        updateFolderLabel();
+        Button selectFolder=button("Choose folder for automatic PDFs");
+        root.addView(selectFolder,new LinearLayout.LayoutParams(-1,dp(53)));
+        selectFolder.setOnClickListener(v->{
+            Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    |Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    |Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            startActivityForResult(intent,PICK_PDF_FOLDER);
+        });
+        Button exportPdf=button("Export all saved results as PDFs");
+        root.addView(exportPdf,new LinearLayout.LayoutParams(-1,dp(53)));
+        exportPdf.setOnClickListener(v->exportAllPdfs());
+        root.addView(label("PDF location: selected folder / YY / MM / DD-Challenge / "
+                +"DD-Challenge.pdf. Existing files are not deleted. "
+                +"For a new device, select the folder again after restoring.",13));
+        backupStatus=label("Backups and PDFs stay on your device until you share them.",13);
+        root.addView(backupStatus);
         loadModels();
+    }
+
+
+    private void createJsonFile(int request,String suggested){
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE,suggested);
+        startActivityForResult(intent,request);
+    }
+    private void openJsonFile(int request){
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        startActivityForResult(intent,request);
+    }
+    private void updateFolderLabel(){
+        if(pdfFolderStatus==null)return;
+        String folder=settings.pdfTreeUri();
+        pdfFolderStatus.setText(folder==null
+                ? "PDF folder: not configured (automatic PDF creation is disabled)."
+                : "PDF folder configured: "+Uri.parse(folder).getLastPathSegment());
+    }
+    private void exportAllPdfs(){
+        String folder=settings.pdfTreeUri();
+        if(folder==null){backupStatus.setText("Select a PDF folder first.");return;}
+        List<AiPreferences.SavedResult> saved=settings.savedResults();
+        if(saved.isEmpty()){backupStatus.setText("No saved AI results to export.");return;}
+        backupStatus.setText("Exporting "+saved.size()+" research PDFs...");
+        WORKER.execute(()->{
+            int count=0;String failure="";
+            for(AiPreferences.SavedResult item:saved){
+                try{ArchiveFiles.makePdf(this,Uri.parse(folder),item);count++;}
+                catch(Exception e){failure=e.getMessage();break;}
+            }
+            final int done=count;
+            final String error=failure;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                backupStatus.setText("Exported "+done+"/"+saved.size()+" PDFs."
+                        +(error.isEmpty()?"":" Error: "+error));
+            });
+        });
+    }
+    @Override protected void onActivityResult(int request,int result,Intent data){
+        super.onActivityResult(request,result,data);
+        if(result!=RESULT_OK||data==null||data.getData()==null)return;
+        Uri uri=data.getData();
+        if(request==PICK_PDF_FOLDER){
+            try{
+                int flags=data.getFlags()&(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        |Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                getContentResolver().takePersistableUriPermission(uri,flags);
+                settings.setPdfTreeUri(uri.toString());
+                updateFolderLabel();
+                backupStatus.setText("PDF destination configured. New AI drafts will be saved automatically.");
+            }catch(Exception e){backupStatus.setText("Folder permission failed: "+e.getMessage());}
+            return;
+        }
+        backupStatus.setText("Processing BIOQRA backup...");
+        WORKER.execute(()->{
+            String outcome;
+            try{
+                if(request==SAVE_SETTINGS || request==SAVE_RESULTS){
+                    JSONObject payload=request==SAVE_SETTINGS?settings.exportSettings()
+                            :settings.exportResults();
+                    ArchiveFiles.writeJson(this,uri,payload);
+                    outcome="BIOQRA "+(request==SAVE_SETTINGS?"settings":"results")+" exported.";
+                }else if(request==RESTORE_SETTINGS){
+                    JSONObject json=ArchiveFiles.readJson(this,uri);
+                    settings.importSettings(json);
+                    outcome="Settings restored. ChatGPT consent is disabled; reconnect if needed.";
+                }else if(request==RESTORE_RESULTS){
+                    JSONObject json=ArchiveFiles.readJson(this,uri);
+                    int n=settings.importResults(json);
+                    outcome=n+" saved results restored. Open each challenge to view them.";
+                }else return;
+            }catch(Exception e){outcome="Backup operation failed: "+e.getMessage();}
+            final String message=outcome;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                backupStatus.setText(message);
+                if(request==RESTORE_SETTINGS){
+                    consent.setChecked(settings.autoConsent());
+                    populateModels(available);
+                    updateRemaining();
+                    int[] limits={1,3,5,10};
+                    for(int i=0;i<limits.length;i++)
+                        if(settings.dailyLimit()==limits[i])limitPicker.setSelection(i);
+                }
+            });
+        });
     }
 
     @Override protected void onResume(){
