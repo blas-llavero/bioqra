@@ -28,7 +28,7 @@ public final class FullBackup {
     private static final int MAX_ENTRIES=550;
     private static final int MAX_PDF_BYTES=8_000_000;
 
-    private static byte[] jsonBytes(JSONObject obj){
+    private static byte[] jsonBytes(JSONObject obj) throws Exception{
         return obj.toString(2).getBytes(StandardCharsets.UTF_8);
     }
     private static void add(ZipOutputStream zip,String name,byte[] data) throws Exception{
