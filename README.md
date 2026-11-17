@@ -4,6 +4,12 @@
 
 BIOQRA is an open-source project for Android and the web. It aims to help researchers discover bioinformatics challenges, develop reproducible computational approaches, and verify results with scientific software. A separate, privacy-first patient research module is planned to help people document their experiences, securely manage health records, and optionally contribute de-identified information to ethically reviewed research. BIOQRA is not a diagnostic, treatment, vaccine-testing, or medication-safety determination tool.
 
+## Mode labels and interpretation of cancer research AI drafts
+
+Android home-screen buttons are named **Manual Mode** and **Automatic Mode**. Selecting a challenge carries its kind (educational exercise, benchmark, funding call, etc.) into the workbench. For research funding calls such as **Gastroesophageal transformation into cancer**, BIOQRA now labels the output **AI RESEARCH PROPOSAL — UNVERIFIED** and explains that research data, experimental testing, eligible teams and independent validation are missing. It must not call the funding call a solved programming problem or a verified cancer treatment.
+
+The project owner's example AI draft is a **proposal**, not a validated result: it suggests a longitudinal dataset, a site-held-out machine-learning baseline and specific tests, but no real dataset was provided and no code was executed. Scientific outcomes require research governance and validation.
+
 ## Interactive challenge workspace: Manual and Automatic (experimental)
 
 Choose **Manual** or **Automatic** on the BIOQRA Android home screen, then tap a challenge result to open its workbench instead of going directly to the external website. Both modes provide a separate button to open the organizer's official page in the browser.
