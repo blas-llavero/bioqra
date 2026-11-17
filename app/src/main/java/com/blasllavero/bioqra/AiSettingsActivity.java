@@ -32,6 +32,7 @@ public final class AiSettingsActivity extends Activity {
     private static final int SAVE_SETTINGS=2101,RESTORE_SETTINGS=2102;
     private static final int SAVE_RESULTS=2103,RESTORE_RESULTS=2104;
     private static final int PICK_PDF_FOLDER=2105;
+    private static final int EXPORT_ALL_ZIP=2106,IMPORT_ALL_ZIP=2107;
     private AiPreferences settings;
     private ChatGptConnection account;
     private Spinner models,limitPicker;
@@ -165,9 +166,22 @@ public final class AiSettingsActivity extends Activity {
         TextView backupHeading=label("Backup, Restore & PDF",20);
         backupHeading.setTypeface(null,Typeface.BOLD);
         root.addView(backupHeading);
-        root.addView(label("Export portable settings or challenge results as JSON. "
-                +"Restore them later on this or another Android device. "
-                +"ChatGPT credentials and automatic consent are never included.",14));
+        root.addView(label("Create a single ZIP containing settings, saved AI results "
+                +"and PDFs, or use the individual JSON buttons below. "
+                +"ChatGPT tokens/passwords and unattended consent are never exported.",14));
+        Button exportAll=button("Export all · settings + results + PDFs (.zip)");
+        root.addView(exportAll,new LinearLayout.LayoutParams(-1,dp(56)));
+        exportAll.setOnClickListener(v->createZipFile());
+        Button importAll=button("Import all · restore ZIP backup");
+        root.addView(importAll,new LinearLayout.LayoutParams(-1,dp(56)));
+        importAll.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Restore complete BIOQRA backup?")
+            .setMessage("Settings will be replaced and saved AI results merged. "
+                +"Existing PDF files will not be overwritten. "
+                +"Configure the PDF folder first. "
+                +"ChatGPT login and permission for unattended AI use are NOT imported.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Choose ZIP",(d,w)->openZipFile()).show());
         Button exportSettings=button("Export settings (.json)");
         root.addView(exportSettings,new LinearLayout.LayoutParams(-1,dp(50)));
         exportSettings.setOnClickListener(v->createJsonFile(SAVE_SETTINGS,"bioqra-settings.json"));
@@ -206,6 +220,19 @@ public final class AiSettingsActivity extends Activity {
     }
 
 
+    private void createZipFile(){
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/zip");
+        intent.putExtra(Intent.EXTRA_TITLE,"bioqra-complete-backup.zip");
+        startActivityForResult(intent,EXPORT_ALL_ZIP);
+    }
+    private void openZipFile(){
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        startActivityForResult(intent,IMPORT_ALL_ZIP);
+    }
     private void createJsonFile(int request,String suggested){
         Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -266,7 +293,16 @@ public final class AiSettingsActivity extends Activity {
         WORKER.execute(()->{
             String outcome;
             try{
-                if(request==SAVE_SETTINGS || request==SAVE_RESULTS){
+                if(request==EXPORT_ALL_ZIP){
+                    FullBackup.Report report=FullBackup.exportAll(this,uri,settings);
+                    outcome="Complete ZIP saved: settings + "+report.results
+                            +" results + "+report.pdfs+" PDFs.";
+                }else if(request==IMPORT_ALL_ZIP){
+                    FullBackup.Report report=FullBackup.importAll(this,uri,settings);
+                    outcome="Complete backup restored: settings + "+report.results
+                            +" results + "+report.pdfs+" PDFs. "
+                            +"Re-enable automatic analysis separately if desired.";
+                }else if(request==SAVE_SETTINGS || request==SAVE_RESULTS){
                     JSONObject payload=request==SAVE_SETTINGS?settings.exportSettings()
                             :settings.exportResults();
                     ArchiveFiles.writeJson(this,uri,payload);
@@ -285,7 +321,7 @@ public final class AiSettingsActivity extends Activity {
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
                 backupStatus.setText(message);
-                if(request==RESTORE_SETTINGS){
+                if(request==RESTORE_SETTINGS || request==IMPORT_ALL_ZIP){
                     consent.setChecked(settings.autoConsent());
                     populateModels(available);
                     updateRemaining();
