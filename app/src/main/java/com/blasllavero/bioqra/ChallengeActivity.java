@@ -32,10 +32,12 @@ public final class ChallengeActivity extends Activity {
     public static final String KIND="challenge_kind";
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     private String title, url, mode, kind;
-    private TextView status, output, statement;
+    private TextView status, output, statement, resolvedLink;
     private EditText sample;
     private Button aiButton, loadButton, offlineButton;
     private String fetchedText="";
+    private String verifiedPageUrl="";
+    private boolean specificPage=false;
     private ChatGptConnection connection;
     private volatile boolean busy=false;
 
@@ -59,7 +61,7 @@ public final class ChallengeActivity extends Activity {
     private void updateButtons(){
         if(loadButton!=null)loadButton.setEnabled(!busy);
         if(aiButton!=null)aiButton.setEnabled(!busy && connection.canUsePlan()
-                && fetchedText.length()>=100);
+                && specificPage && fetchedText.length()>=100);
         if(offlineButton!=null)offlineButton.setEnabled(!busy);
     }
     @Override public void onCreate(Bundle saved){
@@ -110,7 +112,7 @@ public final class ChallengeActivity extends Activity {
 
         status=text("Ready. Only public HTML from an approved HTTPS source can be retrieved.",14,false);
         root.addView(status);
-        loadButton=button("1 · Retrieve public challenge statement");
+        loadButton=button("1 · Find detailed challenge statement");
         root.addView(loadButton,new LinearLayout.LayoutParams(-1,dp(55)));
         loadButton.setOnClickListener(v->retrieve());
 
@@ -123,6 +125,9 @@ public final class ChallengeActivity extends Activity {
         });
 
         root.addView(text("Public statement (read-only preview)",18,true));
+        resolvedLink=text("Detailed statement URL: not identified yet",12,false);
+        resolvedLink.setTextIsSelectable(true);
+        root.addView(resolvedLink);
         statement=text("No statement retrieved yet.",14,false);
         statement.setTextIsSelectable(true);
         root.addView(statement);
@@ -171,19 +176,21 @@ public final class ChallengeActivity extends Activity {
             return;
         }
         busy=true;
-        status.setText("Reading public HTML; no logins or website scripts are executed...");
+        status.setText("Checking official organizer links for the detailed challenge statement...");
         updateButtons();
         EXEC.execute(()->{
             try {
-                TrustedChallengeReader.Result result=TrustedChallengeReader.read(url);
+                ChallengePageResolver.Outcome result=ChallengePageResolver.resolve(url,title);
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     fetchedText=result.text;
+                    specificPage=result.specific;
+                    verifiedPageUrl=result.resolvedUrl;
                     statement.setText(result.text);
-                    status.setText("Public statement retrieved ("+result.text.length()
-                            +" characters). Check that it contains the real task and rules.");
+                    resolvedLink.setText("Selected public page: "+result.resolvedUrl);
+                    status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
                     busy=false;updateButtons();
-                    if("automatic".equals(mode) && connection.canUsePlan())
+                    if("automatic".equals(mode) && connection.canUsePlan() && specificPage)
                         confirmAI();
                 });
             } catch(Exception e){
@@ -205,7 +212,10 @@ public final class ChallengeActivity extends Activity {
                 .setPositiveButton("OK",null).show();
             return;
         }
-        if(fetchedText.length()<100){showError("Retrieve and review a complete public statement first.");return;}
+        if(!specificPage || fetchedText.length()<100){
+            showError("BIOQRA could not verify a detailed public problem statement; no AI usage authorized. Review the organizer page.");
+            return;
+        }
         new AlertDialog.Builder(this)
             .setTitle(isFunding() ? "Prepare research proposal with ChatGPT?" : "Send public challenge to ChatGPT?")
             .setMessage("BIOQRA will send this publicly available statement and any PUBLIC sequence you entered to your authorized ChatGPT account. This uses plan capacity and may be subject to limits. Do not include patient records or private competition data.\n\nThe result is a proposal, NOT a verified solution. Nothing will be submitted externally.")
@@ -247,7 +257,8 @@ public final class ChallengeActivity extends Activity {
         final String input=sample.getText().toString();
         EXEC.execute(()->{
             try{
-                String answer=connection.respond(model,title,fetchedText,input,kind);
+                String answer=connection.respond(model,title,
+                    "Source: "+verifiedPageUrl+"\n\n"+fetchedText,input,kind);
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     busy=false;
