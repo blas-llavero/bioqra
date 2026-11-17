@@ -101,6 +101,7 @@ public final class AiSettingsActivity extends Activity {
         root.addView(consent);
         consent.setOnCheckedChangeListener((b,checked)->{
             if(!checked){settings.setAutoConsent(false);return;}
+            if(settings.autoConsent())return; // already approved; avoid a second dialog
             if(!account.canUsePlan()){
                 consent.setChecked(false);
                 new AlertDialog.Builder(this)
