@@ -12,6 +12,16 @@ The GitHub Actions workflow accepts a private repository secret named `BIOQRA_DE
 
 Portable settings import does not restore ChatGPT credentials or previously granted AI consent; these must be authorized locally. The OAuth flow can skip repeated logins only while the provider's tokens remain valid/refreshable and the app data is intact. Never bypass required account consent.
 
+## One-click full backup and restore (ZIP)
+
+**AI Settings → Backup, Restore & PDF → Export all / Import all** now offers a single portable ZIP containing `settings.json`, `results.json` and `pdf/<challenge>/<YYMMDD-challenge.pdf>`. Existing dated PDF files from the chosen folder are included (up to the bounded archive limits); for a stored latest AI result without an existing PDF, BIOQRA generates its PDF while exporting. The ZIP can be saved locally, on removable storage or in any storage provider exposed by Android's document picker.
+
+**Import all** restores the global and per-challenge model settings, the saved/latest AI result per challenge and the PDF files into the configured destination's per-challenge folders. Before restoring a ZIP containing PDFs, select **Choose folder for automatic PDFs** in AI Settings. Existing PDF documents with the same filename are **not overwritten**, and newer local AI results take precedence. Backups are validated with file-type, size, item-count and path checks; archive limits are 50 MB total and approximately 550 entries. Large research collections beyond those limits require individual exports or a later archival implementation.
+
+**Privacy:** Never includes ChatGPT OAuth/access/refresh tokens, passwords, file access grants or consent for unattended AI use. Automatic consent is switched off when importing settings. The ZIP does contain the text of saved AI analyses and any accessible exported PDFs, so store it securely and do not put confidential clinical/patient data into BIOQRA. Only the current/latest saved analysis per challenge is tracked in JSON; the archive may retain older dated PDF exports when present.
+
+**Automatic Mode login guidance:** If ChatGPT is disconnected, the dialog offers to open **AI Settings → ChatGPT account → ChatGPT login** instead of referring to a removed home-screen login button.
+
 ## Backup, restoration, and automatic PDF exports
 
 In **AI Settings → Backup, Restore & PDF**, BIOQRA uses Android's built-in file picker (Storage Access Framework) to:
