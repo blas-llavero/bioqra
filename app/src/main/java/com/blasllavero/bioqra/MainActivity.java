@@ -56,6 +56,9 @@ public class MainActivity extends Activity {
     private TextView status, heading;
     private Button chatGptLoginButton;
     private ChatGptConnection chatGptConnection;
+    private AiPreferences aiPreferences;
+    private final List<ChatGptConnection.Model> aiModels=new ArrayList<>();
+    private boolean loadingModels=false;
     private boolean chatGptSigningIn = false;
     private String challengeMode = "manual";
     private Button manualModeButton, automaticModeButton;
@@ -77,6 +80,7 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(BLUE);
         getWindow().setNavigationBarColor(Color.BLACK);
         chatGptConnection = new ChatGptConnection(this);
+        aiPreferences = new AiPreferences(this);
         challengeMode = getSharedPreferences("bioqra_mode", MODE_PRIVATE)
                 .getString("mode","manual");
         seed();
@@ -187,6 +191,9 @@ public class MainActivity extends Activity {
         chatGptLoginButton.setOnClickListener(v -> showChatGptAccount());
         root.addView(header);
         updateChatGptButton();
+        Button aiSettingsButton=button("⚙ AI Settings · models & automation");
+        root.addView(aiSettingsButton,new LinearLayout.LayoutParams(-1,dp(49)));
+        aiSettingsButton.setOnClickListener(v->startActivity(new Intent(this,AiSettingsActivity.class)));
         TextView subtitle = text("Open Bioinformatics Research & Patient Assistance", 13, false);
         subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(subtitle);
@@ -248,6 +255,7 @@ public class MainActivity extends Activity {
         root.addView(list);
         row("Home", "Help", () -> showSection("Challenges"), () -> showSection("Help"));
         showItems();
+        refreshAiModels();
     }
 
     private void row(String left, String right, Runnable first, Runnable second) {
@@ -273,6 +281,7 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         if (!chatGptSigningIn) updateChatGptButton();
+        if (list!=null) showItems();
     }
 
     private void updateChatGptButton() {
@@ -297,6 +306,7 @@ public class MainActivity extends Activity {
         chatGptConnection.signIn(this, (success, message) -> {
             chatGptSigningIn = false;
             updateChatGptButton();
+            if (success) refreshAiModels();
             if (isFinishing() || isDestroyed()) return;
             new AlertDialog.Builder(this)
                     .setTitle("ChatGPT connection")
@@ -374,6 +384,23 @@ public class MainActivity extends Activity {
                     ? "Automatic — AI draft after explicit consent" : "Manual — offline tools and no AI usage"));
     }
 
+    private void refreshAiModels() {
+        if(loadingModels || !chatGptConnection.canUsePlan())return;
+        loadingModels=true;
+        WORKER.execute(()->{
+            try{
+                List<ChatGptConnection.Model> models=chatGptConnection.models();
+                runOnUiThread(()->{
+                    loadingModels=false;
+                    aiModels.clear();aiModels.addAll(models);
+                    showItems();
+                });
+            }catch(Exception e){
+                runOnUiThread(()->{loadingModels=false;});
+            }
+        });
+    }
+
     private void openChallenge(String title, String url, String kind){
         Intent intent=new Intent(this,ChallengeActivity.class);
         intent.putExtra(ChallengeActivity.TITLE,title);
@@ -413,13 +440,51 @@ public class MainActivity extends Activity {
     }
 
     private void addLink(String title, String description, String url, String kind) {
-        TextView t = text(title + "\n" + description, 16, false);
-        t.setBackground(bg(Color.WHITE));
-        t.setPadding(dp(14), dp(14), dp(14), dp(14));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.setMargins(0, dp(4), 0, dp(8));
-        list.addView(t, lp);
-        t.setOnClickListener(v -> openChallenge(title,url,kind));
+        LinearLayout card=new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(bg(Color.WHITE));
+        card.setPadding(dp(14),dp(10),dp(14),dp(10));
+        LinearLayout.LayoutParams outer=new LinearLayout.LayoutParams(-1,-2);
+        outer.setMargins(0,dp(4),0,dp(8));
+        list.addView(card,outer);
+        TextView t=text(title+"\n"+description,16,false);
+        card.addView(t);
+        t.setOnClickListener(v->openChallenge(title,url,kind));
+        LinearLayout modelRow=new LinearLayout(this);
+        modelRow.setOrientation(LinearLayout.HORIZONTAL);
+        modelRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView label=text("AI model:",13,true);
+        modelRow.addView(label,new LinearLayout.LayoutParams(dp(78),dp(48)));
+        Spinner picker=new Spinner(this);
+        List<String> names=new ArrayList<>();
+        List<String> keys=new ArrayList<>();
+        names.add("Inherit global / Auto");keys.add(AiPreferences.AUTO);
+        for(ChatGptConnection.Model model:aiModels){
+            names.add(model.title);keys.add(model.slug);
+        }
+        ArrayAdapter<String> adapter=new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item,names);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        picker.setAdapter(adapter);
+        String key=AiPreferences.stableKey(title,title);
+        String override=aiPreferences.override(key);
+        int selected=override==null?0:keys.indexOf(override);
+        picker.setSelection(Math.max(0,selected));
+        picker.setEnabled(!aiModels.isEmpty());
+        picker.setContentDescription("Select ChatGPT model for "+title);
+        picker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,
+                    View view,int position,long id){
+                if(position<0 || position>=keys.size())return;
+                aiPreferences.setOverride(key,position==0?null:keys.get(position));
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        });
+        modelRow.addView(picker,new LinearLayout.LayoutParams(0,dp(48),1));
+        card.addView(modelRow);
+        Button open=button("Open challenge");
+        card.addView(open,new LinearLayout.LayoutParams(-1,dp(42)));
+        open.setOnClickListener(v->openChallenge(title,url,kind));
     }
 
     private static class ResultRow {
