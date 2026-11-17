@@ -227,7 +227,7 @@ public class MainActivity extends Activity {
                     int position, long id) { currentPage = 0; showItems(); }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
-        row("Manual", "Automatic",
+        row("Manual Mode", "Automatic Mode",
                 () -> setChallengeMode("manual"),
                 () -> setChallengeMode("automatic"));
         updateModeControls();
@@ -262,7 +262,7 @@ public class MainActivity extends Activity {
         q.setMargins(dp(6), 0, 0, 0);
         r.addView(b, q);
         a.setOnClickListener(v -> first.run()); b.setOnClickListener(v -> second.run());
-        if("Manual".equals(left) && "Automatic".equals(right)) {
+        if("Manual Mode".equals(left) && "Automatic Mode".equals(right)) {
             manualModeButton=a; automaticModeButton=b;
             a.setAlpha("manual".equals(challengeMode)?1f:0.56f);
             b.setAlpha("automatic".equals(challengeMode)?1f:0.56f);
@@ -374,11 +374,12 @@ public class MainActivity extends Activity {
                     ? "Automatic — AI draft after explicit consent" : "Manual — offline tools and no AI usage"));
     }
 
-    private void openChallenge(String title,String url){
+    private void openChallenge(String title, String url, String kind){
         Intent intent=new Intent(this,ChallengeActivity.class);
         intent.putExtra(ChallengeActivity.TITLE,title);
         intent.putExtra(ChallengeActivity.URL,url);
         intent.putExtra(ChallengeActivity.MODE,challengeMode);
+        intent.putExtra(ChallengeActivity.KIND,kind);
         startActivity(intent);
     }
 
@@ -408,25 +409,29 @@ public class MainActivity extends Activity {
     }
 
     private void addLink(String title, String description, String url) {
+        addLink(title, description, url, "directory");
+    }
+
+    private void addLink(String title, String description, String url, String kind) {
         TextView t = text(title + "\n" + description, 16, false);
         t.setBackground(bg(Color.WHITE));
         t.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.setMargins(0, dp(4), 0, dp(8));
         list.addView(t, lp);
-        t.setOnClickListener(v -> openChallenge(title,url));
+        t.setOnClickListener(v -> openChallenge(title,url,kind));
     }
 
     private static class ResultRow {
-        final String title, description, url;
-        ResultRow(String title, String description, String url) {
-            this.title=title; this.description=description; this.url=url;
+        final String title, description, url, kind;
+        ResultRow(String title, String description, String url, String kind) {
+            this.title=title; this.description=description; this.url=url; this.kind=kind;
         }
     }
 
     private void addResearch(List<ResultRow> rows, ResearchCatalog.Item item) {
         rows.add(new ResultRow(item.title, item.source+" · "+item.label()
-                +"\n"+item.summary, item.url));
+                +"\n"+item.summary, item.url, item.kind));
     }
 
     private void displayPage(List<ResultRow> rows) {
@@ -446,7 +451,7 @@ public class MainActivity extends Activity {
         list.addView(summary);
         for (int i=start; i<end; i++) {
             ResultRow row=rows.get(i);
-            addLink(row.title,row.description,row.url);
+            addLink(row.title,row.description,row.url,row.kind);
         }
         LinearLayout nav=new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
@@ -493,7 +498,7 @@ public class MainActivity extends Activity {
                         String haystack=(challenge.title+" "+challenge.id+" Rosalind").toLowerCase(Locale.ROOT);
                         if(haystack.contains(query)) rows.add(new ResultRow(challenge.title,
                                 "Rosalind · Educational exercise · "+challenge.id.toUpperCase(Locale.ROOT),
-                                challenge.url));
+                                challenge.url, "educational"));
                     }
                 }
             }
