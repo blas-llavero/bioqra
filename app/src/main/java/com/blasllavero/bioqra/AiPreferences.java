@@ -136,6 +136,68 @@ public final class AiPreferences {
     public String lastResult(String key){
         return prefs.getString("latest_"+key,null);
     }
+
+    public String pdfTreeUri(){ return prefs.getString("pdf_tree_uri",null); }
+    public void setPdfTreeUri(String uri){
+        prefs.edit().putString("pdf_tree_uri",uri).apply();
+    }
+    public void recoverResult(String key,String answer,String date){
+        if(key==null || !key.matches("[a-f0-9]{32}") || answer==null || answer.length()>90000)return;
+        String existing=prefs.getString("last_date_"+key,"");
+        if(date==null || !date.matches("\\d{4}-\\d{2}-\\d{2}"))date=today();
+        if(existing.compareTo(date)>0)return; // keep a newer local result
+        prefs.edit().putString("latest_"+key,answer)
+                .putString("last_date_"+key,date).apply();
+    }
+
+    /** Portable preferences do not include OAuth credentials, file grants, or prior AI consent. */
+    public org.json.JSONObject exportSettings(){
+        org.json.JSONObject root=new org.json.JSONObject();
+        try{
+            root.put("type","bioqra-settings");
+            root.put("version",1);
+            root.put("global_model",globalModel());
+            root.put("daily_limit",dailyLimit());
+            org.json.JSONObject overrides=new org.json.JSONObject();
+            for(java.util.Map.Entry<String,?> e:prefs.getAll().entrySet()){
+                String k=e.getKey();
+                if(k.matches("model_[a-f0-9]{32}") && e.getValue() instanceof String)
+                    overrides.put(k.substring(6),(String)e.getValue());
+            }
+            root.put("overrides",overrides);
+            root.put("pdf_folder","Choose folder again on this device");
+            root.put("automatic_consent","Requires reauthorization on import");
+        }catch(org.json.JSONException e){throw new IllegalStateException(e);}
+        return root;
+    }
+
+    public void importSettings(org.json.JSONObject json) throws Exception{
+        if(!"bioqra-settings".equals(json.optString("type")) || json.optInt("version")!=1)
+            throw new Exception("Not a supported BIOQRA settings backup.");
+        String model=json.getString("global_model");
+        if(model.length()>160 || model.isEmpty())throw new Exception("Invalid model name.");
+        int limit=json.getInt("daily_limit");
+        if(limit!=1 && limit!=3 && limit!=5 && limit!=10)
+            throw new Exception("Invalid daily request limit.");
+        org.json.JSONObject overrides=json.getJSONObject("overrides");
+        if(overrides.length()>1500)throw new Exception("Too many model overrides.");
+        java.util.Map<String,String> validated=new java.util.HashMap<>();
+        java.util.Iterator<String> keys=overrides.keys();
+        while(keys.hasNext()){
+            String k=keys.next();
+            String value=overrides.getString(k);
+            if(!k.matches("[a-f0-9]{32}") || value.length()<1 || value.length()>160)
+                throw new Exception("Invalid challenge/model preference.");
+            validated.put("model_"+k,value);
+        }
+        SharedPreferences.Editor edit=prefs.edit();
+        for(String key:prefs.getAll().keySet())if(key.matches("model_[a-f0-9]{32}"))edit.remove(key);
+        edit.putString("global_model",model).putInt("daily_limit",limit)
+                .putBoolean("auto_consent",false);
+        for(java.util.Map.Entry<String,String> entry:validated.entrySet())
+            edit.putString(entry.getKey(),entry.getValue());
+        if(!edit.commit())throw new Exception("Could not save restored settings.");
+    }
     public void storeResult(String key,String answer){
         if(answer!=null && answer.length()<=90000)
             prefs.edit().putString("latest_"+key,answer).putString("last_date_"+key,today()).apply();
