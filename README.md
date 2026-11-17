@@ -4,6 +4,14 @@
 
 BIOQRA is an open-source project for Android and the web. It aims to help researchers discover bioinformatics challenges, develop reproducible computational approaches, and verify results with scientific software. A separate, privacy-first patient research module is planned to help people document their experiences, securely manage health records, and optionally contribute de-identified information to ethically reviewed research. BIOQRA is not a diagnostic, treatment, vaccine-testing, or medication-safety determination tool.
 
+## Automatic discovery of the detailed challenge brief
+
+BIOQRA no longer assumes that a catalog URL is the actual problem statement. In **Automatic Mode**, when a challenge is selected, its public HTTPS page is inspected and BIOQRA searches for relevant, challenge-title-matching links **on the same approved organizer site**. It evaluates at most four follow-up pages (from up to eight potential links), extracts the public statement and shows the exact selected source URL. No ChatGPT capacity is consumed during link discovery, which relies on local HTML parsing and ranking.
+
+If the detailed brief is confidently identified, BIOQRA displays it and requests consent before sharing the public text with ChatGPT. If links are missing, the page needs JavaScript/login, or the result is ambiguous, BIOQRA **does not claim the correct brief was found** and does not launch AI automatically. The official original link remains accessible. Link discovery does not bypass authentication, execute scripts, follow external redirects, upload data, submit applications or download private datasets.
+
+Source links and announcements change; this is a first controlled site-specific resolver, not a universal web-crawling agent. Other source-site adapters and robust evaluation against real challenge pages remain future work. HTTPS and a domain allowlist reduce risk but do not guarantee safe content or scientifically valid rules. Never enter private patient data in the public research workbench.
+
 ## Mode labels and interpretation of cancer research AI drafts
 
 Android home-screen buttons are named **Manual Mode** and **Automatic Mode**. Selecting a challenge carries its kind (educational exercise, benchmark, funding call, etc.) into the workbench. For research funding calls such as **Gastroesophageal transformation into cancer**, BIOQRA now labels the output **AI RESEARCH PROPOSAL — UNVERIFIED** and explains that research data, experimental testing, eligible teams and independent validation are missing. It must not call the funding call a solved programming problem or a verified cancer treatment.
