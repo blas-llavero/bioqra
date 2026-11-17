@@ -39,6 +39,9 @@ public final class ChallengeActivity extends Activity {
     private String verifiedPageUrl="";
     private boolean specificPage=false;
     private ChatGptConnection connection;
+    private AiPreferences aiPreferences;
+    private String challengeKey;
+    private String selectedModelLabel="Global / Auto";
     private volatile boolean busy=false;
 
     private int dp(int x){return Math.round(x*getResources().getDisplayMetrics().density);}
@@ -67,6 +70,7 @@ public final class ChallengeActivity extends Activity {
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
         connection=new ChatGptConnection(this);
+        aiPreferences=new AiPreferences(this);
         title=getIntent().getStringExtra(TITLE);
         url=getIntent().getStringExtra(URL);
         mode=getIntent().getStringExtra(MODE);
@@ -75,6 +79,7 @@ public final class ChallengeActivity extends Activity {
         if(title==null)title="Challenge";
         if(url==null)url="";
         if(!"automatic".equals(mode))mode="manual";
+        challengeKey=AiPreferences.stableKey(title,title);
         getWindow().setStatusBarColor(Color.rgb(24,72,91));
         getWindow().setNavigationBarColor(Color.BLACK);
 
@@ -101,6 +106,10 @@ public final class ChallengeActivity extends Activity {
         root.addView(text("Mode: "+("automatic".equals(mode)?"Automatic (ChatGPT)":"Manual (no AI)")
                 +" · Read-only · No contest submissions",14,false));
         root.addView(text(url,12,false));
+        root.addView(text("AI model: configured for this challenge on the main list; "
+                +"otherwise inherits the global AI Settings model. "
+                +"Automatic use is limited to "+aiPreferences.dailyLimit()
+                +" requests per day on this device.",13,false));
         if(isFunding()) {
             root.addView(text("Research funding opportunity · Not a programming contest",17,true));
             root.addView(text("ChatGPT can prepare a research proposal and an unexecuted methodology, but it cannot establish that this cancer research challenge is solved. The organizer may require an eligible research team, experimental data and scientific validation.",14,false));
@@ -152,8 +161,9 @@ public final class ChallengeActivity extends Activity {
                 : "3 · Ask ChatGPT for a solution proposal");
         root.addView(aiButton,new LinearLayout.LayoutParams(-1,dp(55)));
         aiButton.setOnClickListener(v->confirmAI());
-        output=text(isFunding()
-                ? "No research proposal or independent validation yet."
+        String oldResult=aiPreferences.lastResult(challengeKey);
+        output=text(oldResult!=null ? "SAVED AI DRAFT (not reverified)\n\n"+oldResult
+                : isFunding() ? "No research proposal or independent validation yet."
                 : "No solution proposal or independent verification yet.",14,false);
         output.setTextIsSelectable(true);
         root.addView(text("Results and limitations",18,true));
@@ -190,8 +200,17 @@ public final class ChallengeActivity extends Activity {
                     resolvedLink.setText("Selected public page: "+result.resolvedUrl);
                     status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
                     busy=false;updateButtons();
-                    if("automatic".equals(mode) && connection.canUsePlan() && specificPage)
-                        confirmAI();
+                    if("automatic".equals(mode) && connection.canUsePlan() && specificPage){
+                        if(aiPreferences.alreadyAttempted(challengeKey)){
+                            status.setText("Already attempted today; showing saved result if available. "
+                                    +"Use the AI button to explicitly request another attempt.");
+                        }else if(aiPreferences.autoConsent()){
+                            chooseModelAndRun(true);
+                        }else{
+                            status.setText("Detailed statement found. Enable one-time automatic permission "
+                                    +"in AI Settings or tap the AI button for this attempt.");
+                        }
+                    }
                 });
             } catch(Exception e){
                 runOnUiThread(()->{
@@ -208,74 +227,74 @@ public final class ChallengeActivity extends Activity {
         if(busy)return;
         if(!connection.canUsePlan()){
             new AlertDialog.Builder(this).setTitle("ChatGPT authorization required")
-                .setMessage("The account has not authorized ChatGPT plan usage. Return to the main screen and reconnect. No AI request was sent.")
+                .setMessage("Return to the main screen and reconnect to authorize plan usage. No request was sent.")
                 .setPositiveButton("OK",null).show();
             return;
         }
         if(!specificPage || fetchedText.length()<100){
-            showError("BIOQRA could not verify a detailed public problem statement; no AI usage authorized. Review the organizer page.");
+            showError("A verified public challenge statement is required. No AI request was sent.");
             return;
         }
         new AlertDialog.Builder(this)
-            .setTitle(isFunding() ? "Prepare research proposal with ChatGPT?" : "Send public challenge to ChatGPT?")
-            .setMessage("BIOQRA will send this publicly available statement and any PUBLIC sequence you entered to your authorized ChatGPT account. This uses plan capacity and may be subject to limits. Do not include patient records or private competition data.\n\nThe result is a proposal, NOT a verified solution. Nothing will be submitted externally.")
+            .setTitle("Authorize ChatGPT attempt?")
+            .setMessage("Send this challenge's PUBLIC text and any sample you pasted "
+                +"to your connected ChatGPT account? Limit remaining today: "
+                +aiPreferences.remaining()+". Do not enter patient records or confidential data."
+                +"\n\nThe answer is an unverified research/solution draft; no contest submissions.")
             .setNegativeButton("Cancel",null)
-            .setPositiveButton("Authorize this attempt",(d,w)->chooseModelAndRun())
+            .setPositiveButton("Run once",(d,w)->chooseModelAndRun(false))
             .show();
     }
 
-    private void chooseModelAndRun(){
-        busy=true;status.setText("Checking available ChatGPT models...");
-        updateButtons();
-        EXEC.execute(()->{
-            try {
-                List<ChatGptConnection.Model> models=connection.models();
-                runOnUiThread(()->{
-                    if(isFinishing()||isDestroyed())return;
-                    busy=false;updateButtons();
-                    String[] labels=new String[models.size()];
-                    for(int i=0;i<models.size();i++)labels[i]=models.get(i).title;
-                    new AlertDialog.Builder(this)
-                        .setTitle("Choose ChatGPT model")
-                        .setItems(labels,(d,which)->runAI(models.get(which).slug))
-                        .setNegativeButton("Cancel",null).show();
-                });
-            }catch(Exception e){
-                runOnUiThread(()->{
-                    if(isFinishing()||isDestroyed())return;
-                    busy=false;showError("ChatGPT model list unavailable: "+e.getMessage());
-                });
-            }
-        });
-    }
-
-    private void runAI(String model) {
+    /** Automatic mode uses saved preferences and does not prompt for a model. */
+    private void chooseModelAndRun(boolean unattended){
         if(busy)return;
-        busy=true;status.setText("ChatGPT is preparing a draft solution; do not close the app...");
-        output.setText("AI analysis in progress. Results are not yet verified.");
+        if(unattended && (!aiPreferences.autoConsent()
+                || aiPreferences.alreadyAttempted(challengeKey)))return;
+        if(aiPreferences.remaining()<=0){
+            showError("Local daily ChatGPT request limit reached. Change it in AI Settings or try tomorrow.");
+            return;
+        }
+        busy=true;
+        status.setText("Checking your saved model selection...");
         updateButtons();
-        final String input=sample.getText().toString();
+        final String publicStatement=fetchedText;
+        final String source=verifiedPageUrl;
+        // Unattended requests never send typed user samples, even if present.
+        final String input=unattended?"":sample.getText().toString();
         EXEC.execute(()->{
             try{
-                String answer=connection.respond(model,title,
-                    "Source: "+verifiedPageUrl+"\n\n"+fetchedText,input,kind);
+                List<ChatGptConnection.Model> offered=connection.models();
+                AiPreferences.Selection selection=AiPreferences.choose(
+                        offered,aiPreferences.selected(challengeKey));
+                if(!aiPreferences.reserve(unattended))
+                    throw new Exception("Local limit reached or automatic permission disabled.");
+                aiPreferences.markAttempted(challengeKey);
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    status.setText("Using "+selection.label+"; preparing an unverified draft...");
+                    output.setText("AI analysis in progress. No scientific result validated.");
+                });
+                String answer=connection.respond(selection.slug,title,
+                    "Source: "+source+"\n\n"+publicStatement,input,kind);
+                aiPreferences.storeResult(challengeKey,answer);
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     busy=false;
                     output.setText((isFunding()
                             ? "AI RESEARCH PROPOSAL — UNVERIFIED"
-                            : "AI DRAFT — UNVERIFIED")+"\n\n"+answer
-                        +"\n\nBIOQRA did not run generated code, submit results or validate any external benchmark.");
-                    status.setText(isFunding()
-                            ? "Research proposal drafted. Data and independent scientific validation are still required."
-                            : "AI draft ready. Independently check algorithms, data and organizer requirements.");
+                            : "AI DRAFT — UNVERIFIED")
+                        +"\nModel: "+selection.label+"\n\n"+answer
+                        +"\n\nBIOQRA has not run any generated program or validated a benchmark.");
+                    status.setText("AI draft saved locally for this challenge. "
+                        +"Request limit remaining: "+aiPreferences.remaining());
                     updateButtons();
                 });
             }catch(Exception e){
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
-                    busy=false;output.setText("No verified AI result.");
-                    showError("AI attempt failed: "+e.getMessage());
+                    busy=false;
+                    showError("AI attempt unavailable: "+e.getMessage());
                 });
             }
         });
