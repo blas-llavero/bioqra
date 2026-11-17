@@ -62,10 +62,26 @@ public final class AiPreferences {
     }
 
     /**
-     * ChatGPT does not guarantee that the first list item is the most capable.
-     * Server order is a safe, documented default instead of guessing names
-     * for models this account might not actually be allowed to use.
+     * This is a naming-based preference, not an independently confirmed
+     * scientific ranking. Only actual models advertised by the signed-in
+     * account are considered. Unknown models keep the server's ordering.
      */
+    private static int capabilityHint(ChatGptConnection.Model m){
+        String n=(m.slug+" "+m.title).toLowerCase(Locale.ROOT);
+        int score=0;
+        if(n.contains("gpt-6"))score=600;
+        else if(n.contains("gpt-5.6"))score=560;
+        else if(n.contains("gpt-5.5"))score=550;
+        else if(n.contains("gpt-5"))score=500;
+        else if(n.contains("gpt-4"))score=400;
+        if(n.contains("mini") || n.contains("nano") || n.contains("lite"))score-=160;
+        if(n.contains("pro"))score+=60;
+        if(n.contains("extra high") || n.contains("xhigh"))score+=45;
+        else if(n.contains("high"))score+=30;
+        else if(n.contains("medium"))score+=10;
+        return score;
+    }
+
     public static Selection choose(List<ChatGptConnection.Model> available,String requested){
         if(available==null || available.isEmpty())
             throw new IllegalArgumentException("No ChatGPT models available");
@@ -76,8 +92,13 @@ public final class AiPreferences {
             throw new IllegalArgumentException(
                     "The saved model is no longer offered by this ChatGPT account. Select another in AI Settings.");
         }
-        ChatGptConnection.Model first=available.get(0);
-        return new Selection(first.slug,first.title);
+        ChatGptConnection.Model preferred=available.get(0);
+        int preferredScore=capabilityHint(preferred);
+        for(ChatGptConnection.Model model:available){
+            int score=capabilityHint(model);
+            if(score>preferredScore){preferred=model;preferredScore=score;}
+        }
+        return new Selection(preferred.slug,preferred.title);
     }
 
     public boolean autoConsent(){return prefs.getBoolean("auto_consent",false);}
