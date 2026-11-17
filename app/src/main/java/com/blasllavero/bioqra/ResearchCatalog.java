@@ -130,11 +130,11 @@ public final class ResearchCatalog {
 
         add(result,"cgc-gastro-transformation","Gastroesophageal transformation into cancer",CANCER,
                 "Study early tissue changes with the aim of preventing stomach and oesophageal cancer",
-                "https://www.cancergrandchallenges.org/apply-for-a-challenge",
+                "https://www.cancergrandchallenges.org/apply-for-a-challenge/gastroesophageal-transformation-into-cancer",
                 "funding","cancer prevention","2026-11-24");
         add(result,"cgc-global-variation","Global variation in gastroesophageal cancer",CANCER,
                 "Find biological mechanisms behind differences in incidence between populations",
-                "https://www.cancergrandchallenges.org/apply-for-a-challenge",
+                "https://www.cancergrandchallenges.org/apply-for-a-challenge/global-variation-in-gastroesophageal-cancer",
                 "funding","cancer prevention","2026-11-24");
 
         String active="https://www.cancergrandchallenges.org/challenges/active-challenges";
