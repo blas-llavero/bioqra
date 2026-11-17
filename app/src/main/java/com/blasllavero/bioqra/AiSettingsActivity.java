@@ -29,6 +29,9 @@ public final class AiSettingsActivity extends Activity {
     private Spinner models,limitPicker;
     private TextView info,remaining;
     private CheckBox consent;
+    private Button accountButton;
+    private TextView accountStatus;
+    private boolean signingIn=false;
     private List<ChatGptConnection.Model> available=new ArrayList<>();
     private List<String> modelKeys=new ArrayList<>();
 
@@ -67,8 +70,15 @@ public final class AiSettingsActivity extends Activity {
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(55)));
         TextView heading=label("AI Settings",25);heading.setTypeface(null,Typeface.BOLD);
         root.addView(heading);
-        root.addView(label("Connected: "+account.accountLabel()
-                +"\nUsing ChatGPT plan · Models and usage depend on your account.",14));
+        TextView accountHeading=label("ChatGPT account",19);
+        accountHeading.setTypeface(null,Typeface.BOLD);
+        root.addView(accountHeading);
+        accountStatus=label("",14);
+        root.addView(accountStatus);
+        accountButton=button("ChatGPT login");
+        root.addView(accountButton,new LinearLayout.LayoutParams(-1,dp(56)));
+        accountButton.setOnClickListener(v->showChatGptAccount());
+        updateAccountStatus();
         root.addView(label("Default model (new challenges / inherited selections)",17));
         models=new Spinner(this);
         root.addView(models,new LinearLayout.LayoutParams(-1,dp(55)));
@@ -144,6 +154,77 @@ public final class AiSettingsActivity extends Activity {
         root.addView(reload,new LinearLayout.LayoutParams(-1,dp(52)));
         reload.setOnClickListener(v->loadModels());
         loadModels();
+    }
+
+    @Override protected void onResume(){
+        super.onResume();
+        if(account!=null)updateAccountStatus();
+    }
+
+    private void updateAccountStatus(){
+        if(accountStatus==null || accountButton==null)return;
+        boolean connected=!"Not connected".equals(account.accountLabel());
+        String scope=account.canUsePlan() ? "AI plan usage authorized"
+                : "AI plan usage not authorized";
+        accountStatus.setText("ChatGPT: "+account.accountLabel()
+                +"\n"+(connected?scope:"Log in to connect your account."));
+        accountButton.setText(signingIn?"Connecting..."
+                : connected?"ChatGPT ✓ · Account & sign out":"ChatGPT login");
+        accountButton.setEnabled(!signingIn);
+    }
+
+    private void showChatGptAccount(){
+        if(signingIn)return;
+        boolean connected=!"Not connected".equals(account.accountLabel());
+        if(!connected){
+            new AlertDialog.Builder(this)
+                    .setTitle("Log in with ChatGPT")
+                    .setMessage("BIOQRA will open the official ChatGPT authorization website "
+                        +"in your browser. Do not enter your password inside BIOQRA.")
+                    .setNegativeButton("Cancel",null)
+                    .setPositiveButton("Continue with ChatGPT",(d,w)->startChatGptLogin())
+                    .show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("ChatGPT account")
+                .setMessage("Connected: "+account.accountLabel()
+                    +"\nPlan use: "+(account.canUsePlan()?"authorized":"not authorized")
+                    +"\n\nYou can reconnect or sign out locally.")
+                .setPositiveButton("Close",null)
+                .setNeutralButton("Reconnect",(d,w)->startChatGptLogin())
+                .setNegativeButton("Sign out",(d,w)->
+                    new AlertDialog.Builder(this)
+                        .setTitle("Sign out of BIOQRA?")
+                        .setMessage("This removes the stored local connection and disables "
+                            +"automatic ChatGPT analysis. To revoke app access completely, "
+                            +"use ChatGPT account settings.")
+                        .setNegativeButton("Cancel",null)
+                        .setPositiveButton("Sign out",(confirm,which)->{
+                            account.signOut();
+                            settings.setAutoConsent(false);
+                            if(consent!=null)consent.setChecked(false);
+                            populateModels(new ArrayList<>());
+                            updateAccountStatus();
+                            info.setText("Connect a ChatGPT account to load available models.");
+                        }).show())
+                .show();
+    }
+
+    private void startChatGptLogin(){
+        if(signingIn)return;
+        signingIn=true;
+        updateAccountStatus();
+        account.signIn(this,(success,message)->{
+            signingIn=false;
+            if(isFinishing()||isDestroyed())return;
+            updateAccountStatus();
+            if(success)loadModels();
+            new AlertDialog.Builder(this)
+                .setTitle("ChatGPT connection")
+                .setMessage(message)
+                .setPositiveButton("OK",null).show();
+        });
     }
 
     private void updateRemaining(){
