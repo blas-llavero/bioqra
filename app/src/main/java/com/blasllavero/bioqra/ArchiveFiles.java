@@ -74,32 +74,52 @@ public final class ArchiveFiles {
         return created;
     }
 
-    /** Actual Android folder structure is YY / MM / DD-Challenge / DD-Challenge.pdf. */
+    /** Reuse a saved document rather than generating suffixes on repeated same-day exports. */
+    private static Uri existingPdf(Context context,Uri tree,Uri parent,String filename) {
+        Uri children=DocumentsContract.buildChildDocumentsUriUsingTree(
+                tree,DocumentsContract.getDocumentId(parent));
+        try(Cursor cursor=context.getContentResolver().query(children,
+                new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE},null,null,null)){
+            if(cursor!=null){
+                while(cursor.moveToNext()){
+                    if(filename.equals(cursor.getString(1))
+                        && "application/pdf".equals(cursor.getString(2)))
+                        return DocumentsContract.buildDocumentUriUsingTree(
+                                tree,cursor.getString(0));
+                }
+            }
+        }catch(Exception ignored){}
+        return null;
+    }
+
+    /** Exactly one folder per challenge: <chosen folder>/<challenge>/YYMMDD-<challenge>.pdf */
     public static Uri makePdf(Context context,Uri tree,AiPreferences.SavedResult result) throws Exception{
         if(tree==null)throw new Exception("Choose a PDF folder in AI Settings first.");
         LocalDate date;
         try{date=LocalDate.parse(result.date);}
         catch(Exception e){date=LocalDate.now();}
-        String yy=date.format(DateTimeFormatter.ofPattern("yy",Locale.ROOT));
-        String mm=date.format(DateTimeFormatter.ofPattern("MM",Locale.ROOT));
-        String prefix=date.format(DateTimeFormatter.ofPattern("dd",Locale.ROOT))
-                +"-"+cleanName(result.title);
-        Uri root=DocumentsContract.buildDocumentUriUsingTree(tree,
-                DocumentsContract.getTreeDocumentId(tree));
-        Uri y=folder(context,tree,root,yy);
-        Uri m=folder(context,tree,y,mm);
-        Uri challenge=folder(context,tree,m,prefix);
-        Uri target=DocumentsContract.createDocument(context.getContentResolver(),challenge,
-                "application/pdf",prefix+".pdf");
+        String project=cleanName(result.title);
+        String fileName=date.format(DateTimeFormatter.ofPattern("yyMMdd",Locale.ROOT))
+                +"-"+project+".pdf";
+        Uri root=DocumentsContract.buildDocumentUriUsingTree(
+                tree,DocumentsContract.getTreeDocumentId(tree));
+        Uri challenge=folder(context,tree,root,project);
+        Uri target=existingPdf(context,tree,challenge,fileName);
+        boolean created=target==null;
+        if(created)target=DocumentsContract.createDocument(context.getContentResolver(),
+                challenge,"application/pdf",fileName);
         if(target==null)throw new Exception("Unable to create PDF.");
         boolean ok=false;
-        try(OutputStream out=context.getContentResolver().openOutputStream(target,"w")){
+        try(OutputStream out=context.getContentResolver().openOutputStream(target,"rwt")){
             if(out==null)throw new Exception("Cannot open PDF.");
             writePdf(out,result);
             ok=true;
         }finally{
-            if(!ok)try{DocumentsContract.deleteDocument(context.getContentResolver(),target);}
-                catch(Exception ignored){}
+            if(!ok && created)try{
+                DocumentsContract.deleteDocument(context.getContentResolver(),target);
+            }catch(Exception ignored){}
         }
         return target;
     }
