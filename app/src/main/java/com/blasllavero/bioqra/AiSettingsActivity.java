@@ -196,8 +196,9 @@ public final class AiSettingsActivity extends Activity {
         Button exportPdf=button("Export all saved results as PDFs");
         root.addView(exportPdf,new LinearLayout.LayoutParams(-1,dp(53)));
         exportPdf.setOnClickListener(v->exportAllPdfs());
-        root.addView(label("PDF location: selected folder / YY / MM / DD-Challenge / "
-                +"DD-Challenge.pdf. Existing files are not deleted. "
+        root.addView(label("PDF location: selected folder / Challenge / YYMMDD-Challenge.pdf. "
+                +"Each challenge has one folder. A new date creates a new PDF; "
+                +"exporting twice on the same day updates that file. "
                 +"For a new device, select the folder again after restoring.",13));
         backupStatus=label("Backups and PDFs stay on your device until you share them.",13);
         root.addView(backupStatus);
@@ -307,7 +308,7 @@ public final class AiSettingsActivity extends Activity {
         String scope=account.canUsePlan() ? "AI plan usage authorized"
                 : "AI plan usage not authorized";
         accountStatus.setText("ChatGPT: "+account.accountLabel()
-                +"\n"+(connected?scope:"Log in to connect your account."));
+                +"\n"+(connected?scope+" · Session saved securely on this device. Automatic token renewal is used where supported.":"Log in once to connect this device."));
         accountButton.setText(signingIn?"Connecting..."
                 : connected?"ChatGPT ✓ · Account & sign out":"ChatGPT login");
         accountButton.setEnabled(!signingIn);
