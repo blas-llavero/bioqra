@@ -430,6 +430,11 @@ public final class ChatGptConnection {
     }
 
     public String respond(String model,String challenge,String statement,String input) throws Exception {
+        return respond(model,challenge,statement,input,"directory");
+    }
+
+    public String respond(String model,String challenge,String statement,String input,
+                          String challengeKind) throws Exception {
         if(statement==null || statement.trim().length()<20)
             throw new Exception("Paste the actual official problem statement first");
         if(statement.length()>12000 || input.length()>100000)
@@ -442,6 +447,29 @@ public final class ChatGptConnection {
             +" say what is missing and do not claim the challenge is solved. Do not recommend"
             +" treatment, diagnosis or patient-specific advice. Never submit to a challenge website."
             +" Clearly distinguish a draft solution from independently verified results.";
+        if("funding".equals(challengeKind) || "funded_research".equals(challengeKind)) {
+            instructions += " This is a research funding call or project topic, NOT an automated"
+                    +" programming contest. Start by determining which essential research datasets,"
+                    +" measurements, methods, personnel and ethics approvals are missing."
+                    +" Propose a research plan, dataset sourcing strategy, reproducible baseline,"
+                    +" realistic milestones and scientific validation; label ALL generated code"
+                    +" as an unexecuted template. Never state that cancer has been cured, prevented,"
+                    +" or that a new treatment works. Confirm whether the official page offers"
+                    +" a real, currently eligible application process.";
+        } else if("benchmark".equals(challengeKind)) {
+            instructions += " This is a scientific benchmark. Identify the evaluation metric,"
+                    +" data access, train/validation splits, reproducibility tests and"
+                    +" whether a public baseline is available. A draft algorithm is not a score.";
+        } else if("educational".equals(challengeKind)) {
+            instructions += " This is an educational programming exercise. Provide a"
+                    +" step-by-step approach, implementation, sample cases and expected results."
+                    +" No exercise is verified until the tests have actually been executed.";
+        } else {
+            instructions += " First classify whether this link contains a specific"
+                    +" solvable computational problem, a directory, or a research invitation."
+                    +" If it is a directory or a vague landing page, explain that a precise"
+                    +" problem statement must be retrieved before claiming a solution.";
+        }
         JSONObject request=new JSONObject();
         request.put("model",model);
         request.put("instructions",instructions);
