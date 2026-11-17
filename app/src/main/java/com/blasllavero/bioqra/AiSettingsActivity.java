@@ -154,7 +154,7 @@ public final class AiSettingsActivity extends Activity {
         available=new ArrayList<>(source);
         modelKeys.clear();
         List<String> titles=new ArrayList<>();
-        titles.add("Auto · first model offered by ChatGPT");
+        titles.add("Auto · preferred high-capability model");
         modelKeys.add(AiPreferences.AUTO);
         for(ChatGptConnection.Model m:available){
             titles.add(m.title);modelKeys.add(m.slug);
@@ -183,7 +183,7 @@ public final class AiSettingsActivity extends Activity {
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     populateModels(got);
-                    info.setText(got.size()+" models offered by the connected account. The automatic default follows the server's list order; it is not a verified ranking of scientific capability.");
+                    info.setText(got.size()+" models offered by the connected account. The automatic default uses naming-based capability hints, not a verified scientific model ranking.");
                 });
             }catch(Exception ex){
                 runOnUiThread(()->{
