@@ -4,6 +4,18 @@
 
 BIOQRA is an open-source project for Android and the web. It aims to help researchers discover bioinformatics challenges, develop reproducible computational approaches, and verify results with scientific software. A separate, privacy-first patient research module is planned to help people document their experiences, securely manage health records, and optionally contribute de-identified information to ethically reviewed research. BIOQRA is not a diagnostic, treatment, vaccine-testing, or medication-safety determination tool.
 
+## Backup, restoration, and automatic PDF exports
+
+In **AI Settings → Backup, Restore & PDF**, BIOQRA uses Android's built-in file picker (Storage Access Framework) to:
+
+- **Export settings (.json)** and **Import settings (.json)**. The portable backup includes the global AI model choice, per-challenge model preferences, and the local daily AI request limit. It **never** contains OAuth credentials, secrets, login sessions, file-system permissions or consent for unattended AI use. After importing, automatic consent must be enabled again, and the PDF destination folder must be reselected on the new device.
+- **Export saved AI results (.json)** and **Import saved AI results (.json)**. These contain the most recent persisted proposal per challenge, its title, date, public source URL and model if available. Imported results reappear when the relevant challenge is opened. Exported JSON may contain sensitive text if someone previously pasted it into a manually authorized prompt: treat backups as private files and only use public/non-patient data.
+- **Choose folder for automatic PDFs**. This opens Android's folder picker and retains the folder's permission on the device. Each newly generated saved draft is automatically exported as a readable PDF, with title, source and date. Choose **Export all saved results as PDFs** to export older restored results too. An individual challenge also has **Save this challenge result as PDF**.
+
+Android does not allow literal `/` inside a filename. The requested `YY/MM/DD-Challenge` format is represented as **nested subfolders**, e.g. `26/11/17-Gastroesophageal transformation into cancer/17-Gastroesophageal transformation into cancer.pdf` under the selected destination. Dates are taken from the saved analysis rather than the day of export; directory and filename characters are sanitized for Android. Multiple exports may create provider-renamed duplicate files rather than overwrite existing ones.
+
+The JSON formats are versioned as `bioqra-settings` and `bioqra-results`. Results remain AI drafts, not verified experimental results. No external storage service, paid PDF tool, backup account or clinical data upload is required. For full restoration of settings **and** results, export and import both JSON files separately. Settings include no PDF folder permissions; Android requires choosing a destination again.
+
 ## AI model preferences and low-interaction Automatic Mode
 
 **AI Settings** on the main screen manages the authenticated account's model list. Every challenge card has its own **AI model** dropdown. Each challenge initially inherits the global model; selecting a model there saves an override locally. Selecting **Apply this model to ALL challenges** from AI Settings replaces all saved overrides and applies the selected global default to existing and future challenge cards. Choices survive app restart on the same device.
