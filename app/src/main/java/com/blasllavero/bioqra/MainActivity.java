@@ -279,8 +279,14 @@ public class MainActivity extends Activity {
         if ("automatic".equals(next) && !chatGptConnection.canUsePlan()) {
             new AlertDialog.Builder(this)
                 .setTitle("Connect ChatGPT first")
-                .setMessage("Automatic mode requires an eligible ChatGPT account with permission to use plan capacity. Sign in using ChatGPT login above. Manual mode always works without AI.")
-                .setPositiveButton("OK",null).show();
+                .setMessage("Automatic Mode requires a ChatGPT account with AI permission. "
+                        +"Open AI Settings → ChatGPT account → ChatGPT login to connect. "
+                        +"You only need to sign in again if your existing session has expired "
+                        +"or needs reauthorization. Manual Mode works without ChatGPT.")
+                .setNegativeButton("Stay in Manual Mode",null)
+                .setPositiveButton("Open AI Settings",(dialog,which)->
+                        startActivity(new Intent(this,AiSettingsActivity.class)))
+                .show();
             return;
         }
         challengeMode = "automatic".equals(next) ? "automatic" : "manual";
