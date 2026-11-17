@@ -168,11 +168,41 @@ public final class ChallengeActivity extends Activity {
         output.setTextIsSelectable(true);
         root.addView(text("Results and limitations",18,true));
         root.addView(output);
+        Button savePdf=button("Save this challenge result as PDF");
+        root.addView(savePdf,new LinearLayout.LayoutParams(-1,dp(52)));
+        savePdf.setOnClickListener(v->saveSavedPdf());
         updateButtons();
 
         // Automatic mode retrieves the public challenge on opening.
         // Actual ChatGPT usage still requires consent to transmit each statement.
         if("automatic".equals(mode))retrieve();
+    }
+
+    private void saveSavedPdf(){
+        String folder=aiPreferences.pdfTreeUri();
+        if(folder==null){
+            new AlertDialog.Builder(this).setTitle("Select a PDF folder")
+                .setMessage("Open AI Settings and choose the destination folder first.")
+                .setNegativeButton("Cancel",null)
+                .setPositiveButton("AI Settings",(d,w)->
+                    startActivity(new Intent(this,AiSettingsActivity.class))).show();
+            return;
+        }
+        AiPreferences.SavedResult record=null;
+        for(AiPreferences.SavedResult r:aiPreferences.savedResults())
+            if(challengeKey.equals(r.key)){record=r;break;}
+        if(record==null){status.setText("No saved AI result for this challenge.");return;}
+        final AiPreferences.SavedResult result=record;
+        status.setText("Saving PDF to your configured folder...");
+        EXEC.execute(()->{
+            String message;
+            try{
+                ArchiveFiles.makePdf(this,Uri.parse(folder),result);
+                message="PDF saved under YY/MM/DD-"+ArchiveFiles.cleanName(result.title)+".";
+            }catch(Exception e){message="PDF export failed: "+e.getMessage();}
+            final String feedback=message;
+            runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())status.setText(feedback);});
+        });
     }
 
     private boolean isFunding() {
@@ -277,7 +307,22 @@ public final class ChallengeActivity extends Activity {
                 });
                 String answer=connection.respond(selection.slug,title,
                     "Source: "+source+"\n\n"+publicStatement,input,kind);
-                aiPreferences.storeResult(challengeKey,answer);
+                aiPreferences.storeResult(challengeKey,title,source,selection.label,answer);
+                String pdfStatus="";
+                String destination=aiPreferences.pdfTreeUri();
+                if(destination!=null){
+                    try{
+                        AiPreferences.SavedResult record=null;
+                        for(AiPreferences.SavedResult r:aiPreferences.savedResults()){
+                            if(challengeKey.equals(r.key)){record=r;break;}
+                        }
+                        if(record!=null){
+                            ArchiveFiles.makePdf(this,Uri.parse(destination),record);
+                            pdfStatus=" · PDF saved to configured folder";
+                        }
+                    }catch(Exception e){pdfStatus=" · PDF export failed: "+e.getMessage();}
+                }
+                final String pdfResult=pdfStatus;
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     busy=false;
@@ -287,7 +332,7 @@ public final class ChallengeActivity extends Activity {
                         +"\nModel: "+selection.label+"\n\n"+answer
                         +"\n\nBIOQRA has not run any generated program or validated a benchmark.");
                     status.setText("AI draft saved locally for this challenge. "
-                        +"Request limit remaining: "+aiPreferences.remaining());
+                        +"Request limit remaining: "+aiPreferences.remaining()+pdfResult);
                     updateButtons();
                 });
             }catch(Exception e){
