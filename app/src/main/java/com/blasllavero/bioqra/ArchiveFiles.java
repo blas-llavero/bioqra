@@ -124,6 +124,52 @@ public final class ArchiveFiles {
         return target;
     }
 
+    public static byte[] generatedPdf(AiPreferences.SavedResult result) throws Exception{
+        ByteArrayOutputStream out=new ByteArrayOutputStream();
+        writePdf(out,result);
+        return out.toByteArray();
+    }
+
+    public static String archivePdfPath(AiPreferences.SavedResult result){
+        LocalDate date;
+        try{date=LocalDate.parse(result.date);}
+        catch(Exception e){date=LocalDate.now();}
+        String name=cleanName(result.title);
+        return "pdf/"+name+"/"+date.format(
+                DateTimeFormatter.ofPattern("yyMMdd",Locale.ROOT))+"-"+name+".pdf";
+    }
+
+    public static Uri restorePdf(Context context,Uri tree,String project,String filename,
+                                 byte[] bytes) throws Exception{
+        if(tree==null)throw new Exception("Select the PDF destination folder first.");
+        if(project==null||filename==null||!project.equals(cleanName(project))
+                || filename.contains("/")||filename.contains("\\")
+                || !filename.matches("[0-9]{6}-[^/\\\\]{1,90}\\.pdf"))
+            throw new Exception("Invalid PDF archive path.");
+        if(bytes==null||bytes.length<5||bytes.length>8_000_000
+                || bytes[0]!='%'||bytes[1]!='P'||bytes[2]!='D'
+                || bytes[3]!='F'||bytes[4]!='-')
+            throw new Exception("Invalid PDF archive content.");
+        Uri root=DocumentsContract.buildDocumentUriUsingTree(
+                tree,DocumentsContract.getTreeDocumentId(tree));
+        Uri folderUri=folder(context,tree,root,project);
+        Uri target=existingPdf(context,tree,folderUri,filename);
+        if(target!=null)return target; // Do not overwrite the user's existing PDFs.
+        target=DocumentsContract.createDocument(context.getContentResolver(),
+                folderUri,"application/pdf",filename);
+        if(target==null)throw new Exception("Could not restore PDF.");
+        boolean ok=false;
+        try(OutputStream out=context.getContentResolver().openOutputStream(target,"w")){
+            if(out==null)throw new Exception("Cannot write restored PDF.");
+            out.write(bytes);out.flush();ok=true;
+        }finally{
+            if(!ok)try{
+                DocumentsContract.deleteDocument(context.getContentResolver(),target);
+            }catch(Exception ignored){}
+        }
+        return target;
+    }
+
     private static void writePdf(OutputStream output,AiPreferences.SavedResult result) throws Exception{
         PdfDocument pdf=new PdfDocument();
         final int pageWidth=595,pageHeight=842,margin=45;
