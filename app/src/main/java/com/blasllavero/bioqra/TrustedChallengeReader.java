@@ -53,6 +53,20 @@ public final class TrustedChallengeReader {
     }
 
     public static Result read(String link) throws Exception {
+        Page page = fetchPage(link);
+        return new Result(page.text, page.url, "HTTPS and organizer domain checked · public HTML only");
+    }
+
+    /** The original document retains links, while text is stripped of navigation. */
+    public static final class Page {
+        public final Document document;
+        public final String text, url;
+        Page(Document document, String text, String url) {
+            this.document=document; this.text=text; this.url=url;
+        }
+    }
+
+    public static Page fetchPage(String link) throws Exception {
         if (!approved(link)) throw new IllegalArgumentException(
                 "Automatic retrieval blocked: this source is not in the reviewed HTTPS allowlist.");
         HttpURLConnection connection=(HttpURLConnection)new URL(link).openConnection();
@@ -81,16 +95,19 @@ public final class TrustedChallengeReader {
                             "The public page is too large to inspect safely.");
                 }
                 Document doc=Jsoup.parse(out.toString(StandardCharsets.UTF_8.name()),link);
-                doc.select("script,style,iframe,object,embed,form,footer,nav,header,aside,svg,button").remove();
+                // Never treat webpage text as code or privileged instructions.
+                // Use a separate copy so the resolver can inspect safe link metadata.
+                Document readable=doc.clone();
+                readable.select("script,style,iframe,object,embed,form,footer,nav,header,aside,svg,button").remove();
                 Element best=null;
-                for(Element e:doc.select("main,article,[role=main],.challenge-content,.problem-statement,#content")) {
+                for(Element e:readable.select("main,article,[role=main],.challenge-content,.problem-statement,#content")) {
                     if(best==null || e.text().length()>best.text().length())best=e;
                 }
-                String text=(best!=null?best:doc.body()).text().replaceAll("\\s+"," ").trim();
+                String text=(best!=null?best:readable.body()).text().replaceAll("\\s+"," ").trim();
                 if(text.length()>18000) text=text.substring(0,18000)+" [truncated]";
                 if(text.length()<100) throw new Exception(
                         "No readable public problem statement. This challenge may need JavaScript, authentication or a separate dataset.");
-                return new Result(text,link,"HTTPS and organizer domain checked · public HTML only");
+                return new Page(doc,text,link);
             }
         } finally {connection.disconnect();}
     }
