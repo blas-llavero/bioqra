@@ -100,9 +100,10 @@ public final class TrustedChallengeReader {
                     throw new Exception("Encrypted/oversized PDF is not processed.");
                 com.tom_roush.pdfbox.text.PDFTextStripper stripper=
                     new com.tom_roush.pdfbox.text.PDFTextStripper();
-                String text=stripper.getText(pdf).replaceAll("\\s+"," ").trim();
+                String text=stripper.getText(pdf).replace("\\r\\n","\\n")
+                        .replace("\\r","\\n").replaceAll("[ \\t]+"," ").trim();
                 if(text.length()<160)throw new Exception("No searchable text in PDF (OCR not performed).");
-                return text.substring(0,Math.min(text.length(),18000));
+                return ChallengeTextFormatter.truncate(text,18000);
             }
         }finally{c.disconnect();}
     }
@@ -165,8 +166,8 @@ public final class TrustedChallengeReader {
                 for(Element e:readable.select("main,article,[role=main],.challenge-content,.problem-statement,#content")) {
                     if(best==null || e.text().length()>best.text().length())best=e;
                 }
-                String text=(best!=null?best:readable.body()).text().replaceAll("\\s+"," ").trim();
-                if(text.length()>18000) text=text.substring(0,18000)+" [truncated]";
+                String text=ChallengeTextFormatter.extract(best!=null?best:readable.body());
+                text=ChallengeTextFormatter.truncate(text,18000);
                 if(text.length()<100) throw new Exception(
                         "No readable public problem statement. This challenge may need JavaScript, authentication or a separate dataset.");
                 return new Page(doc,text,link);
