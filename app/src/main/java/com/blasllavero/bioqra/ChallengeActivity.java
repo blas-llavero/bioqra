@@ -5,6 +5,13 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.BackgroundColorSpan;
+import android.view.inputmethod.EditorInfo;
+import android.widget.HorizontalScrollView;
+import java.util.ArrayList;
+import java.util.Locale;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -33,6 +40,15 @@ public final class ChallengeActivity extends Activity {
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     private String title, url, mode, kind;
     private TextView status, output, statement, resolvedLink, deadlinesView;
+    private TextView sectionHeading, searchCounter;
+    private EditText searchText;
+    private LinearLayout searchPanel;
+    private ScrollView pageScroll;
+    private ChallengeSectionNavigator.Snapshot navigation;
+    private String activeSection=ChallengeSectionNavigator.FULL;
+    private final ArrayList<String> sectionHistory=new ArrayList<>();
+    private int historyIndex=-1,searchPosition=-1;
+    private Button backSectionButton,forwardSectionButton;
     private EditText sample;
     private Button aiButton, loadButton, offlineButton;
     private String fetchedText="";
@@ -85,6 +101,7 @@ public final class ChallengeActivity extends Activity {
         getWindow().setNavigationBarColor(Color.BLACK);
 
         ScrollView scroll=new ScrollView(this);
+        pageScroll=scroll;
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(Color.rgb(247,251,250));
         LinearLayout root=new LinearLayout(this);
@@ -134,20 +151,23 @@ public final class ChallengeActivity extends Activity {
             else status.setText("This link is not in BIOQRA's approved research-source allowlist.");
         });
 
-        root.addView(text("Public statement (read-only preview)",18,true));
+        // Browser-like, read-only section navigation for the selected challenge.
+        root.addView(createSectionNavigation());
+        sectionHeading=text("Public statement (read-only preview)",18,true);
+        root.addView(sectionHeading);
         resolvedLink=text("Detailed statement URL: not identified yet",12,false);
         resolvedLink.setTextIsSelectable(true);
         root.addView(resolvedLink);
-        root.addView(text("Participation dates and supporting documents",18,true));
-        deadlinesView=text("Not checked. Dates must be verified on the official organizer website.",13,false);
-        deadlinesView.setTextIsSelectable(true);
-        deadlinesView.setLineSpacing(dp(4),1.08f);
-        root.addView(deadlinesView);
         statement=text("No statement retrieved yet.",14,false);
         statement.setTextIsSelectable(true);
         statement.setLineSpacing(dp(5),1.1f);
         statement.setPadding(dp(3),dp(12),dp(3),dp(18));
         root.addView(statement);
+        root.addView(text("Participation dates and supporting documents",18,true));
+        deadlinesView=text("Not checked. Dates must be verified on the official organizer website.",13,false);
+        deadlinesView.setTextIsSelectable(true);
+        deadlinesView.setLineSpacing(dp(4),1.08f);
+        root.addView(deadlinesView);
 
         root.addView(text("Public sample DNA/RNA data for local checks (optional)",16,true));
         sample=new EditText(this);
@@ -184,6 +204,208 @@ public final class ChallengeActivity extends Activity {
         // Automatic mode retrieves the public challenge on opening.
         // Actual ChatGPT usage still requires consent to transmit each statement.
         if("automatic".equals(mode))retrieve();
+    }
+
+    private LinearLayout createSectionNavigation(){
+        LinearLayout wrapper=new LinearLayout(this);
+        wrapper.setOrientation(LinearLayout.VERTICAL);
+        TextView hint=text("Navigate official challenge sections",15,true);
+        wrapper.addView(hint);
+        HorizontalScrollView horizontal=new HorizontalScrollView(this);
+        horizontal.setHorizontalScrollBarEnabled(true);
+        LinearLayout controls=new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        controls.setGravity(Gravity.CENTER_VERTICAL);
+        backSectionButton=button("← Enrere");
+        forwardSectionButton=button("Endavant →");
+        backSectionButton.setOnClickListener(v->stepHistory(-1));
+        forwardSectionButton.setOnClickListener(v->stepHistory(1));
+        controls.addView(backSectionButton,new LinearLayout.LayoutParams(dp(117),dp(48)));
+        controls.addView(forwardSectionButton,new LinearLayout.LayoutParams(dp(130),dp(48)));
+        Button searchToggle=button("🔍 Cerca");
+        searchToggle.setContentDescription("Search within the current challenge document");
+        controls.addView(searchToggle,new LinearLayout.LayoutParams(dp(119),dp(48)));
+        searchToggle.setOnClickListener(v->{
+            if(searchPanel==null)return;
+            boolean open=searchPanel.getVisibility()!=View.VISIBLE;
+            searchPanel.setVisibility(open?View.VISIBLE:View.GONE);
+            if(open)searchText.requestFocus();
+        });
+        for(String key:ChallengeSectionNavigator.KEYS){
+            Button tab=button(ChallengeSectionNavigator.label(key));
+            int width=(key.equals(ChallengeSectionNavigator.DOCUMENTS)
+                    ||key.equals(ChallengeSectionNavigator.RELATED))?dp(164):dp(125);
+            controls.addView(tab,new LinearLayout.LayoutParams(width,dp(48)));
+            tab.setOnClickListener(v->selectSection(key,true));
+        }
+        horizontal.addView(controls);
+        wrapper.addView(horizontal,new LinearLayout.LayoutParams(-1,dp(58)));
+
+        searchPanel=new LinearLayout(this);
+        searchPanel.setOrientation(LinearLayout.HORIZONTAL);
+        searchPanel.setGravity(Gravity.CENTER_VERTICAL);
+        searchText=new EditText(this);
+        searchText.setSingleLine(true);
+        searchText.setTextSize(15);
+        searchText.setHint("Search text in the current section");
+        searchText.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+        searchPanel.addView(searchText,new LinearLayout.LayoutParams(0,dp(54),1));
+        Button previous=button("◀");
+        previous.setContentDescription("Previous match");
+        searchPanel.addView(previous,new LinearLayout.LayoutParams(dp(52),dp(54)));
+        Button next=button("▶");
+        next.setContentDescription("Next match");
+        searchPanel.addView(next,new LinearLayout.LayoutParams(dp(52),dp(54)));
+        searchCounter=text("0/0",12,false);
+        searchPanel.addView(searchCounter,new LinearLayout.LayoutParams(dp(57),dp(54)));
+        previous.setOnClickListener(v->findMatch(-1));
+        next.setOnClickListener(v->findMatch(1));
+        searchText.setOnEditorActionListener((field,action,event)->{
+            if(action==EditorInfo.IME_ACTION_SEARCH){findMatch(1);return true;}
+            return false;
+        });
+        searchText.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            public void onTextChanged(CharSequence s,int start,int before,int count){
+                searchPosition=-1;
+                highlightSearch(false);
+            }
+            public void afterTextChanged(android.text.Editable editable){}
+        });
+        searchPanel.setVisibility(View.GONE);
+        wrapper.addView(searchPanel);
+        updateNavigationButtons();
+        return wrapper;
+    }
+
+    private void updateNavigationButtons(){
+        if(backSectionButton!=null)backSectionButton.setEnabled(historyIndex>0);
+        if(forwardSectionButton!=null)
+            forwardSectionButton.setEnabled(historyIndex>=0
+                    &&historyIndex<sectionHistory.size()-1);
+    }
+    private void selectSection(String key,boolean record){
+        if(record && (historyIndex<0 || !key.equals(sectionHistory.get(historyIndex)))){
+            while(sectionHistory.size()>historyIndex+1)
+                sectionHistory.remove(sectionHistory.size()-1);
+            sectionHistory.add(key);
+            historyIndex=sectionHistory.size()-1;
+        }
+        activeSection=key;
+        updateNavigationButtons();
+        showSection(key);
+    }
+    private void stepHistory(int delta){
+        int next=historyIndex+delta;
+        if(next<0 || next>=sectionHistory.size())return;
+        historyIndex=next;
+        selectSection(sectionHistory.get(next),false);
+    }
+    private void showSection(String key){
+        if(navigation==null){
+            status.setText("First retrieve the official challenge statement.");
+            return;
+        }
+        ChallengeSectionNavigator.Section selected=navigation.get(key);
+        sectionHeading.setText(ChallengeSectionNavigator.label(key));
+        if(selected!=null){
+            statement.setText(selected.body);
+            resolvedLink.setText("Official source: "+selected.url);
+            highlightSearch(false);
+            pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
+            return;
+        }
+        String officialLink=navigation.link(key);
+        statement.setText("Looking for the official "+ChallengeSectionNavigator.label(key)
+                +" section...");
+        if(officialLink==null){
+            statement.setText("This section was not identifiable in the public official "
+                    +"statement. BIOQRA will not invent missing challenge details. "
+                    +"Open the organizer's original page for more information.");
+            resolvedLink.setText("Source: "+navigation.sourceUrl);
+            pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
+            return;
+        }
+        resolvedLink.setText("Checking official link: "+officialLink);
+        final ChallengeSectionNavigator.Snapshot snapshot=navigation;
+        EXEC.execute(()->{
+            try{
+                ChallengeSectionNavigator.Section loaded=
+                        ChallengeSectionNavigator.follow(this,snapshot,key);
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed()
+                            ||!key.equals(activeSection)||navigation!=snapshot)return;
+                    statement.setText(loaded==null
+                            ?"Official section link cannot be retrieved automatically."
+                            :loaded.body);
+                    if(loaded!=null)resolvedLink.setText("Official source: "+loaded.url);
+                    highlightSearch(false);
+                    pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
+                });
+            }catch(Exception e){
+                runOnUiThread(()->{
+                    if(!isFinishing()&&!isDestroyed()&&key.equals(activeSection)){
+                        statement.setText("The official content could not be loaded: "
+                                +e.getMessage()+"\n\nSource: "+officialLink);
+                    }
+                });
+            }
+        });
+    }
+
+    /** Highlight case-insensitive text matches without altering source data. */
+    private void highlightSearch(boolean scrollToMatch){
+        if(searchText==null || statement==null)return;
+        String text=statement.getText().toString();
+        String query=searchText.getText().toString().trim();
+        if(query.isEmpty()){
+            searchCounter.setText("0/0");
+            return;
+        }
+        String haystack=text.toLowerCase(Locale.ROOT);
+        String needle=query.toLowerCase(Locale.ROOT);
+        ArrayList<Integer> found=new ArrayList<>();
+        for(int from=0;from<haystack.length() && found.size()<400;){
+            int i=haystack.indexOf(needle,from);
+            if(i<0)break;
+            found.add(i);from=i+Math.max(1,needle.length());
+        }
+        if(found.isEmpty()){
+            searchCounter.setText("0/0");
+            return;
+        }
+        if(searchPosition<0 || searchPosition>=found.size())searchPosition=0;
+        SpannableString marked=new SpannableString(text);
+        for(int i=0;i<found.size();i++){
+            int start=found.get(i);
+            marked.setSpan(new BackgroundColorSpan(i==searchPosition
+                        ?Color.rgb(255,192,65):Color.rgb(255,238,165)),
+                    start,start+needle.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        statement.setText(marked,TextView.BufferType.SPANNABLE);
+        searchCounter.setText((searchPosition+1)+"/"+found.size());
+        if(scrollToMatch){
+            final int position=found.get(searchPosition);
+            statement.post(()->{
+                if(statement.getLayout()==null)return;
+                int line=statement.getLayout().getLineForOffset(
+                    Math.min(position,statement.length()));
+                int y=statement.getTop()+statement.getLayout().getLineTop(line);
+                pageScroll.smoothScrollTo(0,Math.max(0,y-dp(105)));
+            });
+        }
+    }
+    private void findMatch(int direction){
+        String query=searchText.getText().toString().trim();
+        if(query.isEmpty()){searchCounter.setText("0/0");return;}
+        String haystack=statement.getText().toString().toLowerCase(Locale.ROOT);
+        String needle=query.toLowerCase(Locale.ROOT);
+        int count=0;
+        for(int i=0;(i=haystack.indexOf(needle,i))>=0 && count<400;i+=needle.length())
+            count++;
+        if(count==0){searchCounter.setText("0/0");return;}
+        searchPosition=(searchPosition+direction+count)%count;
+        highlightSearch(true);
     }
 
     private void saveSavedPdf(){
@@ -236,6 +458,27 @@ public final class ChallengeActivity extends Activity {
                     verifiedPageUrl=result.resolvedUrl;
                     statement.setText(result.text);
                     resolvedLink.setText("Selected public page: "+result.resolvedUrl);
+                    navigation=ChallengeSectionNavigator.fromText(result.resolvedUrl,
+                            result.text,result.deadlineSummary,result.documentLinks);
+                    selectSection(ChallengeSectionNavigator.FULL,true);
+                    // Enrich the section index with original organizer links.
+                    // Failure is nonfatal: the local formatted text remains usable.
+                    EXEC.execute(()->{
+                        try{
+                            TrustedChallengeReader.Page page=
+                                    TrustedChallengeReader.fetchPage(result.resolvedUrl);
+                            ChallengeSectionNavigator.Snapshot extra=
+                                    ChallengeSectionNavigator.fromPage(page,
+                                        result.deadlineSummary,result.documentLinks);
+                            runOnUiThread(()->{
+                                if(!isFinishing()&&!isDestroyed()){
+                                    navigation=extra;
+                                    if(!ChallengeSectionNavigator.FULL.equals(activeSection))
+                                        showSection(activeSection);
+                                }
+                            });
+                        }catch(Exception ignored){}
+                    });
                     StringBuilder sources=new StringBuilder(result.deadlineSummary);
                     if(!result.documentLinks.isEmpty()){
                         sources.append("\n\nPUBLIC SUPPORTING PDF DOCUMENTS (read-only):\n");
