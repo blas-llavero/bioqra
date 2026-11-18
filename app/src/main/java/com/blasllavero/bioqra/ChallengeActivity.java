@@ -32,7 +32,7 @@ public final class ChallengeActivity extends Activity {
     public static final String KIND="challenge_kind";
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     private String title, url, mode, kind;
-    private TextView status, output, statement, resolvedLink;
+    private TextView status, output, statement, resolvedLink, deadlinesView;
     private EditText sample;
     private Button aiButton, loadButton, offlineButton;
     private String fetchedText="";
@@ -138,6 +138,10 @@ public final class ChallengeActivity extends Activity {
         resolvedLink=text("Detailed statement URL: not identified yet",12,false);
         resolvedLink.setTextIsSelectable(true);
         root.addView(resolvedLink);
+        root.addView(text("Participation dates and supporting documents",18,true));
+        deadlinesView=text("Not checked. Dates must be verified on the official organizer website.",13,false);
+        deadlinesView.setTextIsSelectable(true);
+        root.addView(deadlinesView);
         statement=text("No statement retrieved yet.",14,false);
         statement.setTextIsSelectable(true);
         root.addView(statement);
@@ -199,7 +203,7 @@ public final class ChallengeActivity extends Activity {
             String message;
             try{
                 ArchiveFiles.makePdf(this,Uri.parse(folder),result);
-                message="PDF saved under YY/MM/DD-"+ArchiveFiles.cleanName(result.title)+".";
+                message="PDF saved in the challenge folder as YYMMDD-"+ArchiveFiles.cleanName(result.title)+".pdf";
             }catch(Exception e){message="PDF export failed: "+e.getMessage();}
             final String feedback=message;
             runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())status.setText(feedback);});
@@ -221,7 +225,7 @@ public final class ChallengeActivity extends Activity {
         updateButtons();
         EXEC.execute(()->{
             try {
-                ChallengePageResolver.Outcome result=ChallengePageResolver.resolve(url,title);
+                ChallengePageResolver.Outcome result=ChallengePageResolver.resolve(this,url,title);
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     fetchedText=result.text;
@@ -229,6 +233,12 @@ public final class ChallengeActivity extends Activity {
                     verifiedPageUrl=result.resolvedUrl;
                     statement.setText(result.text);
                     resolvedLink.setText("Selected public page: "+result.resolvedUrl);
+                    StringBuilder sources=new StringBuilder(result.deadlineSummary);
+                    if(!result.documentLinks.isEmpty()){
+                        sources.append("\n\nPUBLIC SUPPORTING PDF DOCUMENTS (read-only):\n");
+                        for(String doc:result.documentLinks)sources.append(doc).append("\n");
+                    }
+                    deadlinesView.setText(sources.toString());
                     status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
                     busy=false;updateButtons();
                     if("automatic".equals(mode) && connection.canUsePlan() && specificPage){
