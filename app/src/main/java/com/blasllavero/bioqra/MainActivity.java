@@ -384,7 +384,7 @@ public class MainActivity extends Activity {
         Spinner picker=new Spinner(this);
         List<String> names=new ArrayList<>();
         List<String> keys=new ArrayList<>();
-        names.add("Inherit global / Auto");keys.add(AiPreferences.AUTO);
+        names.add("Use global model / Auto highest-tier");keys.add(AiPreferences.AUTO);
         for(ChatGptConnection.Model model:aiModels){
             names.add(model.title);keys.add(model.slug);
         }
