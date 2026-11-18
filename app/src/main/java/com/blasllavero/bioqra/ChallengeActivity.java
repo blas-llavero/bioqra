@@ -12,6 +12,8 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.HorizontalScrollView;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.HashSet;
+import java.util.Set;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -48,6 +50,8 @@ public final class ChallengeActivity extends Activity {
     private String activeSection=ChallengeSectionNavigator.FULL;
     private final ArrayList<String> sectionHistory=new ArrayList<>();
     private int historyIndex=-1,searchPosition=-1;
+    private final Set<String> loadedOfficialSections=new HashSet<>();
+    private final Set<String> loadingOfficialSections=new HashSet<>();
     private Button backSectionButton,forwardSectionButton;
     private EditText sample;
     private Button aiButton, loadButton, offlineButton;
@@ -222,6 +226,9 @@ public final class ChallengeActivity extends Activity {
         forwardSectionButton.setOnClickListener(v->stepHistory(1));
         controls.addView(backSectionButton,new LinearLayout.LayoutParams(dp(117),dp(48)));
         controls.addView(forwardSectionButton,new LinearLayout.LayoutParams(dp(130),dp(48)));
+        Button fullText=button("Full text");
+        fullText.setOnClickListener(v->selectSection(ChallengeSectionNavigator.FULL,true));
+        controls.addView(fullText,new LinearLayout.LayoutParams(dp(112),dp(48)));
         Button searchToggle=button("🔍 Cerca");
         searchToggle.setContentDescription("Search within the current challenge document");
         controls.addView(searchToggle,new LinearLayout.LayoutParams(dp(119),dp(48)));
@@ -308,49 +315,56 @@ public final class ChallengeActivity extends Activity {
         }
         ChallengeSectionNavigator.Section selected=navigation.get(key);
         sectionHeading.setText(ChallengeSectionNavigator.label(key));
+        String link=navigation.link(key);
         if(selected!=null){
             statement.setText(selected.body);
             resolvedLink.setText("Official source: "+selected.url);
-            highlightSearch(false);
-            pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
-            return;
-        }
-        String officialLink=navigation.link(key);
-        statement.setText("Looking for the official "+ChallengeSectionNavigator.label(key)
-                +" section...");
-        if(officialLink==null){
-            statement.setText("This section was not identifiable in the public official "
-                    +"statement. BIOQRA will not invent missing challenge details. "
-                    +"Open the organizer's original page for more information.");
+        }else if(link==null){
+            statement.setText("This section was not identified in the public official "
+                +"statement. BIOQRA will not invent missing challenge details. "
+                +"Use the original organizer page for more information.");
             resolvedLink.setText("Source: "+navigation.sourceUrl);
-            pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
-            return;
+        }else{
+            statement.setText("Official link identified. Retrieving the public section...");
+            resolvedLink.setText("Official source to check: "+link);
         }
-        resolvedLink.setText("Checking official link: "+officialLink);
-        final ChallengeSectionNavigator.Snapshot snapshot=navigation;
-        EXEC.execute(()->{
-            try{
-                ChallengeSectionNavigator.Section loaded=
-                        ChallengeSectionNavigator.follow(this,snapshot,key);
-                runOnUiThread(()->{
-                    if(isFinishing()||isDestroyed()
-                            ||!key.equals(activeSection)||navigation!=snapshot)return;
-                    statement.setText(loaded==null
-                            ?"Official section link cannot be retrieved automatically."
-                            :loaded.body);
-                    if(loaded!=null)resolvedLink.setText("Official source: "+loaded.url);
-                    highlightSearch(false);
-                    pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
-                });
-            }catch(Exception e){
-                runOnUiThread(()->{
-                    if(!isFinishing()&&!isDestroyed()&&key.equals(activeSection)){
-                        statement.setText("The official content could not be loaded: "
-                                +e.getMessage()+"\n\nSource: "+officialLink);
-                    }
-                });
-            }
-        });
+        highlightSearch(false);
+        pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
+        if(link!=null && !loadedOfficialSections.contains(key)
+                && !loadingOfficialSections.contains(key)){
+            loadingOfficialSections.add(key);
+            final ChallengeSectionNavigator.Snapshot snapshot=navigation;
+            EXEC.execute(()->{
+                try{
+                    ChallengeSectionNavigator.Section loaded=
+                            ChallengeSectionNavigator.follow(this,snapshot,key);
+                    runOnUiThread(()->{
+                        loadingOfficialSections.remove(key);
+                        if(isFinishing()||isDestroyed()||navigation!=snapshot)return;
+                        loadedOfficialSections.add(key);
+                        if(key.equals(activeSection)){
+                            if(loaded!=null){
+                                statement.setText(loaded.body);
+                                resolvedLink.setText("Official source: "+loaded.url);
+                            }else statement.setText("This linked section is not accessible.");
+                            highlightSearch(false);
+                            pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
+                        }
+                    });
+                }catch(Exception e){
+                    runOnUiThread(()->{
+                        loadingOfficialSections.remove(key);
+                        if(isFinishing()||isDestroyed()||navigation!=snapshot)return;
+                        loadedOfficialSections.add(key);
+                        if(key.equals(activeSection)){
+                            String original=selected==null?"":selected.body+"\n\n";
+                            statement.setText(original+"The official linked document could not be "
+                                    +"read automatically: "+e.getMessage()+"\nSource: "+link);
+                        }
+                    });
+                }
+            });
+        }
     }
 
     /** Highlight case-insensitive text matches without altering source data. */
@@ -462,6 +476,8 @@ public final class ChallengeActivity extends Activity {
                     verifiedPageUrl=result.resolvedUrl;
                     statement.setText(result.text);
                     resolvedLink.setText("Selected public page: "+result.resolvedUrl);
+                    loadedOfficialSections.clear();
+                    loadingOfficialSections.clear();
                     navigation=ChallengeSectionNavigator.fromText(result.resolvedUrl,
                             result.text,result.deadlineSummary,result.documentLinks);
                     selectSection(ChallengeSectionNavigator.FULL,true);
@@ -477,6 +493,8 @@ public final class ChallengeActivity extends Activity {
                             runOnUiThread(()->{
                                 if(!isFinishing()&&!isDestroyed()){
                                     navigation=extra;
+                                    loadedOfficialSections.clear();
+                                    loadingOfficialSections.clear();
                                     if(!ChallengeSectionNavigator.FULL.equals(activeSection))
                                         showSection(activeSection);
                                 }
