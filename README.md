@@ -44,6 +44,10 @@ The default **Auto · preferred high-capability model** selects among models *ac
 
 This is **user-triggered per-selected-challenge automation**, not a background agent processing every listing without the app open. Daily limits are local safeguards, not a guarantee of available ChatGPT plan capacity or a financial quota. No model or plan promises unlimited free usage. The AI's analysis is **unverified** until independent tools and suitable real data have been used.
 
+## Readable public challenge statements
+
+BIOQRA now preserves **paragraph breaks, original section headings, lists, tables and whitespace** when converting an official public HTML challenge page into the text shown under **Public statement (read-only preview)**. This prevents the previous single-line wall of text and also gives ChatGPT the same structured public statement instead of collapsing all words into one paragraph. The view has additional line spacing for tablet readability. Small public PDF briefs keep their extracted text line breaks where possible; PDF layout and scanned-image OCR are not yet supported. The app extracts only public static HTML/PDF text, never executing webpage scripts or accepting webpage instructions as privileged commands.
+
 ## Higher-tier model default and extended research-source discovery
 
 BIOQRA's **Auto** model preference now favors the highest-tier model advertised by the authenticated ChatGPT account, with a naming-based preference for full/Pro and high-reasoning variants. This is a **heuristic, not an official scientific capability ranking**. Users may still set **a different model for any individual challenge**, save a global preference, or apply one model across the entire list. No model missing from the authenticated model list is invented or used.
