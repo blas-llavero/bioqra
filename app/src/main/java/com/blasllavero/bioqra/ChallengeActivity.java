@@ -374,7 +374,7 @@ public final class ChallengeActivity extends Activity {
             searchCounter.setText("0/0");
             return;
         }
-        if(searchPosition<0 || searchPosition>=found.size())searchPosition=0;
+        if(searchPosition>=found.size())searchPosition=-1;
         SpannableString marked=new SpannableString(text);
         for(int i=0;i<found.size();i++){
             int start=found.get(i);
@@ -383,8 +383,8 @@ public final class ChallengeActivity extends Activity {
                     start,start+needle.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         statement.setText(marked,TextView.BufferType.SPANNABLE);
-        searchCounter.setText((searchPosition+1)+"/"+found.size());
-        if(scrollToMatch){
+        searchCounter.setText((searchPosition<0?0:searchPosition+1)+"/"+found.size());
+        if(scrollToMatch && searchPosition>=0){
             final int position=found.get(searchPosition);
             statement.post(()->{
                 if(statement.getLayout()==null)return;
@@ -396,6 +396,10 @@ public final class ChallengeActivity extends Activity {
         }
     }
     private void findMatch(int direction){
+        // Search the entire retrieved statement regardless of the section
+        // currently displayed; navigate back to the original section with ←.
+        if(navigation!=null && !ChallengeSectionNavigator.FULL.equals(activeSection))
+            selectSection(ChallengeSectionNavigator.FULL,true);
         String query=searchText.getText().toString().trim();
         if(query.isEmpty()){searchCounter.setText("0/0");return;}
         String haystack=statement.getText().toString().toLowerCase(Locale.ROOT);
