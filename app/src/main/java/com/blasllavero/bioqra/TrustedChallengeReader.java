@@ -29,7 +29,14 @@ public final class TrustedChallengeReader {
             "cancergrandchallenges.org", "www.cancergrandchallenges.org",
             "grand-challenge.org", "www.grand-challenge.org",
             "biohackathon-europe.org", "www.biohackathon-europe.org",
-            "2026.genedis.org", "mlcontests.com", "www.mlcontests.com"));
+            "2026.genedis.org", "mlcontests.com", "www.mlcontests.com",
+            "precision.fda.gov", "challenges.synapse.org",
+            "challenge.physionet.org", "moody-challenge.physionet.org",
+            "physionet.org", "www.physionet.org",
+            "www.codabench.org", "codabench.org",
+            "www.cancer.gov", "cancer.gov",
+            "www.synapse.org", "synapse.org",
+            "openchallenges.io", "www.openchallenges.io"));
 
     public static boolean approved(String raw) {
         try {
@@ -43,6 +50,61 @@ public final class TrustedChallengeReader {
             if (host.endsWith(".") || host.equals("localhost")) return false;
             return EXACT.contains(host) || host.endsWith(".grand-challenge.org");
         } catch(Exception e) { return false; }
+    }
+
+    /** Review the HTTPS host and link extension before downloading a small public PDF. */
+    public static boolean approvedPdf(String link){
+        if(!approved(link))return false;
+        try{
+            URI uri=new URI(link);
+            String path=uri.getPath()==null?"":uri.getPath().toLowerCase(Locale.ROOT);
+            return path.endsWith(".pdf") || path.contains("/pdfs/");
+        }catch(Exception e){return false;}
+    }
+    private static byte[] readLimited(InputStream in,int limit) throws Exception{
+        try(ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] buf=new byte[8192];int n;
+            while((n=in.read(buf))!=-1){
+                out.write(buf,0,n);
+                if(out.size()>limit)throw new Exception("Public document exceeds size limit");
+            }
+            return out.toByteArray();
+        }
+    }
+    /** Download a bounded public PDF without following redirects or sending credentials. */
+    public static String fetchPdf(android.content.Context context,String link) throws Exception {
+        if(!approvedPdf(link))throw new Exception("Unapproved public PDF URL.");
+        HttpURLConnection c=(HttpURLConnection)new URL(link).openConnection();
+        c.setConnectTimeout(12000);c.setReadTimeout(18000);
+        c.setInstanceFollowRedirects(false);
+        c.setRequestMethod("GET");
+        c.setRequestProperty("Accept","application/pdf");
+        c.setRequestProperty("User-Agent","BIOQRA/0.5 public challenge brief reader");
+        try{
+            int code=c.getResponseCode();
+            if(code!=200)throw new Exception("Organizer PDF HTTP "+code+" (redirects not followed).");
+            String mime=c.getContentType();
+            if(mime!=null && !(mime.toLowerCase(Locale.ROOT).contains("pdf")
+                    || mime.toLowerCase(Locale.ROOT).contains("octet-stream")))
+                throw new Exception("Document is not a PDF.");
+            byte[] bytes;
+            try(InputStream input=c.getInputStream()){bytes=readLimited(input,4_000_000);}
+            if(bytes.length<5 || bytes[0]!='%'||bytes[1]!='P'||bytes[2]!='D'
+                    || bytes[3]!='F'||bytes[4]!='-')
+                throw new Exception("Invalid PDF signature.");
+            com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(
+                    context.getApplicationContext());
+            try(com.tom_roush.pdfbox.pdmodel.PDDocument pdf=
+                    com.tom_roush.pdfbox.pdmodel.PDDocument.load(bytes)){
+                if(pdf.isEncrypted() || pdf.getNumberOfPages()>30)
+                    throw new Exception("Encrypted/oversized PDF is not processed.");
+                com.tom_roush.pdfbox.text.PDFTextStripper stripper=
+                    new com.tom_roush.pdfbox.text.PDFTextStripper();
+                String text=stripper.getText(pdf).replaceAll("\\s+"," ").trim();
+                if(text.length()<160)throw new Exception("No searchable text in PDF (OCR not performed).");
+                return text.substring(0,Math.min(text.length(),18000));
+            }
+        }finally{c.disconnect();}
     }
 
     public static final class Result {
