@@ -298,6 +298,7 @@ public final class ChallengeActivity extends Activity {
             sectionHistory.add(key);
             historyIndex=sectionHistory.size()-1;
         }
+        if(!key.equals(activeSection))searchPosition=-1;
         activeSection=key;
         updateNavigationButtons();
         showSection(key);
@@ -373,6 +374,9 @@ public final class ChallengeActivity extends Activity {
         String text=statement.getText().toString();
         String query=searchText.getText().toString().trim();
         if(query.isEmpty()){
+            // Clear highlighted spans from any previous search.
+            statement.setText(text);
+            searchPosition=-1;
             searchCounter.setText("0/0");
             return;
         }
@@ -385,6 +389,8 @@ public final class ChallengeActivity extends Activity {
             found.add(i);from=i+Math.max(1,needle.length());
         }
         if(found.isEmpty()){
+            statement.setText(text);
+            searchPosition=-1;
             searchCounter.setText("0/0");
             return;
         }
