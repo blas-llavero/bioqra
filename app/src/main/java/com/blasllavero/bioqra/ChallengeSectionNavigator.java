@@ -192,6 +192,42 @@ public final class ChallengeSectionNavigator {
         return snapshot;
     }
 
+    /** Local fallback when refreshing HTML is unavailable. */
+    public static Snapshot fromText(String url,String text,String dates,List<String> pdfs){
+        Snapshot snapshot=new Snapshot(url,text);
+        String current=null;
+        Map<String,StringBuilder> sections=new LinkedHashMap<>();
+        for(String paragraph:text.split("\\n\\s*\\n")){
+            String line=paragraph.trim();
+            if(line.isEmpty())continue;
+            String label=classify(line);
+            if(label!=null){
+                current=label;
+                sections.putIfAbsent(current,new StringBuilder());
+            }else if(current!=null){
+                StringBuilder b=sections.get(current);
+                if(b.length()<14000){
+                    if(b.length()>0)b.append("\n\n");
+                    b.append(line);
+                }
+            }
+        }
+        for(Map.Entry<String,StringBuilder> item:sections.entrySet())
+            if(item.getValue().length()>=25)
+                snapshot.set(item.getKey(),item.getValue().toString(),url,true);
+        if(dates!=null&&!dates.startsWith("No participation"))
+            snapshot.set(DEADLINE,dates,url,true);
+        if(pdfs!=null && !pdfs.isEmpty()){
+            StringBuilder links=new StringBuilder();
+            for(String item:pdfs)if(TrustedChallengeReader.approvedPdf(item)){
+                links.append("• ").append(item).append("\n");
+                snapshot.link(DOCUMENTS,item);
+            }
+            if(links.length()>0)snapshot.set(DOCUMENTS,links.toString(),url,true);
+        }
+        return snapshot;
+    }
+
     /** Retrieves at most one matching, approved public source on user tap. */
     public static Section follow(Context context,Snapshot snapshot,String key) throws Exception{
         if(snapshot==null)return null;
