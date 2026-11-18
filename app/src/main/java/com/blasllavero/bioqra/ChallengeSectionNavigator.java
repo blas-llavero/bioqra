@@ -241,7 +241,13 @@ public final class ChallengeSectionNavigator {
         // The document is always identified as a retrieved source, not a proof
         // of eligibility, open registration, or a verified research result.
         String combined=fetched;
-        if(fetched.length()>14000)combined=ChallengeTextFormatter.truncate(fetched,14000);
+        if(fetched.length()>12000)combined=ChallengeTextFormatter.truncate(fetched,12000);
+        Section existing=snapshot.get(key);
+        if(existing!=null && !existing.body.isEmpty()
+                && !existing.url.equals(target)){
+            combined=existing.body+"\n\n— ADDITIONAL OFFICIAL SOURCE —\n"
+                    +target+"\n\n"+combined;
+        }
         Section section=new Section(key,combined,target,true);
         snapshot.set(key,section.body,target,true);
         return section;
