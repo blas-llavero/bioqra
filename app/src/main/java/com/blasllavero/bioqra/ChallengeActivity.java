@@ -11,6 +11,8 @@ import android.text.style.BackgroundColorSpan;
 import android.view.inputmethod.EditorInfo;
 import android.widget.HorizontalScrollView;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.HashSet;
 import java.util.Set;
@@ -42,7 +44,7 @@ public final class ChallengeActivity extends Activity {
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     private String title, url, mode, kind;
     private TextView status, output, statement, resolvedLink, deadlinesView;
-    private TextView sectionHeading, searchCounter;
+    private TextView sectionHeading, searchCounter, aiSectionView;
     private EditText searchText;
     private LinearLayout searchPanel;
     private ScrollView pageScroll;
@@ -52,6 +54,7 @@ public final class ChallengeActivity extends Activity {
     private int historyIndex=-1,searchPosition=-1;
     private final Set<String> loadedOfficialSections=new HashSet<>();
     private final Set<String> loadingOfficialSections=new HashSet<>();
+    private final Map<String,String> aiSectionCache=new HashMap<>();
     private Button backSectionButton,forwardSectionButton;
     private EditText sample;
     private Button aiButton, loadButton, offlineButton;
@@ -167,6 +170,9 @@ public final class ChallengeActivity extends Activity {
         statement.setLineSpacing(dp(5),1.1f);
         statement.setPadding(dp(3),dp(12),dp(3),dp(18));
         root.addView(statement);
+        aiSectionView=text("Optional ChatGPT interpretation: select an official section, then authorize a one-time explanation.",13,false);
+        aiSectionView.setTextIsSelectable(true);
+        root.addView(aiSectionView);
         root.addView(text("Participation dates and supporting documents",18,true));
         deadlinesView=text("Not checked. Dates must be verified on the official organizer website.",13,false);
         deadlinesView.setTextIsSelectable(true);
@@ -247,6 +253,9 @@ public final class ChallengeActivity extends Activity {
         }
         horizontal.addView(controls);
         wrapper.addView(horizontal,new LinearLayout.LayoutParams(-1,dp(58)));
+        Button explain=button("Explain selected official section with ChatGPT (optional)");
+        explain.setOnClickListener(v->confirmSectionExplanation());
+        wrapper.addView(explain,new LinearLayout.LayoutParams(-1,dp(52)));
 
         searchPanel=new LinearLayout(this);
         searchPanel.setOrientation(LinearLayout.HORIZONTAL);
@@ -298,6 +307,7 @@ public final class ChallengeActivity extends Activity {
             sectionHistory.add(key);
             historyIndex=sectionHistory.size()-1;
         }
+        if(!key.equals(activeSection))searchPosition=-1;
         activeSection=key;
         updateNavigationButtons();
         showSection(key);
@@ -314,6 +324,12 @@ public final class ChallengeActivity extends Activity {
             return;
         }
         ChallengeSectionNavigator.Section selected=navigation.get(key);
+        if(aiSectionView!=null){
+            String cacheKey=key+"|"+(selected==null?"":selected.url);
+            aiSectionView.setText(aiSectionCache.containsKey(cacheKey)
+                ?aiSectionCache.get(cacheKey)
+                :"Optional AI interpretation is separate from the official statement.");
+        }
         sectionHeading.setText(ChallengeSectionNavigator.label(key));
         String link=navigation.link(key);
         if(selected!=null){
@@ -426,6 +442,87 @@ public final class ChallengeActivity extends Activity {
         highlightSearch(true);
     }
 
+
+    /**
+     * Per-request permission, even when automatic research proposal mode is on.
+     * Sends only already retrieved PUBLIC official text; never typed samples.
+     */
+    private void confirmSectionExplanation(){
+        if(busy)return;
+        if(navigation==null || ChallengeSectionNavigator.FULL.equals(activeSection)){
+            status.setText("Select a specific official section first. No AI request sent.");
+            return;
+        }
+        final ChallengeSectionNavigator.Snapshot snapshot=navigation;
+        final String sectionKey=activeSection;
+        final ChallengeSectionNavigator.Section source=snapshot.get(sectionKey);
+        if(source==null || source.body.trim().length()<20){
+            status.setText("No official section text available. Open its official link first.");
+            return;
+        }
+        if(!TrustedChallengeReader.approved(source.url)){
+            status.setText("Source not approved for AI transmission. No request sent.");
+            return;
+        }
+        if(!connection.canUsePlan()){
+            status.setText("Reconnect ChatGPT in AI Settings before requesting an explanation.");
+            return;
+        }
+        if(aiPreferences.remaining()<=0){
+            status.setText("Local daily ChatGPT request limit reached.");
+            return;
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("Explain official section with ChatGPT?")
+            .setMessage("Section: "+ChallengeSectionNavigator.label(sectionKey)
+                +"\nSource: "+source.url
+                +"\n\nSend up to 10,000 characters of this already retrieved PUBLIC section "
+                +"to your connected ChatGPT account, using this challenge's selected model? "
+                +"This consumes one local AI request (remaining: "+aiPreferences.remaining()+"). "
+                +"No patient information or typed samples will be sent. "
+                +"AI interpretations are unverified; consult the official source.")
+            .setNegativeButton("Cancel",null)
+            .setPositiveButton("Explain once",(d,w)->runSectionExplanation(snapshot,sectionKey,source))
+            .show();
+    }
+
+    private void runSectionExplanation(ChallengeSectionNavigator.Snapshot snapshot,
+                                       String sectionKey,ChallengeSectionNavigator.Section source){
+        if(busy || aiPreferences.remaining()<=0)return;
+        busy=true;
+        updateButtons();
+        status.setText("Preparing consented ChatGPT explanation...");
+        final String cacheKey=sectionKey+"|"+source.url;
+        EXEC.execute(()->{
+            try{
+                List<ChatGptConnection.Model> available=connection.models();
+                AiPreferences.Selection selection=AiPreferences.choose(
+                    available,aiPreferences.selected(challengeKey));
+                if(!aiPreferences.reserve(false))
+                    throw new Exception("Local AI request limit reached.");
+                String explanation=connection.explainOfficialSection(selection.slug,title,
+                    ChallengeSectionNavigator.label(sectionKey),source.url,source.body);
+                final String visible="AI INTERPRETATION — UNVERIFIED"
+                    +"\nModel: "+selection.label+"\nOfficial source: "+source.url
+                    +"\n\n"+explanation;
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    busy=false;updateButtons();
+                    if(navigation!=snapshot)return;
+                    aiSectionCache.put(cacheKey,visible);
+                    if(sectionKey.equals(activeSection))aiSectionView.setText(visible);
+                    status.setText("Optional section interpretation generated. Verify source facts.");
+                });
+            }catch(Exception e){
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    busy=false;updateButtons();
+                    status.setText("ChatGPT section explanation unavailable: "+e.getMessage());
+                });
+            }
+        });
+    }
+
     private void saveSavedPdf(){
         String folder=aiPreferences.pdfTreeUri();
         if(folder==null){
@@ -478,6 +575,7 @@ public final class ChallengeActivity extends Activity {
                     resolvedLink.setText("Selected public page: "+result.resolvedUrl);
                     loadedOfficialSections.clear();
                     loadingOfficialSections.clear();
+                    aiSectionCache.clear();
                     navigation=ChallengeSectionNavigator.fromText(result.resolvedUrl,
                             result.text,result.deadlineSummary,result.documentLinks);
                     selectSection(ChallengeSectionNavigator.FULL,true);
