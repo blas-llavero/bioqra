@@ -19,9 +19,14 @@ public final class ResearchCatalog {
     public static final String HACK = "Hackathons";
     public static final String ML = "ML Contests";
     public static final String GRAND = "Grand Challenge";
+    public static final String FDA = "precisionFDA";
+    public static final String SAGE = "Sage / Synapse";
+    public static final String PHYSIONET = "PhysioNet";
+    public static final String CODABENCH = "Codabench";
     public static final String REVIEWED = "2026-11-16";
     public static final String[] FILTERS = {
-        "All sources", GRAND, CANCER, DREAM, OPEN, HACK, ML, ROSALIND
+        "All sources", GRAND, CANCER, DREAM, OPEN, HACK, ML,
+        FDA, SAGE, PHYSIONET, CODABENCH, ROSALIND
     };
 
     public static final String[] AVAILABILITY_FILTERS = {
@@ -172,6 +177,23 @@ public final class ResearchCatalog {
         add(result,"ml-list","ML Contests — healthcare and science",ML,
                 "Public machine learning competitions; check source organizer before applying",
                 "https://mlcontests.com/","directory","biomedical",null);
+        // Official public challenge directories. Availability and exact
+        // submission windows are NOT inferred from listing membership.
+        add(result,"directory-precisionfda","precisionFDA biomedical challenges",FDA,
+                "FDA-linked genomics, AI and biomedical data science challenges; inspect each official task and submission window.",
+                "https://precision.fda.gov/challenges","directory","genomics and biomedical AI",null);
+        add(result,"directory-sage","Sage / Synapse OpenChallenges",SAGE,
+                "Biomedical, cancer, neurological and data-science challenge discovery; confirm eligibility and dates on each challenge page.",
+                "https://challenges.synapse.org/OpenChallenges","directory","biomedical competitions",null);
+        add(result,"directory-physionet","PhysioNet scientific challenges",PHYSIONET,
+                "Open clinical signal processing and physiological AI challenges; confirm current submissions on each official site.",
+                "https://challenge.physionet.org/","directory","biomedical signals",null);
+        add(result,"directory-moody","George B. Moody PhysioNet Challenge",PHYSIONET,
+                "Current and previous physiologic data analysis challenges; check the official timetable and evaluation instructions.",
+                "https://moody-challenge.physionet.org/","directory","physiology AI",null);
+        add(result,"directory-codabench","Codabench scientific benchmarks",CODABENCH,
+                "Benchmark competitions and evaluation tasks; check challenge-specific data, rules, scoring and deadline.",
+                "https://www.codabench.org/","directory","scientific machine learning",null);
         // Public, non-educational challenges. Availability checked 16 Nov 2026.
         // Source websites must be opened for entry requirements; statuses expire.
         add(result, "grand-owl", "Observing What Models Learn (OWL)", GRAND,
