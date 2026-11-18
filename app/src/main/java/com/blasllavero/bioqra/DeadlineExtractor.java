@@ -118,7 +118,14 @@ public final class DeadlineExtractor {
             int from=Math.max(previous,item[0]-105);
             int to=Math.min(next,item[1]+90);
             String context=scan.substring(from,to).replaceAll("\\s+"," ").trim();
-            String label=classify(context);
+            // Prefer the milestone immediately preceding the date. Adjacent
+            // clauses after the date may describe a DIFFERENT requirement.
+            int clauseFrom=Math.max(from,Math.max(
+                    scan.lastIndexOf('.',item[0]-1)+1,
+                    scan.lastIndexOf('\\n',item[0]-1)+1));
+            String lead=scan.substring(clauseFrom,item[1]).trim();
+            String label=classify(lead);
+            if(label==null)label=classify(context);
             if(label==null)continue;
             String key=label+"|"+date+"|"+sourceUrl;
             unique.putIfAbsent(key,new DateFinding(label,date,context,sourceUrl));
