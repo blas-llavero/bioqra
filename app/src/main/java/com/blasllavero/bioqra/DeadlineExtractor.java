@@ -122,7 +122,7 @@ public final class DeadlineExtractor {
             // clauses after the date may describe a DIFFERENT requirement.
             int clauseFrom=Math.max(from,Math.max(
                     scan.lastIndexOf('.',item[0]-1)+1,
-                    scan.lastIndexOf('\\n',item[0]-1)+1));
+                    scan.lastIndexOf('\n',item[0]-1)+1));
             String lead=scan.substring(clauseFrom,item[1]).trim();
             String label=classify(lead);
             if(label==null)label=classify(context);
