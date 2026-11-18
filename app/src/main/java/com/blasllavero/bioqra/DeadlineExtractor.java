@@ -102,11 +102,22 @@ public final class DeadlineExtractor {
         String scan=text.substring(0,Math.min(text.length(),60000))
                 .replaceAll("[\\r\\t]+"," ");
         Matcher matcher=DATE.matcher(scan);
-        while(matcher.find() && unique.size()<20){
-            String date=iso(matcher.group());
+        List<int[]> matches=new ArrayList<>();
+        List<String> raw=new ArrayList<>();
+        while(matcher.find() && matches.size()<120){
+            matches.add(new int[]{matcher.start(),matcher.end()});
+            raw.add(matcher.group());
+        }
+        for(int i=0;i<matches.size() && unique.size()<20;i++){
+            int[] item=matches.get(i);
+            String date=iso(raw.get(i));
             if(date==null)continue;
-            int start=Math.max(0,matcher.start()-110),end=Math.min(scan.length(),matcher.end()+105);
-            String context=scan.substring(start,end).replaceAll("\\s+"," ").trim();
+            int previous=i==0?0:matches.get(i-1)[1];
+            int next=i+1==matches.size()?scan.length():matches.get(i+1)[0];
+            // Never borrow milestone keywords from the neighboring date.
+            int from=Math.max(previous,item[0]-105);
+            int to=Math.min(next,item[1]+90);
+            String context=scan.substring(from,to).replaceAll("\\s+"," ").trim();
             String label=classify(context);
             if(label==null)continue;
             String key=label+"|"+date+"|"+sourceUrl;
