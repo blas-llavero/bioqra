@@ -62,23 +62,27 @@ public final class AiPreferences {
     }
 
     /**
-     * This is a naming-based preference, not an independently confirmed
-     * scientific ranking. Only actual models advertised by the signed-in
-     * account are considered. Unknown models keep the server's ordering.
+     * Default selection favors the strongest available reasoning tier for the
+     * account. This is a transparent heuristic, NOT a provider capability score.
+     * Never fabricate or access models absent from the authenticated model list.
      */
     private static int capabilityHint(ChatGptConnection.Model m){
         String n=(m.slug+" "+m.title).toLowerCase(Locale.ROOT);
+        java.util.regex.Matcher version=java.util.regex.Pattern.compile(
+                "gpt[- ]?(\\d+)(?:[.](\\d+))?").matcher(n);
         int score=0;
-        if(n.contains("gpt-6"))score=600;
-        else if(n.contains("gpt-5.6"))score=560;
-        else if(n.contains("gpt-5.5"))score=550;
-        else if(n.contains("gpt-5"))score=500;
-        else if(n.contains("gpt-4"))score=400;
-        if(n.contains("mini") || n.contains("nano") || n.contains("lite"))score-=160;
-        if(n.contains("pro"))score+=60;
-        if(n.contains("extra high") || n.contains("xhigh"))score+=45;
-        else if(n.contains("high"))score+=30;
-        else if(n.contains("medium"))score+=10;
+        if(version.find()){
+            int major=Integer.parseInt(version.group(1));
+            int minor=version.group(2)==null?0:Integer.parseInt(version.group(2));
+            score=Math.min(999,major*100+minor*10)*10;
+        }
+        if(n.contains("pro") || n.contains("max"))score+=400;
+        if(n.contains("extra high") || n.contains("xhigh"))score+=300;
+        else if(n.contains("high") || n.contains("reasoning"))score+=200;
+        else if(n.contains("medium"))score+=80;
+        else if(n.contains("instant") || n.contains("fast"))score-=90;
+        if(n.contains("mini") || n.contains("nano") || n.contains("lite"))score-=1600;
+        if(n.contains("preview") || n.contains("deprecated"))score-=40;
         return score;
     }
 
