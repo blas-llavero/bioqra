@@ -141,9 +141,12 @@ public final class ChallengeActivity extends Activity {
         root.addView(text("Participation dates and supporting documents",18,true));
         deadlinesView=text("Not checked. Dates must be verified on the official organizer website.",13,false);
         deadlinesView.setTextIsSelectable(true);
+        deadlinesView.setLineSpacing(dp(4),1.08f);
         root.addView(deadlinesView);
         statement=text("No statement retrieved yet.",14,false);
         statement.setTextIsSelectable(true);
+        statement.setLineSpacing(dp(5),1.1f);
+        statement.setPadding(dp(3),dp(12),dp(3),dp(18));
         root.addView(statement);
 
         root.addView(text("Public sample DNA/RNA data for local checks (optional)",16,true));
