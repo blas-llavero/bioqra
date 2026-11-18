@@ -104,13 +104,43 @@ public final class ChallengeTextFormatter {
         }
     }
 
+    /**
+     * Many organizer sites repeat a section label in an accordion/navigation
+     * control and again in its visible heading. Remove ONLY adjacent identical
+     * short title blocks, never repeated research paragraphs or headings that
+     * are separated by meaningful content.
+     */
+    static String removeAdjacentRepeatedHeadings(String text) {
+        if(text==null || text.isEmpty())return text==null?"":text;
+        String[] blocks=text.trim().split("\\n[ \\t]*\\n+");
+        StringBuilder clean=new StringBuilder();
+        String previous="";
+        for(String block:blocks){
+            String current=block.trim();
+            if(current.isEmpty())continue;
+            String normalized=current.replaceAll("[ \\t]+"," ").trim();
+            String prior=previous.replaceAll("[ \\t]+"," ").trim();
+            boolean headingLike=!current.contains("\n")
+                    && current.length()<=110
+                    && current.split("\\s+").length<=16
+                    && Character.isLetter(current.charAt(0))
+                    && !current.matches("(?s).*[.!?;:]$");
+            if(headingLike && normalized.equalsIgnoreCase(prior))continue;
+            if(clean.length()>0)clean.append("\n\n");
+            clean.append(current);
+            previous=current;
+        }
+        return clean.toString();
+    }
+
     public static String extract(Element root){
         if(root==null)return "";
         StringBuilder b=new StringBuilder();
         walk(root,b,0);
-        return b.toString().replaceAll("(?m)[ \\t]+$", "")
+        String formatted=b.toString().replaceAll("(?m)[ \\t]+$", "")
                 .replaceAll("\\n[ \\t]+","\\n")
                 .replaceAll("\\n{3,}","\\n\\n").trim();
+        return removeAdjacentRepeatedHeadings(formatted);
     }
 
     /** Do not cut in the middle of a sentence if a paragraph boundary is near. */
