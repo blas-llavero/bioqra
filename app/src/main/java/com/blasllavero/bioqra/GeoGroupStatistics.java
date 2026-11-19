@@ -65,6 +65,11 @@ public final class GeoGroupStatistics {
         return 0;
     }
     private static JSONObject runOne(File file,JSONObject entry) throws Exception{
+        return runOne(file,entry,null);
+    }
+    /** Apply candidates chosen from a separate study to a new, untouched matrix. */
+    private static JSONObject runOne(File file,JSONObject entry,
+                                      java.util.Set<String> preselected) throws Exception{
         String acc=entry.getString("accession");
         JSONObject result=new JSONObject();
         result.put("accession",acc);
@@ -166,6 +171,9 @@ public final class GeoGroupStatistics {
                 if(featureRows>=MAX_FEATURES || cells+groups.length>MAX_CELLS){skipped=true;break;}
                 String[] vals=line.split("\t",-1);
                 if(vals.length!=groups.length+1)continue;
+                // Study A selects candidate probes; in study B evaluate exactly
+                // those prespecified IDs, never reselect its top-ranked features.
+                if(preselected!=null && !preselected.contains(clean(vals[0])))continue;
                 featureRows++;cells+=groups.length;
                 double[] sum=new double[2], sq=new double[2];int[] n=new int[2];
                 boolean valid=true;
@@ -191,7 +199,10 @@ public final class GeoGroupStatistics {
             }
         }
         if(!complete||skipped)throw new Exception("Matrix incomplete or exceeds bounded computational limits");
-        if(features.size()<10)throw new Exception("Too few analyzable features");
+        if(preselected==null && features.size()<10)
+            throw new Exception("Too few analyzable features");
+        if(preselected!=null && features.isEmpty())
+            throw new Exception("No prespecified discovery probes evaluable on external matrix");
         features.sort(Comparator.comparingDouble(f->f.p));
         final int m=features.size();
         double previous=1;
@@ -221,10 +232,58 @@ public final class GeoGroupStatistics {
         result.put("features_tested",m);
         result.put("features_fdr_below_0_05",passed);
         result.put("top_100_features",top);
+        result.put("feature_selection",preselected==null
+            ?"Within-study exploratory feature ranking"
+            :"Fixed from independent discovery study; no validation-set feature selection");
+        if(preselected!=null){
+            result.put("prespecified_candidates_requested",preselected.size());
+            result.put("prespecified_candidates_evaluated",features.size());
+        }
         result.put("limitations","Automatic labels from explicit GEO characteristics only. No batch adjustment, pairing model, biological replicate verification, clinical evaluation or study-specific preprocessing validation. Statistical associations must not be interpreted as biomarkers or treatment effects.");
         result.put("scientifically_validated",false);
         return result;
     }
+    /**
+     * Re-test a frozen set of discovery-selected probe IDs on real validation
+     * study data. The same conservative sample/processing checks run again.
+     */
+    public static JSONObject retest(Context context,String key,String accession,
+                                    java.util.Set<String> candidateProbes) throws Exception{
+        if(key==null||!key.matches("[a-f0-9]{32}")||
+                accession==null||!accession.matches("GSE[0-9]+")||
+                candidateProbes==null||candidateProbes.isEmpty()||
+                candidateProbes.size()>100)
+            throw new Exception("Invalid frozen external validation request");
+        File directory=new File(new File(context.getFilesDir(),"research-evidence"),key);
+        File manifest=new File(directory,"manifest.json");
+        if(!manifest.isFile()||manifest.length()>150000)
+            throw new Exception("Evidence manifest unavailable");
+        byte[] bytes=new byte[(int)manifest.length()];
+        try(FileInputStream in=new FileInputStream(manifest)){
+            int off=0;
+            while(off<bytes.length){
+                int n=in.read(bytes,off,bytes.length-off);
+                if(n<0)throw new Exception("Incomplete provenance manifest");
+                off+=n;
+            }
+        }
+        JSONArray source=new JSONObject(new String(bytes,StandardCharsets.UTF_8))
+            .optJSONArray("downloaded_files");
+        if(source==null)throw new Exception("No study downloads available");
+        for(int i=0;i<source.length();i++){
+            JSONObject entry=source.optJSONObject(i);
+            if(entry==null||!accession.equals(entry.optString("accession")))continue;
+            String name=accession+"_series_matrix.txt.gz";
+            File file=new File(directory,name);
+            if(!name.equals(entry.optString("file"))||!file.isFile()||
+                    file.length()!=entry.optLong("bytes")||
+                    !sha(file).equals(entry.optString("sha256")))
+                throw new Exception("External study file provenance invalid");
+            return runOne(file,entry,candidateProbes);
+        }
+        throw new Exception("External validation accession absent from manifest");
+    }
+
     public static Result analyze(Context context,String key) throws Exception{
         if(key==null||!key.matches("[a-f0-9]{32}"))throw new Exception("Invalid challenge key");
         File dir=new File(new File(context.getFilesDir(),"research-evidence"),key);
