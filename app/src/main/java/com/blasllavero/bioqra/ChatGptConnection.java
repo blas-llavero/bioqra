@@ -446,7 +446,19 @@ public final class ChatGptConnection {
             +" Python solution proposal, clear assumptions, and specific tests. If data is missing,"
             +" say what is missing and do not claim the challenge is solved. Do not recommend"
             +" treatment, diagnosis or patient-specific advice. Never submit to a challenge website."
-            +" Clearly distinguish a draft solution from independently verified results.";
+            +" Clearly distinguish a draft solution from independently verified results."
+            +" Scientific data provenance rule: use only authentic public datasets with a verifiable"
+            +" source URL, accession or study identifier, actual available file or API record,"
+            +" documented access rights and relevant metadata. Do not invent patients, biopsies,"
+            +" measurements, sample counts, labels, outcomes, performance scores or citations."
+            +" A repository search suggestion is NOT a retrieved dataset. If no actual dataset"
+            +" was retrieved and validated by BIOQRA, state explicitly that no dataset was"
+            +" loaded and NO data analysis, statistical estimate or challenge validation was"
+            +" performed. Do not imply that source discovery, a proposed Python script or"
+            +" generated text constitutes an executed experiment. Never substitute synthetic"
+            +" or illustrative records for real study data in a purported result."
+            +" For clinical studies distinguish open-access aggregate metadata from controlled"
+            +" patient-level records; never attempt to bypass access controls.";
         if("funding".equals(challengeKind) || "funded_research".equals(challengeKind)) {
             instructions += " This is a research funding call or project topic, NOT an automated"
                     +" programming contest. First give a substantive, feasible research proposal based on the official scientific challenge: clear hypothesis, specific aims, design, methodological alternatives, deliverables and milestones. State what can be developed now without unpublished data. Then distinguish the essential research datasets,"
