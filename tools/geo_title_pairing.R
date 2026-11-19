@@ -5,7 +5,7 @@ bioqra_geo_title_pairs <- function(titles, accession) {
   if(!identical(accession,"GSE20347"))return(fail("Title grammar not reviewed for this accession"))
   titles <- trimws(tolower(titles))
   normal_pattern <- "^normal adjacent esophageal tissue from patient ([a-z.]+) ?([0-9]{1,4})$"
-  tumor_pattern <- "^esophageal squamous cell carcinoma from patient ([a-z]+) ([0-9]{1,4})$"
+  tumor_pattern <- "^esophageal squamous cell carcinoma from patient ([a-z.]+) ?([0-9]{1,4})$"
   is_normal <- grepl(normal_pattern,titles)
   is_tumor <- grepl(tumor_pattern,titles)
   if(length(titles)!=34L||!all(is_normal|is_tumor)||
