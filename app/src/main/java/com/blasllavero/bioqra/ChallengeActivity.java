@@ -667,16 +667,13 @@ public final class ChallengeActivity extends Activity {
                     deadlinesView.setText(sources.toString());
                     status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
                     busy=false;updateButtons();
-                    if("automatic".equals(mode) && connection.canUsePlan() && specificPage){
-                        if(aiPreferences.alreadyAttempted(challengeKey)){
-                            status.setText("Already attempted today; showing saved result if available. "
-                                    +"Use the AI button to explicitly request another attempt.");
-                        }else if(aiPreferences.autoConsent()){
-                            beginDatasetDiscovery(true);
-                        }else{
-                            status.setText("Detailed statement found. Enable one-time automatic permission "
-                                    +"in AI Settings or tap the AI button for this attempt.");
-                        }
+                    if("automatic".equals(mode) && specificPage){
+                        // Search public metadata independently of AI consent.
+                        boolean authorized=connection.canUsePlan() && aiPreferences.autoConsent()
+                            && !aiPreferences.alreadyAttempted(challengeKey);
+                        beginDatasetDiscovery(authorized);
+                        if(!authorized)status.setText("Searching real public study metadata. "
+                            +"AI proposal awaits consent or the next permitted attempt.");
                     }
                 });
             } catch(Exception e){
