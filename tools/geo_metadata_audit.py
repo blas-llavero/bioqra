@@ -49,7 +49,7 @@ def summary_counts(key):
 def generalized_templates(key):
     out=[]
     for row in metadata.get(key,[]):
-        for text in row[:12]:
+        for text in row[:500]:
             # Remove possible names/donor IDs and any numbers. Output only a
             # controlled lexical grammar of source-title tokens, no raw titles.
             words=[]
