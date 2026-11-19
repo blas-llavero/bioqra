@@ -645,8 +645,9 @@ public final class ChallengeActivity extends Activity {
         updateButtons();
         final String publicStatement=fetchedText;
         final String officialContext=(navigation==null?"":navigation.fullText);
-        final String researchSource=publicStatement.equals(officialContext)?publicStatement
-                :publicStatement+"\n\nOfficial challenge page context:\n"+officialContext;
+        final String researchSource=ChallengeTextFormatter.truncate(
+                publicStatement.equals(officialContext)?publicStatement
+                :publicStatement+"\n\nOfficial challenge page context:\n"+officialContext,22000);
         final String source=verifiedPageUrl;
         // Unattended requests never send typed user samples, even if present.
         final String input=unattended?"":sample.getText().toString();
