@@ -9,6 +9,7 @@ on:
       - 'tools/geo_limma_audit.R'
       - 'tools/geo_pairing.R'
       - 'tools/test_geo_pairing.R'
+      - 'tools/test_paired_limma.R'
       - '.github/workflows/scientific-validation.yml'
 
 permissions:
@@ -26,6 +27,8 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends r-base-core r-bioc-limma r-cran-jsonlite
       - name: Verify patient-pair metadata eligibility with numerical test fixtures
         run: Rscript tools/test_geo_pairing.R
+      - name: Test patient fixed-effect limma coefficients on nonclinical fixture
+        run: Rscript tools/test_paired_limma.R
       - name: Download authentic public NCBI GEO GSE17351
         run: python3 tools/geo_fetch_for_r.py --accession GSE17351 --out validation-input
       - name: Audit sample metadata and run limma only when scientifically eligible
