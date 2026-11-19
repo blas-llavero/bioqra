@@ -221,7 +221,10 @@ public final class ChallengeActivity extends Activity {
                 : "No solution proposal or independent verification yet.",14,false);
         output.setTextIsSelectable(true);
         root.addView(text("Results and limitations",18,true));
+        output.setLineSpacing(dp(5),1.12f);
+        output.setPadding(dp(5),dp(12),dp(5),dp(20));
         root.addView(output);
+        renderProposal(output.getText().toString());
         Button savePdf=button("Save this challenge result as PDF");
         root.addView(savePdf,new LinearLayout.LayoutParams(-1,dp(52)));
         savePdf.setOnClickListener(v->saveSavedPdf());
@@ -494,6 +497,11 @@ public final class ChallengeActivity extends Activity {
         highlightSearch(true);
     }
 
+    /** Keep the stored draft unchanged while rendering its Markdown safely on screen. */
+    private void renderProposal(String raw){
+        output.setText(ResearchMarkdownFormatter.format(raw));
+    }
+
     private void saveSavedPdf(){
         String folder=aiPreferences.pdfTreeUri();
         if(folder==null){
@@ -636,6 +644,9 @@ public final class ChallengeActivity extends Activity {
         status.setText("Checking your saved model selection...");
         updateButtons();
         final String publicStatement=fetchedText;
+        final String officialContext=(navigation==null?"":navigation.fullText);
+        final String researchSource=publicStatement.equals(officialContext)?publicStatement
+                :publicStatement+"\n\nOfficial challenge page context:\n"+officialContext;
         final String source=verifiedPageUrl;
         // Unattended requests never send typed user samples, even if present.
         final String input=unattended?"":sample.getText().toString();
@@ -650,10 +661,10 @@ public final class ChallengeActivity extends Activity {
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     status.setText("Using "+selection.label+"; preparing an unverified draft...");
-                    output.setText("AI analysis in progress. No scientific result validated.");
+                    renderProposal("AI analysis in progress. No scientific result validated.");
                 });
                 String answer=connection.respond(selection.slug,title,
-                    "Source: "+source+"\n\n"+publicStatement,input,kind);
+                    "Source: "+source+"\n\n"+researchSource,input,kind);
                 aiPreferences.storeResult(challengeKey,title,source,selection.label,answer);
                 String pdfStatus="";
                 String destination=aiPreferences.pdfTreeUri();
@@ -673,7 +684,7 @@ public final class ChallengeActivity extends Activity {
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     busy=false;
-                    output.setText((isFunding()
+                    renderProposal((isFunding()
                             ? "AI RESEARCH PROPOSAL — UNVERIFIED"
                             : "AI DRAFT — UNVERIFIED")
                         +"\nModel: "+selection.label+"\n\n"+answer
