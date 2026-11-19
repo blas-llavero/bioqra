@@ -67,14 +67,14 @@ public final class PublicDatasetDiscovery {
     private static String query(String title){
         String t=title==null?"":title.toLowerCase(Locale.ROOT);
         if(t.contains("gastro")||t.contains("esoph")||t.contains("oesoph"))
-            return "(esophageal OR oesophageal OR gastric) AND (cancer OR adenocarcinoma) AND gse[ETYP]";
-        if(t.contains("breast"))return "breast cancer AND gse[ETYP]";
-        if(t.contains("lung"))return "lung cancer AND gse[ETYP]";
-        if(t.contains("leuk"))return "leukemia AND gse[ETYP]";
-        if(t.contains("gliob")||t.contains("brain"))return "glioblastoma AND gse[ETYP]";
+            return "(esophageal OR oesophageal OR gastric) AND (cancer OR adenocarcinoma)";
+        if(t.contains("breast"))return "breast cancer";
+        if(t.contains("lung"))return "lung cancer";
+        if(t.contains("leuk"))return "leukemia";
+        if(t.contains("gliob")||t.contains("brain"))return "glioblastoma";
         String cleaned=t.replaceAll("[^a-z0-9 ]"," ").trim();
         if(cleaned.length()>65)cleaned=cleaned.substring(0,65).trim();
-        return (cleaned.isEmpty()?"cancer":cleaned)+" AND gse[ETYP]";
+        return cleaned.isEmpty()?"cancer":cleaned;
     }
 
     private static int relevance(String challenge,String title,String summary){
