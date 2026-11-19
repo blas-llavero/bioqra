@@ -59,6 +59,9 @@ public final class ChallengeActivity extends Activity {
     private TextView datasetStatus;
     private LinearLayout datasetResults;
     private boolean datasetSearchInProgress=false;
+    private ResearchEvidenceArchive.Outcome evidenceOutcome;
+    private static final int EXPORT_EVIDENCE_ZIP=7123;
+    private TextView evidenceStatus;
     private EditText searchText;
     private LinearLayout searchPanel;
     private ScrollView pageScroll;
@@ -211,6 +214,18 @@ public final class ChallengeActivity extends Activity {
         datasetResults.setVisibility(View.GONE);
         root.addView(datasetResults);
         searchDatasets.setOnClickListener(v->beginDatasetDiscovery(false));
+        evidenceStatus=text("No research dataset files downloaded yet.",13,false);
+        root.addView(evidenceStatus);
+        Button exportEvidence=button("Export research evidence and proposal (ZIP)");
+        root.addView(exportEvidence,new LinearLayout.LayoutParams(-1,dp(52)));
+        exportEvidence.setOnClickListener(v->{
+            android.content.Intent intent=new android.content.Intent(Intent.ACTION_CREATE_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("application/zip");
+            intent.putExtra(Intent.EXTRA_TITLE,
+                "BIOQRA-"+ArchiveFiles.cleanName(title)+ "-evidence.zip");
+            startActivityForResult(intent,EXPORT_EVIDENCE_ZIP);
+        });
 
         root.addView(text("Public sample DNA/RNA data for local checks (optional)",16,true));
         sample=new EditText(this);
@@ -572,6 +587,33 @@ public final class ChallengeActivity extends Activity {
         return "funding".equals(kind) || "funded_research".equals(kind);
     }
 
+    @Override protected void onActivityResult(int request,int result,Intent data){
+        super.onActivityResult(request,result,data);
+        if(request!=EXPORT_EVIDENCE_ZIP || result!=RESULT_OK || data==null
+                || data.getData()==null)return;
+        Uri target=data.getData();
+        evidenceStatus.setText("Exporting evidence ZIP...");
+        EXEC.execute(()->{
+            String resultMessage;
+            try{
+                AiPreferences.SavedResult record=null;
+                for(AiPreferences.SavedResult saved:aiPreferences.savedResults()){
+                    if(challengeKey.equals(saved.key)){record=saved;break;}
+                }
+                ResearchEvidenceArchive.export(this,challengeKey,target,record);
+                resultMessage="Evidence ZIP saved successfully to selected destination.";
+            }catch(Exception e){resultMessage="Evidence export failed: "+e.getMessage();}
+            final String feedback=resultMessage;
+            runOnUiThread(()->{
+                if(!isFinishing()&&!isDestroyed()){
+                    evidenceStatus.setText(feedback);
+                    android.widget.Toast.makeText(this,feedback,
+                        android.widget.Toast.LENGTH_LONG).show();
+                }
+            });
+        });
+    }
+
     /** Live public metadata search, performed before AI in automatic mode. */
     private void beginDatasetDiscovery(boolean thenAi){
         if(datasetSearchInProgress)return;
@@ -587,10 +629,23 @@ public final class ChallengeActivity extends Activity {
             catch(Exception e){failure=e.getMessage();}
             final PublicDatasetDiscovery.Report report=found;
             final String error=failure;
+            ResearchEvidenceArchive.Outcome acquired=null;
+            String downloadError="";
+            if("automatic".equals(mode) && report!=null){
+                try{acquired=ResearchEvidenceArchive.acquire(this,challengeKey,
+                    title,report,verifiedPageUrl.isEmpty()?url:verifiedPageUrl);}
+                catch(Exception e){downloadError=e.getMessage();}
+            }
+            final ResearchEvidenceArchive.Outcome evidence=acquired;
+            final String evidenceError=downloadError;
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
                 datasetSearchInProgress=false;
                 discoveredDatasets=report;
+                evidenceOutcome=evidence;
+                if(evidence!=null)evidenceStatus.setText(evidence.summary);
+                else if(!evidenceError.isEmpty())evidenceStatus.setText("Evidence acquisition failed: "+evidenceError);
+                else evidenceStatus.setText("No data files downloaded.");
                 datasetDiscoveryNote=error==null?"":"GEO metadata search unavailable: "+error;
                 datasetResults.removeAllViews();
                 if(report!=null){
@@ -728,9 +783,10 @@ public final class ChallengeActivity extends Activity {
                 publicStatement.equals(officialContext)?publicStatement
                 :publicStatement+"\n\nOfficial challenge page context:\n"+officialContext,22000);
         final String source=verifiedPageUrl;
-        final String datasetEvidence=discoveredDatasets==null
+        final String datasetEvidence=(discoveredDatasets==null
                 ?"LIVE DATASET DISCOVERY: no verified study metadata available. "+datasetDiscoveryNote
-                :discoveredDatasets.forModel();
+                :discoveredDatasets.forModel())+"\n\nLOCAL FILE ACQUISITION: "
+                +ResearchEvidenceArchive.summary(this,challengeKey);
         // Unattended requests never send typed user samples, even if present.
         final String input=unattended?"":sample.getText().toString();
         EXEC.execute(()->{
