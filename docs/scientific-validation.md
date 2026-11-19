@@ -10,8 +10,8 @@ The separate `Independent GEO / limma scientific audit` GitHub Actions workflow:
 2. Downloads the public **GSE17351** GEO Series Matrix directly from NCBI, up to 8 MB.
 3. Stores its accession, official URL, SHA-256 and byte count in `source-provenance.json`.
 4. Inspects original GSM accessions, phenotypes, processing description and GPL platform.
-5. **Skips** differential expression if groups are ambiguous, fewer than three samples per group are explicitly labelled, paired/donor/batch/time/treatment metadata appear, or logged and normalized measurements are not documented.
-6. If the study qualifies, applies a two-group limma model, uses BH-adjusted p-values, and saves probe-level results as `limma-probe-results.csv`.
+5. **Skips** differential expression if groups are ambiguous, fewer than three samples per group are explicitly labelled, batch/time/treatment confounders appear, or logged and normalized measurements are not documented. Patient/subject/donor identifiers are allowed **only** if they form unambiguous pairs: one control and one tumor sample per patient, with at least three pairs.
+6. If the study qualifies, applies either an unpaired two-group limma model or an explicit **patient fixed-effects paired model** (`~ patient + group`), uses BH-adjusted p-values, and saves probe-level results as `limma-probe-results.csv`. The report records the chosen design but does not export patient identifiers.
 
 The `bioqra-independent-geo-audit` Actions artifact includes an audit status (JSON or text), package versions, provenance and probe-level results **only if actually computed**.
 
@@ -22,6 +22,8 @@ The `bioqra-independent-geo-audit` Actions artifact includes an audit status (JS
 - GSE17351 is used first as a **real-world ingestion and eligibility test**, not a verified independent replication cohort.
 - Matching GPL accessions or disjoint GSM IDs alone does not prove donor-level independence or control of biological and technical confounding.
 - A `SKIPPED` audit is an appropriate result when the design metadata are insufficient; do not weaken checks to force apparently significant results.
+- Pairing is never inferred from sample order or publication text. Explicit study metadata must identify each patient, one tumor and one control sample per patient. Paired design is not safe where treatment, batch or time metadata require more complex models.
+- The separate `tools/test_geo_pairing.R` uses **synthetic unit-test identifiers only**, not research evidence. Real GEO matrices and scientific results remain restricted to actual public repository files.
 - No scientific or clinical claims should be based on exploratory data alone.
 
 ## Run locally
@@ -30,6 +32,7 @@ With **R** and free Bioconductor limma installed:
 
 ```bash
 python3 tools/geo_fetch_for_r.py --accession GSE17351 --out validation-input
+Rscript tools/test_geo_pairing.R
 Rscript tools/geo_limma_audit.R validation-input/GSE17351_series_matrix.txt.gz validation-results
 ```
 
