@@ -47,6 +47,9 @@ jobs:
           fi
       - name: Run numerical regression tests
         run: gradle :app:testDebugUnitTest --no-daemon
+      - name: Verify real public GEO Series Matrix (network-dependent audit)
+        continue-on-error: true
+        run: python3 tools/geo_real_data_smoke.py
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
       - name: Verify approved video is packaged in APK
