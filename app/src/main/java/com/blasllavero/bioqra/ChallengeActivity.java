@@ -794,6 +794,36 @@ public final class ChallengeActivity extends Activity {
                 List<ChatGptConnection.Model> offered=connection.models();
                 AiPreferences.Selection selection=AiPreferences.choose(
                         offered,aiPreferences.selected(challengeKey));
+                String liveEvidence=datasetEvidence;
+                // An extra model call uses its own quota; keep one request for final output.
+                if(unattended && aiPreferences.remaining()>=2 && aiPreferences.autoConsent()){
+                    if(aiPreferences.reserve(true)){
+                        try{
+                            runOnUiThread(()->{
+                                if(!isFinishing()&&!isDestroyed())
+                                    datasetStatus.setText("ChatGPT planning an additional public dataset search...");
+                            });
+                            ResearchDataPlan plan=connection.planDatasetSearch(
+                                selection.slug,title,publicStatement);
+                            PublicDatasetDiscovery.Report extra=
+                                PublicDatasetDiscovery.discoverQuery(plan.geoQuery,title);
+                            ResearchEvidenceArchive.Outcome acquired=
+                                ResearchEvidenceArchive.acquire(this,challengeKey,title,extra,source);
+                            liveEvidence+="\n\nADDITIONAL AI-PLANNED SEARCH: "+plan.geoQuery
+                                +"\n"+extra.forModel()+"\n"+acquired.summary;
+                            runOnUiThread(()->{
+                                if(isFinishing()||isDestroyed())return;
+                                discoveredDatasets=extra;
+                                evidenceOutcome=acquired;
+                                datasetStatus.setText("AI-planned GEO search found "
+                                    +extra.studies.size()+" public study records.");
+                                evidenceStatus.setText(acquired.summary);
+                            });
+                        }catch(Exception e){
+                            liveEvidence+="\n\nAdditional data search could not complete: "+e.getMessage();
+                        }
+                    }
+                }
                 if(!aiPreferences.reserve(unattended))
                     throw new Exception("Local limit reached or automatic permission disabled.");
                 aiPreferences.markAttempted(challengeKey);
@@ -803,7 +833,7 @@ public final class ChallengeActivity extends Activity {
                     renderProposal("AI analysis in progress. No scientific result validated.");
                 });
                 String answer=connection.respond(selection.slug,title,
-                    "Source: "+source+"\n\n"+researchSource+"\n\n"+datasetEvidence,input,kind);
+                    "Source: "+source+"\n\n"+researchSource+"\n\n"+liveEvidence,input,kind);
                 aiPreferences.storeResult(challengeKey,title,source,selection.label,answer);
                 String pdfStatus="";
                 String destination=aiPreferences.pdfTreeUri();
