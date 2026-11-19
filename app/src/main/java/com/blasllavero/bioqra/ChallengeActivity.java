@@ -50,7 +50,7 @@ public final class ChallengeActivity extends Activity {
     public static final String KIND="challenge_kind";
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     private String title, url, mode, kind;
-    private TextView status, output, statement, resolvedLink, deadlinesView;
+    private TextView status, output, statement, resolvedLink, deadlinesView, pdfFeedback;
     private TextView sectionHeading, searchCounter;
     private Button originalDocumentButton;
     private String activeDocumentUrl="";
@@ -250,6 +250,9 @@ public final class ChallengeActivity extends Activity {
         Button savePdf=button("Save this challenge result as PDF");
         root.addView(savePdf,new LinearLayout.LayoutParams(-1,dp(52)));
         savePdf.setOnClickListener(v->saveSavedPdf());
+        pdfFeedback=text("PDF: select a destination in AI Settings to enable saving.",13,false);
+        root.addView(pdfFeedback);
+        updatePdfFeedback();
         updateButtons();
 
         // Automatic mode retrieves the public challenge on opening.
@@ -524,6 +527,25 @@ public final class ChallengeActivity extends Activity {
         output.setText(ResearchMarkdownFormatter.format(raw));
     }
 
+    private void pdfNotice(String message){
+        if(pdfFeedback!=null)pdfFeedback.setText(message);
+        if(status!=null)status.setText(message);
+        android.widget.Toast.makeText(this,message,android.widget.Toast.LENGTH_LONG).show();
+    }
+
+    private void updatePdfFeedback(){
+        if(pdfFeedback==null)return;
+        String folder=aiPreferences.pdfTreeUri();
+        pdfFeedback.setText(folder==null
+            ?"PDF not configured. Choose a folder in AI Settings; generated drafts stay in local app storage."
+            :"PDF destination is configured. Automatic mode saves each new completed draft as PDF.");
+    }
+
+    @Override protected void onResume(){
+        super.onResume();
+        if(aiPreferences!=null)updatePdfFeedback();
+    }
+
     private void saveSavedPdf(){
         String folder=aiPreferences.pdfTreeUri();
         if(folder==null){
@@ -537,17 +559,17 @@ public final class ChallengeActivity extends Activity {
         AiPreferences.SavedResult record=null;
         for(AiPreferences.SavedResult r:aiPreferences.savedResults())
             if(challengeKey.equals(r.key)){record=r;break;}
-        if(record==null){status.setText("No saved AI result for this challenge.");return;}
+        if(record==null){pdfNotice("No saved AI result for this challenge; PDF not created.");return;}
         final AiPreferences.SavedResult result=record;
-        status.setText("Saving PDF to your configured folder...");
+        pdfNotice("Saving PDF to your configured folder...");
         EXEC.execute(()->{
             String message;
             try{
-                ArchiveFiles.makePdf(this,Uri.parse(folder),result);
-                message="PDF saved in the challenge folder as YYMMDD-"+ArchiveFiles.cleanName(result.title)+".pdf";
+                Uri saved=ArchiveFiles.makePdf(this,Uri.parse(folder),result);
+                message="PDF SAVED: "+ArchiveFiles.archivePdfPath(result)+" · "+saved.toString();
             }catch(Exception e){message="PDF export failed: "+e.getMessage();}
             final String feedback=message;
-            runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())status.setText(feedback);});
+            runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())pdfNotice(feedback);});
         });
     }
 
@@ -691,17 +713,23 @@ public final class ChallengeActivity extends Activity {
                 aiPreferences.storeResult(challengeKey,title,source,selection.label,answer);
                 String pdfStatus="";
                 String destination=aiPreferences.pdfTreeUri();
-                if(destination!=null){
-                    try{
-                        AiPreferences.SavedResult record=null;
-                        for(AiPreferences.SavedResult r:aiPreferences.savedResults()){
-                            if(challengeKey.equals(r.key)){record=r;break;}
-                        }
-                        if(record!=null){
-                            ArchiveFiles.makePdf(this,Uri.parse(destination),record);
-                            pdfStatus=" · PDF saved to configured folder";
-                        }
-                    }catch(Exception e){pdfStatus=" · PDF export failed: "+e.getMessage();}
+                if("automatic".equals(mode)){
+                    if(destination==null){
+                        pdfStatus=" · PDF not created: select a folder in AI Settings.";
+                    }else{
+                        try{
+                            AiPreferences.SavedResult record=null;
+                            for(AiPreferences.SavedResult r:aiPreferences.savedResults()){
+                                if(challengeKey.equals(r.key)){record=r;break;}
+                            }
+                            if(record==null)throw new Exception("Saved draft not found.");
+                            Uri saved=ArchiveFiles.makePdf(this,Uri.parse(destination),record);
+                            pdfStatus=" · PDF saved: "+ArchiveFiles.archivePdfPath(record)
+                                +" ("+saved.toString()+")";
+                        }catch(Exception e){pdfStatus=" · PDF save failed: "+e.getMessage();}
+                    }
+                }else{
+                    pdfStatus=" · Manual mode: use Save as PDF to export this draft.";
                 }
                 final String pdfResult=pdfStatus;
                 runOnUiThread(()->{
@@ -712,7 +740,7 @@ public final class ChallengeActivity extends Activity {
                             : "AI DRAFT — UNVERIFIED")
                         +"\nModel: "+selection.label+"\n\n"+answer
                         +"\n\nBIOQRA has not run any generated program or validated a benchmark.");
-                    status.setText("AI draft saved locally for this challenge. "
+                    pdfNotice("AI draft saved locally for this challenge. "
                         +"Request limit remaining: "+aiPreferences.remaining()+pdfResult);
                     updateButtons();
                 });
