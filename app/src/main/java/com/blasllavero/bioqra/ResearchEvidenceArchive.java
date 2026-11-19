@@ -178,11 +178,11 @@ public final class ResearchEvidenceArchive {
         try(OutputStream out=context.getContentResolver().openOutputStream(destination,"wt")){
             if(out==null)throw new Exception("Cannot write evidence ZIP");
             try(ZipOutputStream zip=new ZipOutputStream(out)){
-                try(InputStream in=new FileInputStream(manifest))put(zip,"evidence/manifest.json",in);
+                try(InputStream in=new FileInputStream(manifest)){put(zip,"evidence/manifest.json",in);}
                 File[] files=directory.listFiles();
                 if(files!=null)for(File file:files){
                     if(file.isFile()&&file.getName().matches("GSE[0-9]+_series_matrix[.]txt[.]gz")){
-                        try(InputStream in=new FileInputStream(file))put(zip,"evidence/data/"+file.getName(),in);
+                        try(InputStream in=new FileInputStream(file)){put(zip,"evidence/data/"+file.getName(),in);}
                     }
                 }
                 if(result!=null){
