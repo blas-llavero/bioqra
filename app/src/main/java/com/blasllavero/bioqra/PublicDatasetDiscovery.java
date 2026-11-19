@@ -94,8 +94,15 @@ public final class PublicDatasetDiscovery {
     }
 
     public static Report discover(String challenge) throws Exception{
+        return discoverQuery(query(challenge),challenge);
+    }
+
+    /** Query can be proposed by a model, but is never allowed to supply a host or URL. */
+    public static Report discoverQuery(String candidate,String challenge) throws Exception{
+        if(candidate==null || !candidate.matches("[A-Za-z0-9 ,()\\-]{3,95}"))
+            throw new IllegalArgumentException("Invalid biomedical query");
         String base="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/";
-        String terms=Uri.encode(query(challenge));
+        String terms=Uri.encode("("+candidate+") AND gse[ETYP]");
         JSONObject search=json(base+"esearch.fcgi?db=gds&retmode=json&retmax=12&term="+terms);
         JSONArray ids=search.getJSONObject("esearchresult").optJSONArray("idlist");
         if(ids==null||ids.length()==0)
