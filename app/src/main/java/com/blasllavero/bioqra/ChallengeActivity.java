@@ -265,8 +265,8 @@ public final class ChallengeActivity extends Activity {
         LinearLayout controls=new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);
         controls.setGravity(Gravity.CENTER_VERTICAL);
-        backSectionButton=button("← Enrere");
-        forwardSectionButton=button("Endavant →");
+        backSectionButton=button("← Back");
+        forwardSectionButton=button("Forward →");
         backSectionButton.setOnClickListener(v->stepHistory(-1));
         forwardSectionButton.setOnClickListener(v->stepHistory(1));
         controls.addView(backSectionButton,new LinearLayout.LayoutParams(dp(117),dp(48)));
@@ -274,7 +274,7 @@ public final class ChallengeActivity extends Activity {
         Button fullText=button("Full text");
         fullText.setOnClickListener(v->selectSection(ChallengeSectionNavigator.FULL,true));
         controls.addView(fullText,new LinearLayout.LayoutParams(dp(112),dp(48)));
-        Button searchToggle=button("🔍 Cerca");
+        Button searchToggle=button("🔍 Search");
         searchToggle.setContentDescription("Search within the current challenge document");
         controls.addView(searchToggle,new LinearLayout.LayoutParams(dp(119),dp(48)));
         searchToggle.setOnClickListener(v->{
