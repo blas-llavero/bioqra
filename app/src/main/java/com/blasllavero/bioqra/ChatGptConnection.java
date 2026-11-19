@@ -429,6 +429,70 @@ public final class ChatGptConnection {
         return output;
     }
 
+    /**
+     * One structured planning pass. The model does not browse, download files,
+     * run code, or decide which URLs are trusted. Only a short GEO query is used.
+     */
+    public ResearchDataPlan planDatasetSearch(String model,String challenge,String statement)
+            throws Exception {
+        JSONObject request=new JSONObject();
+        request.put("model",model);
+        request.put("instructions","You are planning a public bioinformatics dataset search. "
+            +"Do not suggest any paid or controlled-access datasets. "
+            +"Return exactly one line: GEO_QUERY: followed by 3 to 95 characters "
+            +"containing only biomedical English search terms, parentheses, "
+            +"letters, digits, commas or hyphens. No URLs, tools, scripts, claims "
+            +"about data availability, accessions or fabricated evidence. "
+            +"Focus on disease, tissue and desired measurement. "
+            +"BIOQRA independently retrieves and validates real study metadata.");
+        JSONArray input=new JSONArray();
+        JSONObject message=new JSONObject();
+        message.put("role","user");
+        message.put("content","Challenge: "+challenge+"\nPublic challenge excerpt:\n"
+            +ChallengeTextFormatter.truncate(statement,4500));
+        input.put(message);
+        request.put("input",input);
+        request.put("store",false);
+        request.put("stream",true);
+        HttpURLConnection con=(HttpURLConnection)new URL(RESOURCE+"/responses").openConnection();
+        con.setRequestMethod("POST");
+        con.setConnectTimeout(12000);con.setReadTimeout(120000);
+        con.setDoOutput(true);con.setInstanceFollowRedirects(false);
+        con.setRequestProperty("Authorization","Bearer "+accessToken());
+        con.setRequestProperty("Content-Type","application/json");
+        con.setRequestProperty("Accept","text/event-stream");
+        try{
+            try(OutputStream out=con.getOutputStream())
+                {out.write(request.toString().getBytes(StandardCharsets.UTF_8));}
+            if(con.getResponseCode()!=200){
+                readResponse(con,4000);
+                throw new Exception("Search planner HTTP "+con.getResponseCode());
+            }
+            StringBuilder result=new StringBuilder();
+            boolean completed=false;
+            try(BufferedReader reader=new BufferedReader(new InputStreamReader(
+                    con.getInputStream(),StandardCharsets.UTF_8))){
+                String line;
+                while((line=reader.readLine())!=null){
+                    if(!line.startsWith("data: "))continue;
+                    String event=line.substring(6).trim();
+                    if("[DONE]".equals(event))break;
+                    JSONObject data;
+                    try{data=new JSONObject(event);}catch(Exception ignored){continue;}
+                    String type=data.optString("type");
+                    if("response.output_text.delta".equals(type)){
+                        result.append(data.optString("delta",""));
+                        if(result.length()>5000)throw new Exception("Planner response too large");
+                    }else if("response.completed".equals(type))completed=true;
+                    else if("response.failed".equals(type)||"response.incomplete".equals(type)
+                            ||"error".equals(type))throw new Exception("Planner request incomplete");
+                }
+            }
+            if(!completed)throw new Exception("Planner request incomplete");
+            return ResearchDataPlan.parse(result.toString());
+        }finally{con.disconnect();}
+    }
+
     public String respond(String model,String challenge,String statement,String input) throws Exception {
         return respond(model,challenge,statement,input,"directory");
     }
