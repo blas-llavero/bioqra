@@ -794,36 +794,59 @@ public final class ChallengeActivity extends Activity {
                 List<ChatGptConnection.Model> offered=connection.models();
                 AiPreferences.Selection selection=AiPreferences.choose(
                         offered,aiPreferences.selected(challengeKey));
-                String liveEvidence=datasetEvidence;
-                // An extra model call uses its own quota; keep one request for final output.
-                if(unattended && aiPreferences.remaining()>=2 && aiPreferences.autoConsent()){
-                    if(aiPreferences.reserve(true)){
-                        try{
-                            runOnUiThread(()->{
-                                if(!isFinishing()&&!isDestroyed())
-                                    datasetStatus.setText("ChatGPT planning an additional public dataset search...");
-                            });
-                            ResearchDataPlan plan=connection.planDatasetSearch(
-                                selection.slug,title,publicStatement);
-                            PublicDatasetDiscovery.Report extra=
-                                PublicDatasetDiscovery.discoverQuery(plan.geoQuery,title);
-                            ResearchEvidenceArchive.Outcome acquired=
-                                ResearchEvidenceArchive.acquire(this,challengeKey,title,extra,source);
-                            liveEvidence+="\n\nADDITIONAL AI-PLANNED SEARCH: "+plan.geoQuery
-                                +"\n"+extra.forModel()+"\n"+acquired.summary;
-                            runOnUiThread(()->{
-                                if(isFinishing()||isDestroyed())return;
-                                discoveredDatasets=extra;
-                                evidenceOutcome=acquired;
-                                datasetStatus.setText("AI-planned GEO search found "
-                                    +extra.studies.size()+" public study records.");
-                                evidenceStatus.setText(acquired.summary);
-                            });
-                        }catch(Exception e){
-                            liveEvidence+="\n\nAdditional data search could not complete: "+e.getMessage();
+                StringBuilder evidenceLog=new StringBuilder(datasetEvidence);
+                java.util.Set<String> triedQueries=new java.util.HashSet<>();
+                // At most two planning rounds, never consuming the last AI request
+                // reserved for the final proposal. Further rounds require a future
+                // explicit user-configured quota, not unbounded agent activity.
+                for(int round=1;unattended && round<=2 && aiPreferences.remaining()>=2
+                        && aiPreferences.autoConsent() && connection.canUsePlan();round++){
+                    if(!aiPreferences.reserve(true))break;
+                    final int currentRound=round;
+                    try{
+                        runOnUiThread(()->{
+                            if(!isFinishing()&&!isDestroyed())
+                                datasetStatus.setText("Research data planning pass "+currentRound+"/2...");
+                        });
+                        ResearchDataPlan plan=connection.planDatasetSearch(
+                            selection.slug,title,publicStatement+"\n\n"+
+                            ResearchReadiness.assess(this,challengeKey,discoveredDatasets).describe());
+                        if(!triedQueries.add(plan.geoQuery.toLowerCase(Locale.ROOT))){
+                            evidenceLog.append("\nRepeated search query; no further search.");
+                            break;
                         }
+                        PublicDatasetDiscovery.Report extra=
+                            PublicDatasetDiscovery.discoverQuery(plan.geoQuery,title);
+                        int before=ResearchEvidenceArchive.downloadedCount(this,challengeKey);
+                        ResearchEvidenceArchive.Outcome acquired=
+                            ResearchEvidenceArchive.acquire(this,challengeKey,title,extra,source);
+                        int after=ResearchEvidenceArchive.downloadedCount(this,challengeKey);
+                        evidenceLog.append("\n\nPLANNING PASS ").append(round)
+                            .append(" query: ").append(plan.geoQuery).append("\n")
+                            .append(extra.forModel()).append("\n").append(acquired.summary);
+                        final ResearchReadiness.Assessment assessment=
+                            ResearchReadiness.assess(this,challengeKey,extra);
+                        evidenceLog.append("\n").append(assessment.describe());
+                        runOnUiThread(()->{
+                            if(isFinishing()||isDestroyed())return;
+                            discoveredDatasets=extra;
+                            evidenceOutcome=acquired;
+                            datasetStatus.setText("Planning pass "+currentRound+
+                                " finished · evidence status: "+assessment.state.name());
+                            evidenceStatus.setText(acquired.summary+"\n"+assessment.missing);
+                        });
+                        // No automatic scientific-readiness assertion is possible
+                        // without assessing source variables and experimental design.
+                        if(after<=before)break;
+                    }catch(Exception planningError){
+                        evidenceLog.append("\nPlanning pass ").append(round)
+                            .append(" unavailable: ").append(planningError.getMessage());
+                        break;
                     }
                 }
+                evidenceLog.append("\n\nFINAL DATA READINESS CHECK:\n")
+                    .append(ResearchReadiness.assess(this,challengeKey,discoveredDatasets).describe());
+                String liveEvidence=ChallengeTextFormatter.truncate(evidenceLog.toString(),6500);
                 if(!aiPreferences.reserve(unattended))
                     throw new Exception("Local limit reached or automatic permission disabled.");
                 aiPreferences.markAttempted(challengeKey);
