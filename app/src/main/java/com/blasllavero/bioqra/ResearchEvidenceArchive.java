@@ -280,6 +280,11 @@ public final class ResearchEvidenceArchive {
                     try(InputStream in=new FileInputStream(qc)){
                         put(zip,"research/analysis-qc.json",in);
                     }
+                File comparison=new File(directory,"group-comparison.json");
+                if(comparison.isFile()&&comparison.length()<=500000)
+                    try(InputStream in=new FileInputStream(comparison)){
+                        put(zip,"research/group-comparison.json",in);
+                    }
                 File audit=new File(directory,"planning-log.jsonl");
                 if(audit.isFile() && audit.length()<=120000)
                     try(InputStream in=new FileInputStream(audit)){
