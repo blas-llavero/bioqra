@@ -821,6 +821,9 @@ public final class ChallengeActivity extends Activity {
                         ResearchEvidenceArchive.Outcome acquired=
                             ResearchEvidenceArchive.acquire(this,challengeKey,title,extra,source);
                         int after=ResearchEvidenceArchive.downloadedCount(this,challengeKey);
+                        ResearchEvidenceArchive.recordPlanning(this,challengeKey,round,
+                            plan.geoQuery,before,after,
+                            acquired.summary);
                         evidenceLog.append("\n\nPLANNING PASS ").append(round)
                             .append(" query: ").append(plan.geoQuery).append("\n")
                             .append(extra.forModel()).append("\n").append(acquired.summary);
