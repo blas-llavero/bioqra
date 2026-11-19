@@ -46,6 +46,26 @@ def summary_counts(key):
                 if re.search(r"\b"+tag+r"\b",val):
                     counter[tag]+=1
     return dict(counter)
+def generalized_templates(key):
+    out=[]
+    for row in metadata.get(key,[]):
+        for text in row[:12]:
+            # Remove possible names/donor IDs and any numbers. Output only a
+            # controlled lexical grammar of source-title tokens, no raw titles.
+            words=[]
+            for w in re.findall(r"[A-Za-z]+|[0-9]+",text.lower()):
+                if w.isdigit():
+                    words.append("<number>")
+                elif w in {"patient","tumor","tumour","normal","adjacent","esophageal",
+                           "squamous","cell","carcinoma","cancer","tissue","sample",
+                           "of","from","matched","case","control","non","neoplastic"}:
+                    words.append(w)
+                else:
+                    words.append("<other>")
+            template=" ".join(words[:15])
+            if template not in out:out.append(template)
+    return out[:8]
+
 report={
     "real_input":path.name,
     "fictional_data_used":False,
@@ -54,6 +74,7 @@ report={
     "sample_source_columns":shape("!Sample_source_name_ch1"),
     "characteristics_row_sizes":shape("!Sample_characteristics_ch1"),
     "sample_title_label_word_counts":summary_counts("!Sample_title"),
+    "sample_title_grammar_templates":generalized_templates("!Sample_title"),
     "sample_source_label_word_counts":summary_counts("!Sample_source_name_ch1"),
     "sample_characteristics_label_word_counts":summary_counts("!Sample_characteristics_ch1"),
     "platform_fields_present":bool(metadata.get("!Series_platform_id") or metadata.get("!Sample_platform_id")),
