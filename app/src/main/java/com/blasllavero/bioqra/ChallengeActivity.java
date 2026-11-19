@@ -195,6 +195,28 @@ public final class ChallengeActivity extends Activity {
         deadlinesView.setLineSpacing(dp(4),1.08f);
         root.addView(deadlinesView);
 
+        root.addView(text("Open biomedical datasets",18,true));
+        root.addView(text("Search official public repositories for this research challenge. Search results are not verified data matches; inspect study provenance, sample size, licensing, metadata and whether individual-level access needs approval.",13,false));
+        Button searchDatasets=button("🔎 Cerca dades obertes per a aquest repte");
+        root.addView(searchDatasets,new LinearLayout.LayoutParams(-1,dp(54)));
+        LinearLayout datasetResults=new LinearLayout(this);
+        datasetResults.setOrientation(LinearLayout.VERTICAL);
+        datasetResults.setVisibility(View.GONE);
+        root.addView(datasetResults);
+        searchDatasets.setOnClickListener(v->{
+            datasetResults.removeAllViews();
+            datasetResults.setVisibility(View.VISIBLE);
+            for(OpenResearchDataSources.Source source:OpenResearchDataSources.forChallenge(title)){
+                datasetResults.addView(text(source.name,16,true));
+                datasetResults.addView(text(source.description+"\n"+source.accessNote,13,false));
+                Button browse=button("Open "+source.name+" ↗");
+                datasetResults.addView(browse,new LinearLayout.LayoutParams(-1,dp(48)));
+                browse.setOnClickListener(open->startActivity(
+                    new Intent(Intent.ACTION_VIEW,Uri.parse(source.url))));
+            }
+            datasetResults.addView(text("Research data readiness: no matching study has been verified or downloaded. Check comparable controls, tissue type, outcomes, study dates, consent and permitted reuse before testing. Never enter identifiable patient records.",13,false));
+        });
+
         root.addView(text("Public sample DNA/RNA data for local checks (optional)",16,true));
         sample=new EditText(this);
         sample.setHint("Paste public sample DNA/RNA sequence (no patient records)");
