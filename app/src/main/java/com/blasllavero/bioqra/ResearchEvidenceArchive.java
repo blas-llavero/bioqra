@@ -219,6 +219,26 @@ public final class ResearchEvidenceArchive {
         }catch(Exception e){return 0;}
     }
 
+    /** Local audit trail of each bounded planning decision, not a scientific result. */
+    public static void recordPlanning(Context context,String key,int pass,
+                                      String query,int before,int after,String outcome){
+        try{
+            File directory=folder(context,key);
+            File audit=new File(directory,"planning-log.jsonl");
+            if(audit.length()>120000)return;
+            JSONObject event=new JSONObject();
+            event.put("utc",Instant.now().toString());
+            event.put("pass",pass);
+            event.put("query",query==null?"":query.substring(0,Math.min(query.length(),95)));
+            event.put("files_before",before);
+            event.put("files_after",after);
+            event.put("outcome",outcome==null?"":outcome.substring(0,Math.min(300,outcome.length())));
+            try(FileOutputStream out=new FileOutputStream(audit,true)){
+                out.write((event.toString()+"\\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+        }catch(Exception ignored){/* audit never changes decision to fabricate results */}
+    }
+
     public static String summary(Context context,String key){
         try{
             File manifest=new File(folder(context,key),"manifest.json");
@@ -255,6 +275,11 @@ public final class ResearchEvidenceArchive {
                     +"This archive contains no independently validated scientific results.\\n")
                     .getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 zip.closeEntry();
+                File audit=new File(directory,"planning-log.jsonl");
+                if(audit.isFile() && audit.length()<=120000)
+                    try(InputStream in=new FileInputStream(audit)){
+                        put(zip,"evidence/planning-log.jsonl",in);
+                    }
                 File[] files=directory.listFiles();
                 if(files!=null)for(File file:files){
                     if(file.isFile()&&file.getName().matches("GSE[0-9]+_series_matrix[.]txt[.]gz")){
