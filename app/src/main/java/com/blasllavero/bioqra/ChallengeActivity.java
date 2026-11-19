@@ -84,13 +84,13 @@ public final class ChallengeActivity extends Activity {
 
     private TextView text(String s, int size, boolean bold){
         TextView t=new TextView(this);
-        t.setText(s);t.setTextColor(Color.rgb(19,57,70));t.setTextSize(size);
+        t.setText(UiLanguage.tr(this,s));t.setTextColor(Color.rgb(19,57,70));t.setTextSize(size);
         if(bold)t.setTypeface(null,Typeface.BOLD);
         t.setPadding(0,dp(9),0,dp(9));
         return t;
     }
     private Button button(String name){
-        Button b=new Button(this);b.setAllCaps(false);b.setText(name);
+        Button b=new Button(this);b.setAllCaps(false);b.setText(UiLanguage.tr(this,name));
         return b;
     }
     private void showError(String message){
@@ -389,8 +389,8 @@ public final class ChallengeActivity extends Activity {
     private void setDocumentLink(String link){
         activeDocumentUrl=TrustedChallengeReader.approved(link)?link:"";
         originalDocumentButton.setVisibility(activeDocumentUrl.isEmpty()?View.GONE:View.VISIBLE);
-        originalDocumentButton.setText(TrustedChallengeReader.approvedPdf(activeDocumentUrl)
-            ?"📄 Open original PDF with its layout":"🌐 Open original source in browser");
+        originalDocumentButton.setText(UiLanguage.tr(this,TrustedChallengeReader.approvedPdf(activeDocumentUrl)
+            ?"📄 Open original PDF with its layout":"🌐 Open original source in browser"));
     }
 
     private void showSection(String key){
@@ -399,7 +399,7 @@ public final class ChallengeActivity extends Activity {
             return;
         }
         ChallengeSectionNavigator.Section selected=navigation.get(key);
-        sectionHeading.setText(ChallengeSectionNavigator.label(key));
+        sectionHeading.setText(UiLanguage.tr(this,ChallengeSectionNavigator.label(key)));
         String link=navigation.link(key);
         if(selected!=null){
             renderStatement(selected.body);
