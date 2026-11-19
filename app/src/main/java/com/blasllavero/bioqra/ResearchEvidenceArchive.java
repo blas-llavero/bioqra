@@ -285,6 +285,11 @@ public final class ResearchEvidenceArchive {
                     try(InputStream in=new FileInputStream(comparison)){
                         put(zip,"research/group-comparison.json",in);
                     }
+                File concordance=new File(directory,"cohort-concordance.json");
+                if(concordance.isFile()&&concordance.length()<=500000)
+                    try(InputStream in=new FileInputStream(concordance)){
+                        put(zip,"research/cohort-concordance.json",in);
+                    }
                 File audit=new File(directory,"planning-log.jsonl");
                 if(audit.isFile() && audit.length()<=120000)
                     try(InputStream in=new FileInputStream(audit)){
