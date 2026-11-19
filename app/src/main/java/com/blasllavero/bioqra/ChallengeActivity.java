@@ -654,6 +654,14 @@ public final class ChallengeActivity extends Activity {
                 try{initialConcordance=GeoCohortConcordance.inspect(this,challengeKey);}
                 catch(Exception e){concordanceError=e.getMessage();}
             }
+            GeoExternalValidation.Result initialExternal=null;
+            String externalError="";
+            if("automatic".equals(mode) && initialComparison!=null){
+                try{initialExternal=GeoExternalValidation.evaluate(this,challengeKey);}
+                catch(Exception e){externalError=e.getMessage();}
+            }
+            final GeoExternalValidation.Result external=initialExternal;
+            final String externalFailure=externalError;
             final GeoCohortConcordance.Result concordance=initialConcordance;
             final String concordanceFailure=concordanceError;
             final GeoGroupStatistics.Result comparison=initialComparison;
@@ -673,7 +681,9 @@ public final class ChallengeActivity extends Activity {
                     +(comparison==null?"":"\n"+comparison.summary)
                     +(comparisonError.isEmpty()?"":"\nComparison unavailable: "+comparisonError)
                     +(concordance==null?"":"\n"+concordance.summary)
-                    +(concordanceFailure.isEmpty()?"":"\nCohort audit unavailable: "+concordanceFailure));
+                    +(concordanceFailure.isEmpty()?"":"\nCohort audit unavailable: "+concordanceFailure)
+                    +(external==null?"":"\n"+external.summary)
+                    +(externalFailure.isEmpty()?"":"\nExternal retest unavailable: "+externalFailure));
                 else if(!evidenceError.isEmpty())evidenceStatus.setText("Evidence acquisition failed: "+evidenceError);
                 else evidenceStatus.setText("No data files downloaded.");
                 datasetDiscoveryNote=error==null?"":"GEO metadata search unavailable: "+error;
@@ -908,6 +918,16 @@ public final class ChallengeActivity extends Activity {
                         .append("\nStudy pair checks saved in research/cohort-concordance.json.");
                 }catch(Exception e){
                     evidenceLog.append("\n\nCross-study concordance audit unavailable: ")
+                        .append(e.getMessage());
+                }
+                try{
+                    GeoExternalValidation.Result external=GeoExternalValidation.evaluate(this,challengeKey);
+                    evidenceLog.append("\n\nFROZEN-CANDIDATE EXTERNAL COHORT RETEST:\n")
+                        .append(external.summary)
+                        .append("\nThe independent validation status is not established by this preliminary test.")
+                        .append("\nEvidence stored in research/external-validation.json.");
+                }catch(Exception e){
+                    evidenceLog.append("\n\nExternal cohort retest unavailable: ")
                         .append(e.getMessage());
                 }
                 evidenceLog.append("\n\nFINAL DATA READINESS CHECK:\n")
