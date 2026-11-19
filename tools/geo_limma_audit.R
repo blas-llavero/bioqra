@@ -64,12 +64,11 @@ if(length(sample_ids)<6L||length(sample_ids)>500L ||
 characteristics <- extract_fields("!Sample_characteristics_ch1")
 if(length(characteristics)==0L)skip("No study-provided sample phenotype fields")
 groups <- rep(NA_character_,length(sample_ids))
-confounder <- FALSE
+metadata_fields <- list()
 for(field in characteristics) {
   if(length(field)!=length(sample_ids))skip("Inconsistent phenotype column count")
   low <- tolower(field)
-  if(any(grepl("(^|[[:space:]])(batch|patient.?id|subject.?id|donor.?id|pair.?id|paired|treatment|time.?point)[[:space:]]*:",low)))
-    confounder <- TRUE
+  metadata_fields[[length(metadata_fields)+1L]] <- field
   allowed <- grepl("^(disease state|disease status|condition|tissue type|phenotype|group|sample type|histology):[[:space:]]*",low)
   value <- trimws(sub("^[^:]+:[[:space:]]*","",low))
   control <- allowed & value %in% c("normal","healthy","non-tumor","non-tumour",
@@ -84,9 +83,11 @@ for(field in characteristics) {
   if(any(clash))skip("Contradictory case/control labels")
   groups[!is.na(current)] <- current[!is.na(current)]
 }
-if(confounder)skip("Paired, batch, donor, treatment or time metadata detected; blocked unadjusted model")
 if(anyNA(groups) || sum(groups=="control")<3L || sum(groups=="tumor")<3L)
-  skip("Fewer than three clearly labeled independent samples per group")
+  skip("Fewer than three clearly labeled samples per group")
+source("tools/geo_pairing.R",local=TRUE)
+pairing <- bioqra_paired_design(groups,metadata_fields,sample_ids)
+if(pairing$status!="ELIGIBLE")skip(pairing$reason)
 processing <- meta[grepl("^!(Series|Sample)_data_processing",meta)]
 p <- tolower(paste(processing,collapse=" "))
 if(!grepl("log2|log 2|log-transformed|log transformed",p) ||
@@ -140,18 +141,29 @@ if(ncol(values)!=length(sample_ids) || any(!is.finite(values)))
   skip("Non-numeric or missing values; imputation is not permitted")
 rownames(values) <- probe_ids
 colnames(values) <- sample_ids
-design <- model.matrix(~0+factor(groups,levels=c("control","tumor")))
-colnames(design) <- c("control","tumor")
-fit <- limma::lmFit(values,design)
-fit <- limma::contrasts.fit(fit,limma::makeContrasts(tumor-control,levels=design))
-fit <- limma::eBayes(fit)
-results <- limma::topTable(fit,coef=1,number=Inf,sort.by="none",adjust.method="BH")
+if(pairing$design=="paired") {
+  # Explicit patient fixed effects model; no patient identifiers are exported.
+  design <- model.matrix(~factor(pairing$patient_ids)+factor(groups,levels=c("control","tumor")))
+  if(qr(design)$rank!=ncol(design))skip("Paired design matrix is rank deficient")
+  coefficient <- ncol(design)
+  fit <- limma::lmFit(values,design)
+  fit <- limma::eBayes(fit)
+} else {
+  design <- model.matrix(~0+factor(groups,levels=c("control","tumor")))
+  colnames(design) <- c("control","tumor")
+  fit <- limma::lmFit(values,design)
+  fit <- limma::contrasts.fit(fit,limma::makeContrasts(tumor-control,levels=design))
+  fit <- limma::eBayes(fit)
+  coefficient <- 1L
+}
+results <- limma::topTable(fit,coef=coefficient,number=Inf,sort.by="none",adjust.method="BH")
 results$probe_id <- rownames(results)
 results <- results[order(results$P.Value, results$probe_id),]
 write.csv(results,file.path(output_dir,"limma-probe-results.csv"),row.names=FALSE)
 write_status("EXPLORATORY_ANALYSIS_COMPLETED",
   "R limma analyzed authentic GEO numeric values with explicit nonconfounded groups. Biological validity is NOT established.",
   list(accession=basename(source_file),platform=platform,
+       design=pairing$design, independent_patients=if(pairing$design=="paired") length(unique(pairing$patient_ids)) else NA_integer_,
        samples_control=sum(groups=="control"),samples_tumor=sum(groups=="tumor"),
        probes_tested=nrow(results),probes_fdr_under_0_05=sum(results$adj.P.Val<0.05),
        r_version=R.version.string,limma_version=as.character(packageVersion("limma"))))
