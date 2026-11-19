@@ -54,6 +54,11 @@ public final class ChallengeActivity extends Activity {
     private TextView sectionHeading, searchCounter;
     private Button originalDocumentButton;
     private String activeDocumentUrl="";
+    private PublicDatasetDiscovery.Report discoveredDatasets;
+    private String datasetDiscoveryNote="";
+    private TextView datasetStatus;
+    private LinearLayout datasetResults;
+    private boolean datasetSearchInProgress=false;
     private EditText searchText;
     private LinearLayout searchPanel;
     private ScrollView pageScroll;
@@ -197,25 +202,15 @@ public final class ChallengeActivity extends Activity {
 
         root.addView(text("Open biomedical datasets",18,true));
         root.addView(text("Search official public repositories for this research challenge. Search results are not verified data matches; inspect study provenance, sample size, licensing, metadata and whether individual-level access needs approval.",13,false));
-        Button searchDatasets=button("🔎 Cerca dades obertes per a aquest repte");
+        Button searchDatasets=button("🔎 Search open data for this challenge");
         root.addView(searchDatasets,new LinearLayout.LayoutParams(-1,dp(54)));
-        LinearLayout datasetResults=new LinearLayout(this);
+        datasetStatus=text("No live dataset search has been performed.",13,false);
+        root.addView(datasetStatus);
+        datasetResults=new LinearLayout(this);
         datasetResults.setOrientation(LinearLayout.VERTICAL);
         datasetResults.setVisibility(View.GONE);
         root.addView(datasetResults);
-        searchDatasets.setOnClickListener(v->{
-            datasetResults.removeAllViews();
-            datasetResults.setVisibility(View.VISIBLE);
-            for(OpenResearchDataSources.Source source:OpenResearchDataSources.forChallenge(title)){
-                datasetResults.addView(text(source.name,16,true));
-                datasetResults.addView(text(source.description+"\n"+source.accessNote,13,false));
-                Button browse=button("Open "+source.name+" ↗");
-                datasetResults.addView(browse,new LinearLayout.LayoutParams(-1,dp(48)));
-                browse.setOnClickListener(open->startActivity(
-                    new Intent(Intent.ACTION_VIEW,Uri.parse(source.url))));
-            }
-            datasetResults.addView(text("Research data readiness: no matching study has been verified or downloaded. Check comparable controls, tissue type, outcomes, study dates, consent and permitted reuse before testing. Never enter identifiable patient records.",13,false));
-        });
+        searchDatasets.setOnClickListener(v->beginDatasetDiscovery(false));
 
         root.addView(text("Public sample DNA/RNA data for local checks (optional)",16,true));
         sample=new EditText(this);
@@ -577,6 +572,49 @@ public final class ChallengeActivity extends Activity {
         return "funding".equals(kind) || "funded_research".equals(kind);
     }
 
+    /** Live public metadata search, performed before AI in automatic mode. */
+    private void beginDatasetDiscovery(boolean thenAi){
+        if(datasetSearchInProgress)return;
+        datasetSearchInProgress=true;
+        discoveredDatasets=null;
+        datasetStatus.setText("Searching NCBI GEO for real study metadata...");
+        datasetResults.removeAllViews();
+        datasetResults.setVisibility(View.VISIBLE);
+        EXEC.execute(()->{
+            PublicDatasetDiscovery.Report found=null;
+            String failure=null;
+            try{found=PublicDatasetDiscovery.discover(title);}
+            catch(Exception e){failure=e.getMessage();}
+            final PublicDatasetDiscovery.Report report=found;
+            final String error=failure;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                datasetSearchInProgress=false;
+                discoveredDatasets=report;
+                datasetDiscoveryNote=error==null?"":"GEO metadata search unavailable: "+error;
+                datasetResults.removeAllViews();
+                if(report!=null){
+                    datasetStatus.setText("NCBI GEO: "+report.studies.size()
+                        +" public study records found. Metadata only; data files not loaded.");
+                    for(PublicDatasetDiscovery.Study study:report.studies){
+                        datasetResults.addView(text(study.accession+" · "+study.title,15,true));
+                        datasetResults.addView(text(study.url+"\n"+study.summary,12,false));
+                        Button source=button("Open verified GEO study "+study.accession);
+                        datasetResults.addView(source,new LinearLayout.LayoutParams(-1,dp(46)));
+                        source.setOnClickListener(v->startActivity(
+                            new Intent(Intent.ACTION_VIEW,Uri.parse(study.url))));
+                    }
+                }else{
+                    datasetStatus.setText("No dataset loaded. "+datasetDiscoveryNote);
+                }
+                datasetResults.addView(text("No study measurements have been downloaded or analysed. Verify design, permissions and outcome variables before drawing conclusions.",13,false));
+                if(thenAi && connection.canUsePlan() && aiPreferences.autoConsent()
+                        && !aiPreferences.alreadyAttempted(challengeKey) && specificPage)
+                    chooseModelAndRun(true);
+            });
+        });
+    }
+
     private void retrieve(){
         if(busy)return;
         if(!TrustedChallengeReader.approved(url)){
@@ -634,7 +672,7 @@ public final class ChallengeActivity extends Activity {
                             status.setText("Already attempted today; showing saved result if available. "
                                     +"Use the AI button to explicitly request another attempt.");
                         }else if(aiPreferences.autoConsent()){
-                            chooseModelAndRun(true);
+                            beginDatasetDiscovery(true);
                         }else{
                             status.setText("Detailed statement found. Enable one-time automatic permission "
                                     +"in AI Settings or tap the AI button for this attempt.");
@@ -693,6 +731,9 @@ public final class ChallengeActivity extends Activity {
                 publicStatement.equals(officialContext)?publicStatement
                 :publicStatement+"\n\nOfficial challenge page context:\n"+officialContext,22000);
         final String source=verifiedPageUrl;
+        final String datasetEvidence=discoveredDatasets==null
+                ?"LIVE DATASET DISCOVERY: no verified study metadata available. "+datasetDiscoveryNote
+                :discoveredDatasets.forModel();
         // Unattended requests never send typed user samples, even if present.
         final String input=unattended?"":sample.getText().toString();
         EXEC.execute(()->{
@@ -709,7 +750,7 @@ public final class ChallengeActivity extends Activity {
                     renderProposal("AI analysis in progress. No scientific result validated.");
                 });
                 String answer=connection.respond(selection.slug,title,
-                    "Source: "+source+"\n\n"+researchSource,input,kind);
+                    "Source: "+source+"\n\n"+researchSource+"\n\n"+datasetEvidence,input,kind);
                 aiPreferences.storeResult(challengeKey,title,source,selection.label,answer);
                 String pdfStatus="";
                 String destination=aiPreferences.pdfTreeUri();
