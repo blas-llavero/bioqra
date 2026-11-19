@@ -140,14 +140,14 @@ public class MainActivity extends Activity {
 
     private TextView text(String value, int size, boolean bold) {
         TextView t = new TextView(this);
-        t.setText(value); t.setTextSize(size); t.setTextColor(BLUE);
+        t.setText(UiLanguage.tr(this,value)); t.setTextSize(size); t.setTextColor(BLUE);
         if (bold) t.setTypeface(null, Typeface.BOLD);
         return t;
     }
 
     private Button button(String value) {
         Button b = new Button(this);
-        b.setText(value);
+        b.setText(UiLanguage.tr(this,value));
         b.setAllCaps(false);
         b.setTextColor(Color.WHITE);
         b.setBackground(bg(GREEN));
