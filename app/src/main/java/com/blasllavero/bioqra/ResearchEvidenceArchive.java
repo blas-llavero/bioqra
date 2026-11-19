@@ -275,6 +275,11 @@ public final class ResearchEvidenceArchive {
                     +"This archive contains no independently validated scientific results.\\n")
                     .getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 zip.closeEntry();
+                File qc=new File(directory,"analysis-qc.json");
+                if(qc.isFile()&&qc.length()<=500000)
+                    try(InputStream in=new FileInputStream(qc)){
+                        put(zip,"research/analysis-qc.json",in);
+                    }
                 File audit=new File(directory,"planning-log.jsonl");
                 if(audit.isFile() && audit.length()<=120000)
                     try(InputStream in=new FileInputStream(audit)){
