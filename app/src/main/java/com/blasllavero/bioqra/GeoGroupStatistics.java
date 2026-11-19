@@ -71,6 +71,8 @@ public final class GeoGroupStatistics {
         result.put("source_sha256",entry.getString("sha256"));
         String processing="";
         int[] groups=null;int controls=0,cases=0,featureRows=0;
+        java.util.List<String> sampleAccessions=new java.util.ArrayList<>();
+        boolean metadataConflict=false;
         boolean complete=false,header=false,skipped=false;
         List<Feature> features=new ArrayList<>();
         long cells=0;
@@ -81,7 +83,28 @@ public final class GeoGroupStatistics {
                 if(line.startsWith("!Series_data_processing")||line.startsWith("!Sample_data_processing")){
                     if(processing.length()<8000)processing+=line.toLowerCase(Locale.ROOT)+" ";
                 }
+                if(line.startsWith("!Sample_geo_accession") && !header){
+                    if(!sampleAccessions.isEmpty())throw new Exception("Duplicate GEO sample accession annotations");
+                    String[] ids=line.split("\t",-1);
+                    if(ids.length<3||ids.length>501)throw new Exception("Invalid GSM sample identifiers");
+                    java.util.Set<String> unique=new java.util.HashSet<>();
+                    for(int i=1;i<ids.length;i++){
+                        String id=clean(ids[i]);
+                        if(!id.matches("GSM[0-9]+")||!unique.add(id))
+                            throw new Exception("Missing or duplicate GSM sample accession");
+                        sampleAccessions.add(id);
+                    }
+                }
                 if(line.startsWith("!Sample_characteristics_ch1") && !header){
+                    String lower=line.toLowerCase(Locale.ROOT);
+                    if(lower.contains("batch:")||lower.contains("batch id:")||
+                       lower.contains("patient id:")||lower.contains("patient_id:")||
+                       lower.contains("subject id:")||lower.contains("subject_id:")||
+                       lower.contains("donor id:")||lower.contains("donor_id:")||
+                       lower.contains("pair id:")||lower.contains("paired:")||
+                       lower.contains("treatment:")||lower.contains("timepoint:")||
+                       lower.contains("time point:"))metadataConflict=true;
+
                     String[] parts=line.split("\t",-1);
                     if(parts.length<2||parts.length>501)continue;
                     if(groups==null)groups=new int[parts.length-1];
@@ -101,6 +124,11 @@ public final class GeoGroupStatistics {
             }
             if(!header||skipped)throw new Exception("Missing table or inconsistent group metadata");
             if(groups==null)throw new Exception("No explicit sample phenotype annotations");
+            if(sampleAccessions.size()!=groups.length)
+                throw new Exception("Missing or inconsistent GEO sample identifiers");
+            if(metadataConflict)
+                throw new Exception("Pairing, batch, treatment, donor or timepoint metadata: unadjusted independent Welch test blocked");
+
             for(int group:groups){if(group==-1)controls++;else if(group==1)cases++;}
             if(controls<3||cases<3||controls+cases!=groups.length)
                 throw new Exception("Requires at least 3 unambiguous, annotated samples in each group");
@@ -112,6 +140,13 @@ public final class GeoGroupStatistics {
             String tableHeader=reader.readLine();
             if(tableHeader==null || tableHeader.split("\t",-1).length!=groups.length+1)
                 throw new Exception("Sample column count differs from phenotype annotations");
+            String[] matrixHeader=tableHeader.split("\t",-1);
+            if(!clean(matrixHeader[0]).equalsIgnoreCase("ID_REF"))
+                throw new Exception("Unexpected matrix identifier column");
+            for(int i=0;i<groups.length;i++)
+                if(!clean(matrixHeader[i+1]).equals(sampleAccessions.get(i)))
+                    throw new Exception("GEO matrix sample order does not match phenotype annotations");
+
             while((line=reader.readLine())!=null){
                 if(line.equals("!series_matrix_table_end")){complete=true;break;}
                 if(featureRows>=MAX_FEATURES || cells+groups.length>MAX_CELLS){skipped=true;break;}
@@ -163,6 +198,10 @@ public final class GeoGroupStatistics {
             top.put(item);
         }
         result.put("method","Exploratory Welch t-test of normalized log-scale data; Benjamini-Hochberg FDR; no covariates or batch adjustment");
+        result.put("sample_accessions_verified_in_order",true);
+        result.put("explicit_pairing_or_batch_metadata",false);
+        result.put("sample_identifiers",new JSONArray(sampleAccessions));
+        result.put("measurement_type","Reported log-scale normalized measurement; cannot assume gene-level mapping or platform comparability");
         result.put("case_samples",cases);result.put("control_samples",controls);
         result.put("features_tested",m);
         result.put("features_fdr_below_0_05",passed);
