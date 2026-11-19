@@ -74,6 +74,8 @@ public final class GeoGroupStatistics {
         java.util.List<String> sampleAccessions=new java.util.ArrayList<>();
         boolean metadataConflict=false;
         boolean complete=false,header=false,skipped=false;
+        String platformId=null;
+        boolean platformConflict=false;
         List<Feature> features=new ArrayList<>();
         long cells=0;
         try(BufferedReader reader=new BufferedReader(new InputStreamReader(
@@ -82,6 +84,16 @@ public final class GeoGroupStatistics {
             while((line=reader.readLine())!=null){
                 if(line.startsWith("!Series_data_processing")||line.startsWith("!Sample_data_processing")){
                     if(processing.length()<8000)processing+=line.toLowerCase(Locale.ROOT)+" ";
+                }
+                if((line.startsWith("!Series_platform_id") ||
+                        line.startsWith("!Sample_platform_id")) && !header){
+                    String[] platforms=line.split("\t",-1);
+                    for(int i=1;i<platforms.length;i++){
+                        String id=clean(platforms[i]);
+                        if(!id.matches("GPL[0-9]+")){platformConflict=true;break;}
+                        if(platformId!=null && !platformId.equals(id))platformConflict=true;
+                        platformId=id;
+                    }
                 }
                 if(line.startsWith("!Sample_geo_accession") && !header){
                     if(!sampleAccessions.isEmpty())throw new Exception("Duplicate GEO sample accession annotations");
@@ -124,6 +136,8 @@ public final class GeoGroupStatistics {
             }
             if(!header||skipped)throw new Exception("Missing table or inconsistent group metadata");
             if(groups==null)throw new Exception("No explicit sample phenotype annotations");
+            if(platformId==null || platformConflict)
+                throw new Exception("No single consistent GEO measurement platform identified");
             if(sampleAccessions.size()!=groups.length)
                 throw new Exception("Missing or inconsistent GEO sample identifiers");
             if(metadataConflict)
@@ -198,6 +212,7 @@ public final class GeoGroupStatistics {
             top.put(item);
         }
         result.put("method","Exploratory Welch t-test of normalized log-scale data; Benjamini-Hochberg FDR; no covariates or batch adjustment");
+        result.put("platform_accession",platformId);
         result.put("sample_accessions_verified_in_order",true);
         result.put("explicit_pairing_or_batch_metadata",false);
         result.put("sample_identifiers",new JSONArray(sampleAccessions));
