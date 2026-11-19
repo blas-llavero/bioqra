@@ -1,0 +1,48 @@
+name: Independent GEO / limma scientific audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/geo_fetch_for_r.py'
+      - 'tools/geo_limma_audit.R'
+      - '.github/workflows/scientific-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-real-geo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free R and Bioconductor limma packages
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends r-base-core r-bioc-limma r-cran-jsonlite
+      - name: Download authentic public NCBI GEO GSE17351
+        run: python3 tools/geo_fetch_for_r.py --accession GSE17351 --out validation-input
+      - name: Audit sample metadata and run limma only when scientifically eligible
+        run: |
+          Rscript tools/geo_limma_audit.R \
+            validation-input/GSE17351_series_matrix.txt.gz validation-results
+      - name: Record package versions and source provenance
+        if: always()
+        run: |
+          mkdir -p validation-results
+          if command -v Rscript >/dev/null 2>&1; then
+            Rscript -e 'cat(R.version.string,"\n");if(requireNamespace("limma",quietly=TRUE))cat("limma",as.character(packageVersion("limma")),"\n")' > validation-results/R-versions.txt
+          fi
+          if test -f validation-input/provenance.json; then
+            cp validation-input/provenance.json validation-results/source-provenance.json
+          fi
+      - name: Publish independent audit (not scientific validation)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bioqra-independent-geo-audit
+          path: validation-results/
+          if-no-files-found: warn
+          retention-days: 30
