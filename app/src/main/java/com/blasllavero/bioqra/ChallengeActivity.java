@@ -642,6 +642,14 @@ public final class ChallengeActivity extends Activity {
                 try{initialQc=GeoMatrixQualityAnalyzer.analyze(this,challengeKey);}
                 catch(Exception e){qcError=e.getMessage();}
             }
+            GeoGroupStatistics.Result initialComparison=null;
+            String compareError="";
+            if("automatic".equals(mode) && acquired!=null && acquired.files>0){
+                try{initialComparison=GeoGroupStatistics.analyze(this,challengeKey);}
+                catch(Exception e){compareError=e.getMessage();}
+            }
+            final GeoGroupStatistics.Result comparison=initialComparison;
+            final String comparisonError=compareError;
             final GeoMatrixQualityAnalyzer.Result quality=initialQc;
             final String qualityError=qcError;
             final ResearchEvidenceArchive.Outcome evidence=acquired;
@@ -653,7 +661,9 @@ public final class ChallengeActivity extends Activity {
                 evidenceOutcome=evidence;
                 if(evidence!=null)evidenceStatus.setText(evidence.summary
                     +(quality==null?"":"\n"+quality.summary)
-                    +(qualityError.isEmpty()?"":"\nQC failed: "+qualityError));
+                    +(qualityError.isEmpty()?"":"\nQC failed: "+qualityError)
+                    +(comparison==null?"":"\n"+comparison.summary)
+                    +(comparisonError.isEmpty()?"":"\nComparison unavailable: "+comparisonError));
                 else if(!evidenceError.isEmpty())evidenceStatus.setText("Evidence acquisition failed: "+evidenceError);
                 else evidenceStatus.setText("No data files downloaded.");
                 datasetDiscoveryNote=error==null?"":"GEO metadata search unavailable: "+error;
@@ -867,6 +877,18 @@ public final class ChallengeActivity extends Activity {
                     });
                 }catch(Exception e){
                     evidenceLog.append("\n\nLocal GEO quality inspection not completed: ")
+                        .append(e.getMessage());
+                }
+                try{
+                    GeoGroupStatistics.Result compared=GeoGroupStatistics.analyze(this,challengeKey);
+                    evidenceLog.append("\n\nEXECUTED OPTIONAL EXPLORATORY GROUP COMPARISON:\n")
+                        .append(compared.summary)
+                        .append("\nDetails and rejected studies are preserved in research/group-comparison.json.");
+                    runOnUiThread(()->{
+                        if(!isFinishing()&&!isDestroyed())evidenceStatus.setText(compared.summary);
+                    });
+                }catch(Exception e){
+                    evidenceLog.append("\n\nExploratory group comparison unavailable: ")
                         .append(e.getMessage());
                 }
                 evidenceLog.append("\n\nFINAL DATA READINESS CHECK:\n")
