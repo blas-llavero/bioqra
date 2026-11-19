@@ -28,6 +28,26 @@ jobs:
         run: |
           Rscript tools/geo_limma_audit.R \
             validation-input/GSE17351_series_matrix.txt.gz validation-results
+      - name: Publish scientific eligibility summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, os
+          audit=pathlib.Path("validation-results/limma-audit.json")
+          report={"status":"NOT_RUN","reason":"Audit output is missing"}
+          if audit.exists():
+              report=json.loads(audit.read_text(encoding="utf-8"))
+          status=report.get("status","UNKNOWN")
+          reason=report.get("reason","No reason recorded")
+          summary=pathlib.Path(os.environ["GITHUB_STEP_SUMMARY"])
+          with summary.open("a", encoding="utf-8") as out:
+              out.write("## Real GEO / R limma eligibility\n\n")
+              out.write(f"**Status:** {status}\n\n")
+              out.write(f"**Reason:** {reason}\n\n")
+              out.write("**Scientific or clinical validation:** Not established.\n")
+          if status!="EXPLORATORY_ANALYSIS_COMPLETED":
+              print(f"::warning::Real GEO differential-expression analysis not performed: {status}: {reason}")
+          PY
       - name: Record package versions and source provenance
         if: always()
         run: |
