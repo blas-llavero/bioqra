@@ -45,6 +45,8 @@ jobs:
           else
             echo "::warning::No stable debug keystore secret configured. A new debug signing key may prevent in-place upgrades and require a new ChatGPT login. Configure BIOQRA_DEBUG_KEYSTORE_B64."
           fi
+      - name: Run numerical regression tests
+        run: gradle :app:testDebugUnitTest --no-daemon
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
       - name: Verify approved video is packaged in APK
