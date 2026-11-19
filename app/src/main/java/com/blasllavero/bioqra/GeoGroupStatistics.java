@@ -175,27 +175,23 @@ public final class GeoGroupStatistics {
                 // those prespecified IDs, never reselect its top-ranked features.
                 if(preselected!=null && !preselected.contains(clean(vals[0])))continue;
                 featureRows++;cells+=groups.length;
-                double[] sum=new double[2], sq=new double[2];int[] n=new int[2];
+                double[] controlsData=new double[controls];
+                double[] casesData=new double[cases];
+                int cc=0,tc=0;
                 boolean valid=true;
                 for(int i=0;i<groups.length;i++){
                     try{
                         double value=Double.parseDouble(clean(vals[i+1]));
                         if(!Double.isFinite(value)){valid=false;break;}
-                        int k=groups[i]==-1?0:1;
-                        sum[k]+=value;sq[k]+=value*value;n[k]++;
+                        if(groups[i]==-1)controlsData[cc++]=value;
+                        else casesData[tc++]=value;
                     }catch(NumberFormatException e){valid=false;break;}
                 }
-                if(!valid||n[0]<3||n[1]<3)continue;
-                double mean0=sum[0]/n[0],mean1=sum[1]/n[1];
-                double var0=Math.max(0,(sq[0]-sum[0]*sum[0]/n[0])/(n[0]-1));
-                double var1=Math.max(0,(sq[1]-sum[1]*sum[1]/n[1])/(n[1]-1));
-                double a=var0/n[0],b=var1/n[1],den=a+b;
-                if(den<=1e-15)continue;
-                double df=den*den/(a*a/(n[0]-1)+b*b/(n[1]-1));
-                if(!(df>=1)||!Double.isFinite(df))continue;
-                double statistic=(mean1-mean0)/Math.sqrt(den);
-                double pv=2*(new TDistribution(df)).cumulativeProbability(-Math.abs(statistic));
-                if(Double.isFinite(pv))features.add(new Feature(clean(vals[0]),mean1-mean0,Math.min(1,Math.max(0,pv))));
+                if(!valid||cc<3||tc<3)continue;
+                try{
+                    WelchStatistics.TestResult t=WelchStatistics.compare(controlsData,casesData);
+                    features.add(new Feature(clean(vals[0]),t.effect,t.p));
+                }catch(IllegalArgumentException ignored){ /* incomplete feature */ }
             }
         }
         if(!complete||skipped)throw new Exception("Matrix incomplete or exceeds bounded computational limits");
@@ -205,12 +201,10 @@ public final class GeoGroupStatistics {
             throw new Exception("No prespecified discovery probes evaluable on external matrix");
         features.sort(Comparator.comparingDouble(f->f.p));
         final int m=features.size();
-        double previous=1;
-        for(int i=m-1;i>=0;i--){
-            Feature f=features.get(i);
-            previous=Math.min(previous,Math.min(1,f.p*m/(i+1.0)));
-            f.adjusted=previous;
-        }
+        double[] pValues=new double[m];
+        for(int i=0;i<m;i++)pValues[i]=features.get(i).p;
+        double[] adjusted=WelchStatistics.benjaminiHochberg(pValues);
+        for(int i=0;i<m;i++)features.get(i).adjusted=adjusted[i];
         int passed=0;for(Feature f:features)if(f.adjusted<0.05)passed++;
         JSONArray top=new JSONArray();
         for(int i=0;i<Math.min(100,features.size());i++){
