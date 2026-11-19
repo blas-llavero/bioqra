@@ -120,6 +120,38 @@ public final class ResearchEvidenceArchive {
         manifest.put("assessment","Data availability and provenance inventory only. No model training, outcome validation, causal inference or scientific solution performed.");
         JSONArray candidates=new JSONArray();
         JSONArray downloads=new JSONArray();
+        java.util.Set<String> prior=new java.util.HashSet<>();
+        File previous=new File(folder,"manifest.json");
+        if(previous.isFile() && previous.length()<=150000){
+            try{
+                byte[] bytes=new byte[(int)previous.length()];
+                try(FileInputStream in=new FileInputStream(previous)){
+                    int offset=0;
+                    while(offset<bytes.length){
+                        int n=in.read(bytes,offset,bytes.length-offset);
+                        if(n<0)throw new Exception("Incomplete existing manifest");
+                        offset+=n;
+                    }
+                }
+                JSONObject old=new JSONObject(new String(bytes,java.nio.charset.StandardCharsets.UTF_8));
+                JSONArray previousCandidates=old.optJSONArray("candidate_studies");
+                if(previousCandidates!=null)for(int i=0;i<previousCandidates.length();i++){
+                    JSONObject c=previousCandidates.optJSONObject(i);
+                    if(c!=null && prior.add("candidate:"+c.optString("accession")))candidates.put(c);
+                }
+                JSONArray previousFiles=old.optJSONArray("downloaded_files");
+                if(previousFiles!=null)for(int i=0;i<previousFiles.length();i++){
+                    JSONObject file=previousFiles.optJSONObject(i);
+                    if(file==null)continue;
+                    String acc=file.optString("accession");
+                    String name=file.optString("file");
+                    File actual=new File(folder,name);
+                    if(acc.matches("GSE[0-9]+")&&name.equals(acc+"_series_matrix.txt.gz")
+                        &&actual.isFile()&&actual.length()==file.optLong("bytes")
+                        &&prior.add("download:"+acc))downloads.put(file);
+                }
+            }catch(Exception ignored){/* discard malformed prior manifest */}
+        }
         int attempted=0;
         if(studies!=null)for(PublicDatasetDiscovery.Study study:studies.studies){
             JSONObject candidate=new JSONObject();
@@ -127,10 +159,14 @@ public final class ResearchEvidenceArchive {
             candidate.put("title",study.title);
             candidate.put("source",study.url);
             candidate.put("relevance_score",study.relevance);
-            candidates.put(candidate);
-            if(attempted>=MAX_FILES)continue;
+            if(prior.add("candidate:"+study.accession))candidates.put(candidate);
+            if(prior.contains("download:"+study.accession)
+                    || attempted>=MAX_FILES || downloads.length()>=6)continue;
             attempted++;
-            try{downloads.put(tryMatrix(folder,study));}
+            try{
+                JSONObject file=tryMatrix(folder,study);
+                if(prior.add("download:"+study.accession))downloads.put(file);
+            }
             catch(Exception problem){
                 candidate.put("download_status","Unavailable or skipped: "+problem.getMessage());
             }
@@ -147,9 +183,42 @@ public final class ResearchEvidenceArchive {
         File existing=new File(folder,"manifest.json");
         if(existing.exists()&&!existing.delete())throw new Exception("Cannot replace manifest");
         if(!temp.renameTo(existing))throw new Exception("Cannot save evidence manifest");
-        return new Outcome(downloads.length()+" authentic GEO matrix files downloaded (limit "+MAX_FILES
+        return new Outcome(downloads.length()+" authentic GEO matrix files retained across searches (max "+6
             +"); evidence manifest saved. Completeness and scientific suitability not verified.",downloads.length());
     }
+    /** Counts only downloaded files with an original SHA-256 provenance entry. */
+    public static int downloadedCount(Context context,String key){
+        try{
+            File manifest=new File(folder(context,key),"manifest.json");
+            if(!manifest.isFile()||manifest.length()>150000)return 0;
+            byte[] raw=new byte[(int)manifest.length()];
+            try(FileInputStream in=new FileInputStream(manifest)){
+                int offset=0;
+                while(offset<raw.length){
+                    int n=in.read(raw,offset,raw.length-offset);
+                    if(n<0)return 0;
+                    offset+=n;
+                }
+            }
+            JSONObject doc=new JSONObject(new String(raw,java.nio.charset.StandardCharsets.UTF_8));
+            JSONArray entries=doc.optJSONArray("downloaded_files");
+            if(entries==null)return 0;
+            int valid=0;
+            for(int i=0;i<entries.length();i++){
+                JSONObject entry=entries.optJSONObject(i);
+                if(entry==null)continue;
+                String accession=entry.optString("accession");
+                String expected=entry.optString("sha256");
+                String name=entry.optString("file");
+                if(!accession.matches("GSE[0-9]+")||!expected.matches("[a-f0-9]{64}")||
+                    !name.equals(accession+"_series_matrix.txt.gz"))continue;
+                File actual=new File(folder(context,key),name);
+                if(actual.isFile()&&actual.length()==entry.optLong("bytes"))valid++;
+            }
+            return valid;
+        }catch(Exception e){return 0;}
+    }
+
     public static String summary(Context context,String key){
         try{
             File manifest=new File(folder(context,key),"manifest.json");
