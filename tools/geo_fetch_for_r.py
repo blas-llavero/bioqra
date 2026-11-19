@@ -13,7 +13,7 @@ import re
 import urllib.request
 
 MAX_BYTES = 8_000_000
-ALLOWED_STUDIES = {"GSE17351"}  # Extend only after primary-source review.
+ALLOWED_STUDIES = {"GSE17351", "GSE20347"}  # Extend only after primary-source review.
 
 
 def main():
