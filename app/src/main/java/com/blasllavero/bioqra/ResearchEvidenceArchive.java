@@ -248,6 +248,13 @@ public final class ResearchEvidenceArchive {
             if(out==null)throw new Exception("Cannot write evidence ZIP");
             try(ZipOutputStream zip=new ZipOutputStream(out)){
                 try(InputStream in=new FileInputStream(manifest)){put(zip,"evidence/manifest.json",in);}
+                zip.putNextEntry(new ZipEntry("evidence/readiness.txt"));
+                zip.write(("BIOQRA dataset readiness assessment\\n"
+                    +ResearchReadiness.assess(context,key,null).describe()
+                    +"\\nDataset discovery and downloading are not equivalent to analyzing data. "
+                    +"This archive contains no independently validated scientific results.\\n")
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.closeEntry();
                 File[] files=directory.listFiles();
                 if(files!=null)for(File file:files){
                     if(file.isFile()&&file.getName().matches("GSE[0-9]+_series_matrix[.]txt[.]gz")){
