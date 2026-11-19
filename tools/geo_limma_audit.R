@@ -83,10 +83,34 @@ for(field in characteristics) {
   if(any(clash))skip("Contradictory case/control labels")
   groups[!is.na(current)] <- current[!is.na(current)]
 }
+title_pairing <- NULL
+if(anyNA(groups) && identical(basename(source_file),"GSE20347_series_matrix.txt.gz")) {
+  # This accession's *actual* titles have been independently tested as
+  # 17 explicit normal/tumor pairs using matching E-number patient codes.
+  # Never apply this accession-specific pattern to a different study.
+  titles <- extract_fields("!Sample_title")
+  if(length(titles)!=1L||length(titles[[1L]])!=length(sample_ids))
+    skip("Source titles not aligned with GSM sample accessions")
+  source("tools/geo_title_pairing.R",local=TRUE)
+  candidate <- bioqra_geo_title_pairs(titles[[1L]],"GSE20347")
+  if(candidate$status!="ELIGIBLE")skip(candidate$reason)
+  if(any(!is.na(groups) & groups!=candidate$groups))
+    skip("Source title groups contradict study-provided characteristics")
+  groups <- candidate$groups
+  title_pairing <- candidate
+}
 if(anyNA(groups) || sum(groups=="control")<3L || sum(groups=="tumor")<3L)
   skip("Fewer than three clearly labeled samples per group")
 source("tools/geo_pairing.R",local=TRUE)
-pairing <- bioqra_paired_design(groups,metadata_fields,sample_ids)
+pairing <- if(!is.null(title_pairing)) {
+  # Other confounders still prohibit an unadjusted patient fixed-effect model.
+  metadata_check <- bioqra_paired_design(groups,metadata_fields,sample_ids)
+  if(metadata_check$status=="SKIPPED" &&
+      grepl("Batch, treatment or timepoint",metadata_check$reason))
+      skip(metadata_check$reason)
+  list(status="ELIGIBLE", design="paired", patient_ids=title_pairing$patient_ids,
+       reason="Verified GSE20347 source titles")
+} else bioqra_paired_design(groups,metadata_fields,sample_ids)
 if(pairing$status!="ELIGIBLE")skip(pairing$reason)
 processing <- meta[grepl("^!(Series|Sample)_data_processing",meta)]
 p <- tolower(paste(processing,collapse=" "))
