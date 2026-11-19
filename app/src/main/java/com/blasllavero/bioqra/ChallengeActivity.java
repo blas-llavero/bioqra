@@ -648,6 +648,14 @@ public final class ChallengeActivity extends Activity {
                 try{initialComparison=GeoGroupStatistics.analyze(this,challengeKey);}
                 catch(Exception e){compareError=e.getMessage();}
             }
+            GeoCohortConcordance.Result initialConcordance=null;
+            String concordanceError="";
+            if("automatic".equals(mode) && initialComparison!=null){
+                try{initialConcordance=GeoCohortConcordance.inspect(this,challengeKey);}
+                catch(Exception e){concordanceError=e.getMessage();}
+            }
+            final GeoCohortConcordance.Result concordance=initialConcordance;
+            final String concordanceFailure=concordanceError;
             final GeoGroupStatistics.Result comparison=initialComparison;
             final String comparisonError=compareError;
             final GeoMatrixQualityAnalyzer.Result quality=initialQc;
@@ -663,7 +671,9 @@ public final class ChallengeActivity extends Activity {
                     +(quality==null?"":"\n"+quality.summary)
                     +(qualityError.isEmpty()?"":"\nQC failed: "+qualityError)
                     +(comparison==null?"":"\n"+comparison.summary)
-                    +(comparisonError.isEmpty()?"":"\nComparison unavailable: "+comparisonError));
+                    +(comparisonError.isEmpty()?"":"\nComparison unavailable: "+comparisonError)
+                    +(concordance==null?"":"\n"+concordance.summary)
+                    +(concordanceFailure.isEmpty()?"":"\nCohort audit unavailable: "+concordanceFailure));
                 else if(!evidenceError.isEmpty())evidenceStatus.setText("Evidence acquisition failed: "+evidenceError);
                 else evidenceStatus.setText("No data files downloaded.");
                 datasetDiscoveryNote=error==null?"":"GEO metadata search unavailable: "+error;
@@ -889,6 +899,15 @@ public final class ChallengeActivity extends Activity {
                     });
                 }catch(Exception e){
                     evidenceLog.append("\n\nExploratory group comparison unavailable: ")
+                        .append(e.getMessage());
+                }
+                try{
+                    GeoCohortConcordance.Result concordance=GeoCohortConcordance.inspect(this,challengeKey);
+                    evidenceLog.append("\n\nCROSS-STUDY PROBE CONCORDANCE AUDIT:\n")
+                        .append(concordance.summary)
+                        .append("\nStudy pair checks saved in research/cohort-concordance.json.");
+                }catch(Exception e){
+                    evidenceLog.append("\n\nCross-study concordance audit unavailable: ")
                         .append(e.getMessage());
                 }
                 evidenceLog.append("\n\nFINAL DATA READINESS CHECK:\n")
