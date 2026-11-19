@@ -11,6 +11,8 @@ on:
       - 'tools/test_geo_pairing.R'
       - 'tools/test_paired_limma.R'
       - 'tools/geo_metadata_audit.py'
+      - 'tools/geo_title_pairing.R'
+      - 'tools/test_real_geo_title_pairs.R'
       - '.github/workflows/scientific-validation.yml'
 
 permissions:
@@ -40,6 +42,8 @@ jobs:
         run: python3 tools/geo_fetch_for_r.py --accession GSE20347 --out validation-input
       - name: Inspect GSE20347 original sample metadata without inventing groups
         run: python3 tools/geo_metadata_audit.py validation-input/GSE20347_series_matrix.txt.gz validation-results/GSE20347/metadata-audit.json
+      - name: Verify pairs from actual GSE20347 GEO sample titles
+        run: Rscript tools/test_real_geo_title_pairs.R validation-input/GSE20347_series_matrix.txt.gz
       - name: Audit paired-cohort candidate with strict limma rules
         run: |
           Rscript tools/geo_limma_audit.R \
