@@ -636,6 +636,14 @@ public final class ChallengeActivity extends Activity {
                     title,report,verifiedPageUrl.isEmpty()?url:verifiedPageUrl);}
                 catch(Exception e){downloadError=e.getMessage();}
             }
+            GeoMatrixQualityAnalyzer.Result initialQc=null;
+            String qcError="";
+            if("automatic".equals(mode) && acquired!=null && acquired.files>0){
+                try{initialQc=GeoMatrixQualityAnalyzer.analyze(this,challengeKey);}
+                catch(Exception e){qcError=e.getMessage();}
+            }
+            final GeoMatrixQualityAnalyzer.Result quality=initialQc;
+            final String qualityError=qcError;
             final ResearchEvidenceArchive.Outcome evidence=acquired;
             final String evidenceError=downloadError;
             runOnUiThread(()->{
@@ -643,7 +651,9 @@ public final class ChallengeActivity extends Activity {
                 datasetSearchInProgress=false;
                 discoveredDatasets=report;
                 evidenceOutcome=evidence;
-                if(evidence!=null)evidenceStatus.setText(evidence.summary);
+                if(evidence!=null)evidenceStatus.setText(evidence.summary
+                    +(quality==null?"":"\n"+quality.summary)
+                    +(qualityError.isEmpty()?"":"\nQC failed: "+qualityError));
                 else if(!evidenceError.isEmpty())evidenceStatus.setText("Evidence acquisition failed: "+evidenceError);
                 else evidenceStatus.setText("No data files downloaded.");
                 datasetDiscoveryNote=error==null?"":"GEO metadata search unavailable: "+error;
@@ -662,7 +672,7 @@ public final class ChallengeActivity extends Activity {
                 }else{
                     datasetStatus.setText("No dataset loaded. "+datasetDiscoveryNote);
                 }
-                datasetResults.addView(text("No study measurements have been downloaded or analysed. Verify design, permissions and outcome variables before drawing conclusions.",13,false));
+                datasetResults.addView(text("Only bounded exploratory QC is performed on downloaded real GEO matrices. No differential expression, clinical prediction, or challenge solution is established.",13,false));
                 if(thenAi && connection.canUsePlan() && aiPreferences.autoConsent()
                         && !aiPreferences.alreadyAttempted(challengeKey) && specificPage)
                     chooseModelAndRun(true);
@@ -846,6 +856,18 @@ public final class ChallengeActivity extends Activity {
                             .append(" unavailable: ").append(planningError.getMessage());
                         break;
                     }
+                }
+                try{
+                    GeoMatrixQualityAnalyzer.Result qc=GeoMatrixQualityAnalyzer.analyze(this,challengeKey);
+                    evidenceLog.append("\n\nEXECUTED LOCAL GEO QUALITY INSPECTION:\n")
+                        .append(qc.summary)
+                        .append("\nThis is not a clinical result or an assessment of challenge success.");
+                    runOnUiThread(()->{
+                        if(!isFinishing()&&!isDestroyed())evidenceStatus.setText(qc.summary);
+                    });
+                }catch(Exception e){
+                    evidenceLog.append("\n\nLocal GEO quality inspection not completed: ")
+                        .append(e.getMessage());
                 }
                 evidenceLog.append("\n\nFINAL DATA READINESS CHECK:\n")
                     .append(ResearchReadiness.assess(this,challengeKey,discoveredDatasets).describe());
