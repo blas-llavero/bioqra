@@ -15,6 +15,12 @@ for(i in seq_len(30000)) {
     }
 }
 if(is.null(titles))stop("No published source sample titles")
+# Publish only the normalized source syntax, never raw patient identifiers.
+for(t in unique(c(titles[1L],titles[length(titles)]))) {
+  clean<-tolower(trimws(t))
+  clean<-gsub("[0-9]+","<number>",clean)
+  cat("Source title syntax (numbers redacted):",clean,"\n")
+}
 result<-bioqra_geo_title_pairs(titles,"GSE20347")
 cat("Real GEO title-pairing eligibility:",result$status,"\nReason:",result$reason,"\n")
 if(identical(result$status,"ELIGIBLE")){
