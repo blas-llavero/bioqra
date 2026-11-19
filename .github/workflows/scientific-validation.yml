@@ -10,6 +10,7 @@ on:
       - 'tools/geo_pairing.R'
       - 'tools/test_geo_pairing.R'
       - 'tools/test_paired_limma.R'
+      - 'tools/geo_metadata_audit.py'
       - '.github/workflows/scientific-validation.yml'
 
 permissions:
@@ -37,6 +38,8 @@ jobs:
             validation-input/GSE17351_series_matrix.txt.gz validation-results
       - name: Download authentic paired-cohort candidate GSE20347
         run: python3 tools/geo_fetch_for_r.py --accession GSE20347 --out validation-input
+      - name: Inspect GSE20347 original sample metadata without inventing groups
+        run: python3 tools/geo_metadata_audit.py validation-input/GSE20347_series_matrix.txt.gz validation-results/GSE20347/metadata-audit.json
       - name: Audit paired-cohort candidate with strict limma rules
         run: |
           Rscript tools/geo_limma_audit.R \
