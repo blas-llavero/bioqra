@@ -19,6 +19,9 @@ public final class UiLanguage {
         add("Full text","Text complet","Texto completo");
         add("🔍 Cerca","🔍 Cerca","🔍 Buscar");
         add("← Enrere","← Enrere","← Atrás");
+        add("← Back","← Enrere","← Atrás");
+        add("Forward →","Endavant →","Adelante →");
+        add("🔍 Search","🔍 Cerca","🔍 Buscar");
         add("Endavant →","Endavant →","Adelante →");
         add("Public statement (read-only preview)","Enunciat públic (només lectura)","Enunciado público (solo lectura)");
         add("Participation dates and supporting documents","Dates i documents de participació","Fechas y documentos de participación");
