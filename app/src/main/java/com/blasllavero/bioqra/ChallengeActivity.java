@@ -6,6 +6,15 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
+import android.text.style.StyleSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.URLSpan;
+import android.text.util.Linkify;
+import android.text.method.LinkMovementMethod;
+import android.text.Layout;
+import java.util.regex.Pattern;
 import android.text.Spanned;
 import android.text.style.BackgroundColorSpan;
 import android.view.inputmethod.EditorInfo;
@@ -43,6 +52,8 @@ public final class ChallengeActivity extends Activity {
     private String title, url, mode, kind;
     private TextView status, output, statement, resolvedLink, deadlinesView;
     private TextView sectionHeading, searchCounter;
+    private Button originalDocumentButton;
+    private String activeDocumentUrl="";
     private EditText searchText;
     private LinearLayout searchPanel;
     private ScrollView pageScroll;
@@ -162,10 +173,21 @@ public final class ChallengeActivity extends Activity {
         resolvedLink=text("Detailed statement URL: not identified yet",12,false);
         resolvedLink.setTextIsSelectable(true);
         root.addView(resolvedLink);
+        originalDocumentButton=button("📄 Open original document (PDF/web)");
+        originalDocumentButton.setVisibility(View.GONE);
+        originalDocumentButton.setOnClickListener(v->{
+            if(TrustedChallengeReader.approved(activeDocumentUrl))
+                startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(activeDocumentUrl)));
+        });
+        root.addView(originalDocumentButton,new LinearLayout.LayoutParams(-1,dp(52)));
         statement=text("No statement retrieved yet.",14,false);
         statement.setTextIsSelectable(true);
         statement.setLineSpacing(dp(5),1.1f);
-        statement.setPadding(dp(3),dp(12),dp(3),dp(18));
+        statement.setPadding(dp(5),dp(16),dp(5),dp(24));
+        statement.setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
+        statement.setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NORMAL);
+        statement.setLinksClickable(true);
+        statement.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(statement);
         root.addView(text("Participation dates and supporting documents",18,true));
         deadlinesView=text("Not checked. Dates must be verified on the official organizer website.",13,false);
@@ -308,6 +330,46 @@ public final class ChallengeActivity extends Activity {
         historyIndex=next;
         selectSection(sectionHistory.get(next),false);
     }
+    /** Format a plain-text organizer excerpt without changing its wording or trusting HTML. */
+    private void renderStatement(String content){
+        if(content==null)content="";
+        // The source text is unchanged; visual spans only improve readability.
+        SpannableStringBuilder rich=new SpannableStringBuilder(content);
+        String[] lines=content.split("\\n",-1);
+        int offset=0;
+        for(String line:lines){
+            String trimmed=line.trim();
+            int begin=offset+line.indexOf(trimmed.isEmpty()?"":trimmed);
+            int end=begin+trimmed.length();
+            boolean page=trimmed.matches("(?i)^(page\\s+\\d+\\s*/\\s*\\d+|cancer grand challenges)$");
+            boolean heading=trimmed.matches("(?i)^((\\d+(?:\\.\\d+)*\\.?\\s+)?(summary of|introduction|application process|award|about |assessment criteria|challenge teams|contents|official links|application guidelines|research proposal|key dates|documents|additional official source).*)$")
+                    || trimmed.matches("(?i)^\\d+(?:\\.\\d+)*\\.?\\s+[A-Z][^.!?]{2,85}$");
+            boolean label=trimmed.endsWith(":") && trimmed.length()<95 && !trimmed.startsWith("http");
+            if(end>begin && (page||heading||label)){
+                rich.setSpan(new StyleSpan(android.graphics.Typeface.BOLD),begin,end,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                rich.setSpan(new ForegroundColorSpan(Color.rgb(14,76,95)),begin,end,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                if(heading && !page)rich.setSpan(new RelativeSizeSpan(1.12f),begin,end,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            offset+=line.length()+1;
+        }
+        java.util.regex.Matcher urls=Pattern.compile("https://[^\\s<>]+").matcher(content);
+        while(urls.find()){
+            int end=urls.end();
+            while(end>urls.start() && ".,;)".indexOf(content.charAt(end-1))>=0)end--;
+            String link=content.substring(urls.start(),end);
+            if(TrustedChallengeReader.approved(link))
+                rich.setSpan(new URLSpan(link),urls.start(),end,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        statement.setText(rich,TextView.BufferType.SPANNABLE);
+    }
+
+    private void setDocumentLink(String link){
+        activeDocumentUrl=TrustedChallengeReader.approved(link)?link:"";
+        originalDocumentButton.setVisibility(activeDocumentUrl.isEmpty()?View.GONE:View.VISIBLE);
+        originalDocumentButton.setText(TrustedChallengeReader.approvedPdf(activeDocumentUrl)
+            ?"📄 Open original PDF with its layout":"🌐 Open original source in browser");
+    }
+
     private void showSection(String key){
         if(navigation==null){
             status.setText("First retrieve the official challenge statement.");
@@ -317,15 +379,18 @@ public final class ChallengeActivity extends Activity {
         sectionHeading.setText(ChallengeSectionNavigator.label(key));
         String link=navigation.link(key);
         if(selected!=null){
-            statement.setText(selected.body);
+            renderStatement(selected.body);
+            setDocumentLink(selected.url);
             resolvedLink.setText("Official source: "+selected.url);
         }else if(link==null){
-            statement.setText("This section was not identified in the public official "
+            setDocumentLink(navigation.sourceUrl);
+            renderStatement("This section was not identified in the public official "
                 +"statement. BIOQRA will not invent missing challenge details. "
                 +"Use the original organizer page for more information.");
             resolvedLink.setText("Source: "+navigation.sourceUrl);
         }else{
-            statement.setText("Official link identified. Retrieving the public section...");
+            renderStatement("Official link identified. Retrieving the public section...");
+            setDocumentLink(link);
             resolvedLink.setText("Official source to check: "+link);
         }
         highlightSearch(false);
@@ -344,9 +409,10 @@ public final class ChallengeActivity extends Activity {
                         loadedOfficialSections.add(key);
                         if(key.equals(activeSection)){
                             if(loaded!=null){
-                                statement.setText(loaded.body);
+                                renderStatement(loaded.body);
+                                setDocumentLink(loaded.url);
                                 resolvedLink.setText("Official source: "+loaded.url);
-                            }else statement.setText("This linked section is not accessible.");
+                            }else renderStatement("This linked section is not accessible.");
                             highlightSearch(false);
                             pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
                         }
@@ -358,7 +424,7 @@ public final class ChallengeActivity extends Activity {
                         loadedOfficialSections.add(key);
                         if(key.equals(activeSection)){
                             String original=selected==null?"":selected.body+"\n\n";
-                            statement.setText(original+"The official linked document could not be "
+                            renderStatement(original+"The official linked document could not be "
                                     +"read automatically: "+e.getMessage()+"\nSource: "+link);
                         }
                     });
@@ -389,7 +455,9 @@ public final class ChallengeActivity extends Activity {
             return;
         }
         if(searchPosition>=found.size())searchPosition=-1;
-        SpannableString marked=new SpannableString(text);
+        SpannableStringBuilder marked=new SpannableStringBuilder(statement.getText());
+        for(BackgroundColorSpan old:marked.getSpans(0,marked.length(),BackgroundColorSpan.class))
+            marked.removeSpan(old);
         for(int i=0;i<found.size();i++){
             int start=found.get(i);
             marked.setSpan(new BackgroundColorSpan(i==searchPosition
@@ -474,7 +542,7 @@ public final class ChallengeActivity extends Activity {
                     fetchedText=result.text;
                     specificPage=result.specific;
                     verifiedPageUrl=result.resolvedUrl;
-                    statement.setText(result.text);
+                    renderStatement(result.text);
                     resolvedLink.setText("Selected public page: "+result.resolvedUrl);
                     loadedOfficialSections.clear();
                     loadingOfficialSections.clear();
