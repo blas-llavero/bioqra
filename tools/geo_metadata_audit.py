@@ -15,7 +15,7 @@ import sys
 if len(sys.argv) != 3:
     raise SystemExit("Usage: python3 tools/geo_metadata_audit.py MATRIX.gz REPORT.json")
 path, output = map(Path,sys.argv[1:])
-if not path.is_file() or path.stat().st_size>8_000_000:
+if not path.is_file() or path.stat().st_size>32_000_000:
     raise SystemExit("Input missing or exceeds limit")
 prefixes=("!Sample_title","!Sample_source_name_ch1","!Sample_characteristics_ch1",
           "!Sample_geo_accession","!Series_platform_id","!Sample_platform_id",
