@@ -211,6 +211,7 @@ public final class ChallengeActivity extends Activity {
         root.addView(text("Search official public repositories for this research challenge. Search results are not verified data matches; inspect study provenance, sample size, licensing, metadata and whether individual-level access needs approval.",13,false));
         Button searchDatasets=button("🔎 Search open data for this challenge");
         root.addView(searchDatasets,new LinearLayout.LayoutParams(-1,dp(54)));
+        if("automatic".equals(mode))searchDatasets.setVisibility(View.GONE);
         datasetStatus=text("No live dataset search has been performed.",13,false);
         root.addView(datasetStatus);
         datasetResults=new LinearLayout(this);
@@ -222,6 +223,7 @@ public final class ChallengeActivity extends Activity {
         root.addView(evidenceStatus);
         Button exportEvidence=button("Export research evidence and proposal (ZIP)");
         root.addView(exportEvidence,new LinearLayout.LayoutParams(-1,dp(52)));
+        if("automatic".equals(mode))exportEvidence.setVisibility(View.GONE);
         exportEvidence.setOnClickListener(v->{
             android.content.Intent intent=new android.content.Intent(Intent.ACTION_CREATE_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -237,9 +239,11 @@ public final class ChallengeActivity extends Activity {
         sample.setTextSize(14);sample.setMinLines(3);sample.setMaxLines(8);
         sample.setGravity(Gravity.TOP);
         root.addView(sample,new LinearLayout.LayoutParams(-1,dp(112)));
+        if("automatic".equals(mode))sample.setVisibility(View.GONE);
 
         offlineButton=button("2 · Run offline sequence checks");
         root.addView(offlineButton,new LinearLayout.LayoutParams(-1,dp(55)));
+        if("automatic".equals(mode))offlineButton.setVisibility(View.GONE);
         offlineButton.setOnClickListener(v->{
             String result=LocalBioinformatics.inspect(sample.getText().toString());
             output.setText(result);
@@ -250,6 +254,7 @@ public final class ChallengeActivity extends Activity {
                 ? "3 · Ask ChatGPT for a research proposal"
                 : "3 · Ask ChatGPT for a solution proposal");
         root.addView(aiButton,new LinearLayout.LayoutParams(-1,dp(55)));
+        if("automatic".equals(mode))aiButton.setVisibility(View.GONE);
         aiButton.setOnClickListener(v->confirmAI());
         String oldResult=aiPreferences.lastResult(challengeKey);
         output=text(oldResult!=null ? "SAVED AI DRAFT (not reverified)\n\n"+oldResult
@@ -263,6 +268,7 @@ public final class ChallengeActivity extends Activity {
         renderProposal(output.getText().toString());
         Button savePdf=button("Save this challenge result as PDF");
         root.addView(savePdf,new LinearLayout.LayoutParams(-1,dp(52)));
+        if("automatic".equals(mode))savePdf.setVisibility(View.GONE);
         savePdf.setOnClickListener(v->saveSavedPdf());
         viewSavedPdf=button("View PDF");
         viewSavedPdf.setVisibility(View.GONE);
@@ -995,7 +1001,14 @@ public final class ChallengeActivity extends Activity {
                             if(verified==null)throw new SecurityException("Saved PDF cannot be read");
                         }
                         automaticallySavedRecord=record;
-                        pdfStatus=" · PDF saved: "+(destination==null
+                        try{
+                            DefaultEvidenceStorage.export(this,challengeKey,record);
+                            pdfStatus=" · PDF and evidence ZIP saved automatically: "
+                                    +DefaultEvidenceStorage.relativeDirectory(record);
+                        }catch(Exception zipError){
+                            pdfStatus=" · PDF saved; evidence ZIP unavailable: "+zipError.getMessage();
+                        }
+                        pdfStatus += " · PDF saved: "+(destination==null
                             ?DefaultPdfStorage.relativeDirectory(record)
                             :"Selected folder/Bioqra/"+DefaultPdfStorage.projectFolder(record)+"/")
                             +DefaultPdfStorage.filename(record);
