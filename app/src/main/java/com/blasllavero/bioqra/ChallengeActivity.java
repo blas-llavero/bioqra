@@ -990,29 +990,40 @@ public final class ChallengeActivity extends Activity {
                 AiPreferences.SavedResult automaticallySavedRecord=null;
                 String destination=aiPreferences.pdfTreeUri();
                 if("automatic".equals(mode)){
-                    try{
-                        AiPreferences.SavedResult record=null;
-                        for(AiPreferences.SavedResult r:aiPreferences.savedResults()){
-                            if(challengeKey.equals(r.key)){record=r;break;}
-                        }
-                        if(record==null)throw new Exception("Saved draft not found.");
-                        automaticallySavedPdf=ArchiveFiles.makePdf(this,destination==null?null:Uri.parse(destination),record);
-                        try(android.os.ParcelFileDescriptor verified=SecurePdfAccess.open(this,automaticallySavedPdf,destination==null?null:Uri.parse(destination),record)){
-                            if(verified==null)throw new SecurityException("Saved PDF cannot be read");
-                        }
+                    AiPreferences.SavedResult record=null;
+                    for(AiPreferences.SavedResult r:aiPreferences.savedResults()){
+                        if(challengeKey.equals(r.key)){record=r;break;}
+                    }
+                    if(record==null){
+                        pdfStatus=" · Result remains saved locally; PDF and ZIP could not be created.";
+                    }else{
                         automaticallySavedRecord=record;
+                        Uri selectedTree=destination==null?null:Uri.parse(destination);
+                        try{
+                            Uri created=ArchiveFiles.makePdf(this,selectedTree,record);
+                            try(android.os.ParcelFileDescriptor verified=
+                                    SecurePdfAccess.open(this,created,selectedTree,record)){
+                                if(verified==null)throw new SecurityException("PDF read permission unavailable");
+                            }
+                            automaticallySavedPdf=created;
+                            pdfStatus=" · PDF saved: "+(destination==null
+                                ?DefaultPdfStorage.relativeDirectory(record)
+                                :"Selected folder/Bioqra/"+DefaultPdfStorage.projectFolder(record)+"/")
+                                +DefaultPdfStorage.filename(record);
+                        }catch(Exception pdfError){
+                            pdfStatus=" · PDF unavailable: "+pdfError.getMessage();
+                        }
+                        // An evidence archive should not depend on the PDF
+                        // preview check succeeding. The saved proposal is preserved.
                         try{
                             DefaultEvidenceStorage.export(this,challengeKey,record);
-                            pdfStatus=" · PDF and evidence ZIP saved automatically: "
-                                    +DefaultEvidenceStorage.relativeDirectory(record);
-                        }catch(Exception zipError){
-                            pdfStatus=" · PDF saved; evidence ZIP unavailable: "+zipError.getMessage();
+                            pdfStatus+=" · Research ZIP saved: "
+                                +DefaultEvidenceStorage.relativeDirectory(record)
+                                +DefaultEvidenceStorage.filename(record);
+                        }catch(Exception evidenceError){
+                            pdfStatus+=" · Research ZIP unavailable: "+evidenceError.getMessage();
                         }
-                        pdfStatus += " · PDF saved: "+(destination==null
-                            ?DefaultPdfStorage.relativeDirectory(record)
-                            :"Selected folder/Bioqra/"+DefaultPdfStorage.projectFolder(record)+"/")
-                            +DefaultPdfStorage.filename(record);
-                    }catch(Exception e){automaticallySavedPdf=null;pdfStatus=" · PDF saved or checked with error: "+e.getMessage();}
+                    }
                 }else{
                     pdfStatus=" · Manual mode: use Save as PDF to export this draft.";
                 }
