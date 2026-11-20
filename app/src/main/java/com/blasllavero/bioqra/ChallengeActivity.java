@@ -593,13 +593,17 @@ public final class ChallengeActivity extends Activity {
                 Uri saved=ArchiveFiles.makePdf(this,tree,result);
                 try(android.os.ParcelFileDescriptor verified=SecurePdfAccess.open(this,saved,tree,result)){
                     if(verified==null)throw new SecurityException("Saved PDF cannot be read");
+                }catch(Exception previewError){
+                    throw new Exception("PDF saved but preview verification failed: "
+                            +previewError.getMessage(),previewError);
                 }
                 pdf=saved;
                 message="PDF SAVED: "+(folder==null
                     ?DefaultPdfStorage.relativeDirectory(result)
                     :"Selected folder/Bioqra/"+DefaultPdfStorage.projectFolder(result)+"/")
                     +DefaultPdfStorage.filename(result);
-            }catch(Exception e){message="PDF export failed: "+e.getMessage();}
+            }catch(Exception e){message=e.getMessage()!=null && e.getMessage().startsWith("PDF saved but preview")
+                    ?e.getMessage():"PDF export failed: "+e.getMessage();}
             final String feedback=message;
             final Uri confirmed=pdf;
             runOnUiThread(()->{
