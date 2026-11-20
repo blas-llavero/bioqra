@@ -13,7 +13,7 @@ import urllib.request
 import sys
 
 OFFICIAL = "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE23nnn/GSE23400/matrix/"
-MAX_BYTES = 10_000_000
+MAX_BYTES = 32_000_000
 EXPECTED = ("GSE23400-GPL96_series_matrix.txt.gz",
             "GSE23400-GPL97_series_matrix.txt.gz")
 
@@ -37,11 +37,14 @@ def fetch_one(name, directory):
                     raise ValueError("GEO series matrix exceeds per-file audit limit")
                 hash_value.update(chunk)
                 out.write(chunk)
-    if size < 100 or target.read_bytes()[:2] != b"\x1f\x8b":
+    with target.open("rb") as check:
+        header = check.read(2)
+    if size < 100 or header != b"\x1f\x8b":
         raise ValueError("Invalid gzip file")
     samples = []
     platform = name.split("-")[1].split("_")[0]
-    metadata = []
+    series_platforms = set()
+    sample_platforms = set()
     seen_table = False
     with gzip.open(target, "rt", encoding="utf-8") as f:
         for i, line in enumerate(f):
@@ -49,18 +52,23 @@ def fetch_one(name, directory):
                 raise ValueError("Metadata exceeds bounded scan")
             if line.startswith("!Sample_geo_accession\t"):
                 samples = [x.strip().strip('"') for x in line.split("\t")[1:]]
-            if line.startswith(("!Sample_platform_id\t", "!Series_platform_id\t")):
-                metadata.append(line.split("\t")[1:])
+            if line.startswith("!Series_platform_id\t"):
+                series_platforms.update(x.strip().strip('"') for x in line.rstrip("\n").split("\t")[1:])
+            if line.startswith("!Sample_platform_id\t"):
+                sample_platforms.update(x.strip().strip('"') for x in line.rstrip("\n").split("\t")[1:])
             if line.startswith("!series_matrix_table_begin"):
                 seen_table = True
                 break
     if not seen_table or not samples or not all(s.startswith("GSM") for s in samples):
         raise ValueError("Original GSM annotations or table absent")
-    if any(p.strip().strip('"') != platform for row in metadata for p in row):
-        raise ValueError("GEO platform metadata contradicts requested GPL")
+    if (series_platforms and platform not in series_platforms) or (
+        sample_platforms and sample_platforms != {platform}
+    ):
+        raise ValueError("Platform-specific sample metadata contradicts requested GPL")
     return {"accession": "GSE23400", "platform": platform, "url": url,
             "file": name, "sha256": hash_value.hexdigest(), "bytes": size,
-            "sample_count": len(samples), "real_study": True,
+            "sample_count": len(samples), "series_platforms": sorted(series_platforms),
+            "sample_platforms": sorted(sample_platforms), "real_study": True,
             "scientific_analysis_executed": False}
 
 
