@@ -311,13 +311,21 @@ public final class ChallengeActivity extends Activity {
         });
         for(String key:ChallengeSectionNavigator.KEYS){
             Button tab=button(ChallengeSectionNavigator.label(key));
-            int width=(key.equals(ChallengeSectionNavigator.DOCUMENTS)
-                    ||key.equals(ChallengeSectionNavigator.RELATED))?dp(164):dp(125);
-            controls.addView(tab,new LinearLayout.LayoutParams(width,dp(48)));
+            tab.setSingleLine(false);
+            tab.setMaxLines(2);
+            tab.setEllipsize(null);
+            tab.setGravity(Gravity.CENTER);
+            tab.setPadding(dp(14),dp(3),dp(14),dp(3));
+            // The Related Content label needs more width in Catalan and
+            // Spanish. Calculate a width from the actual localized text.
+            int textWidth=(int)Math.ceil(tab.getPaint().measureText(tab.getText().toString()));
+            int desired=Math.max(dp(125),textWidth+dp(42));
+            int width=Math.min(dp(270),desired);
+            controls.addView(tab,new LinearLayout.LayoutParams(width,dp(64)));
             tab.setOnClickListener(v->selectSection(key,true));
         }
         horizontal.addView(controls);
-        wrapper.addView(horizontal,new LinearLayout.LayoutParams(-1,dp(58)));
+        wrapper.addView(horizontal,new LinearLayout.LayoutParams(-1,dp(76)));
 
         searchPanel=new LinearLayout(this);
         searchPanel.setOrientation(LinearLayout.HORIZONTAL);
