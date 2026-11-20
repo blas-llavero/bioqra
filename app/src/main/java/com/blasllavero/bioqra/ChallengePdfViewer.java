@@ -81,7 +81,7 @@ public final class ChallengePdfViewer {
                             int h=Math.max(1,(int)Math.round(page.getHeight()*scale));
                             if((long)w*h>2_000_000L)
                                 throw new SecurityException("Page bitmap exceeds memory limit");
-                            rendered=Bitmap.createBitmap(w,h,Bitmap.Config.RGB_565);
+                            rendered=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);
                             rendered.eraseColor(Color.WHITE);
                             page.render(rendered,null,null,PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
                         }
