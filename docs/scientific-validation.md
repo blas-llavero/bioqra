@@ -90,6 +90,32 @@ The annotation sources are official NCBI GEO archives:
 - https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPLnnn/GPL96/annot/GPL96.annot.gz
 - https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPLnnn/GPL97/annot/GPL97.annot.gz
 
+## Frozen-gene exploratory external analysis — real cohorts
+
+A versioned, deterministic discovery-to-external analysis now runs entirely with authentic public GEO files and Bioconductor limma. GEO **GSE20347** (GPL571, 17 verified matched patients) is the *only discovery dataset*. Its BH-FDR-selected probe hits are mapped to unique Entrez gene IDs through the original GPL571 annotations. Any discovery gene with ambiguous probe mapping is excluded before accessing the external expression results.
+
+The resulting **3,420 discovery-frozen Entrez genes** are retested on independent study **GSE23400**. Its original sample titles and source tissues verify 53 paired patients on GPL96 and 51 paired patients on GPL97. Individual patients are not necessarily independent **between GPL96 and GPL97**, and these arrays must not be counted as separate external cohorts. Both platform comparisons use original matrices and R/limma patient fixed-effects models. GSE23400 source sample metadata document RMA normalization, which supplies the accession-specific processing justification.
+
+The external retest uses only uniquely annotated probes for each gene. Benjamini–Hochberg correction is applied separately to all prespecified genes that can actually be assessed in each platform. The observed exploratory results on 20 November 2026 were:
+
+| Cohort/platform | Frozen candidates tested | Same effect direction | Same direction and external BH-FDR below 0.05 |
+| --- | ---: | ---: | ---: |
+| GSE23400 GPL96 | 3,420 | 3,212 | 2,801 |
+| GSE23400 GPL97 | 736 | 570 | 416 |
+
+**These are exploratory statistical signals, not clinically validated biomarkers, a proven independent-donor replication, or a solved cancer challenge.** Different platforms have different numbers of evaluable probes and share a source study. Limitations include differences in tissue composition, normalization, individual identity checks across studies, batch effects, lack of preregistration and clinical outcomes, and biological validation.
+
+Auditable outputs in the `bioqra-independent-geo-audit` GitHub Actions artifact:
+
+- `frozen-gene-validation/frozen-discovery-gene-candidates.tsv`: discovery-only frozen gene list.
+- `external-gene-retest/GPL96-frozen-gene-retest.tsv` and `GPL97-frozen-gene-retest.tsv`: real external model effects, p-values, and BH adjustments.
+- `external-gene-retest/external-gene-retest.json`: summary with explicit limitations.
+- `GSE20347/limma-probe-results.csv`, `GSE23400/GPL96/limma-probe-results.csv`, and `GSE23400/GPL97/limma-probe-results.csv`.
+- `source-files/`: original downloaded public GEO Series Matrix files.
+- `platform-annotations/`: original NCBI platform annotations and provenance.
+
+The workflow and test fixtures are free and open source; the public scientific datasets retain their respective source terms. No generated patient records have been used as evidence.
+
 ## Next scientific milestones
 
 A truly externally validated finding requires a fully documented biological hypothesis, prespecified model, correctly labelled independent patients, study-specific normalization, covariate/batch or pairing adjustments where relevant, harmonized gene/probe annotation, and independent replication with full result reporting. BIOQRA must show these requirements as **pending** until verified.
