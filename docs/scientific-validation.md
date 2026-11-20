@@ -42,6 +42,22 @@ For mathematical-only Java tests (no biological data involved):
 gradle :app:testDebugUnitTest --no-daemon
 ```
 
+## Real paired ESCC cohort: GSE20347
+
+A second allowlisted real GEO study, **GSE20347**, contains 34 publicly deposited samples from 17 documented esophageal tumor–normal patient pairs. The original GEO sample titles specify an E-number patient code and tissue category. An accession-specific parser, `geo_title_pairing.R`, reconstructs the 17 complete pairs **by matching these explicit codes**, not by assuming pairs based on sample order.
+
+Primary source: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE20347
+
+NCBI's study record documents RMA background correction and normalization across all samples on GPL571. The Bioconductor `affy::rma` manual confirms RMA output uses the log2 scale. These are the provenance checks behind the strictly accession-specific RMA processing exception in the audit; it is **not** a blanket bypass for other GEO files.
+
+- Exact patient titles and their pairing were validated against the real downloaded GSE20347 Series Matrix.
+- The matched patient fixed-effects limma model (`~ patient + tumor_vs_normal`) ran on real processed GEO measurements in the independent R workflow.
+- Numerical probe-level results and BH-adjusted p-values are exported in `validation-results/GSE20347/limma-probe-results.csv` when successfully calculated.
+- The audit includes library versions and original file checksums, and explicitly states that scientific and clinical validation have **not** been established.
+- GSE23400 is another public candidate, but platform overlap, cohort independence, annotations, access and processing must be validated before claiming external replication.
+
+The Android application does not yet implement this accession-specific paired model locally; the R audit executes within GitHub Actions.
+
 ## Next scientific milestones
 
 A truly externally validated finding requires a fully documented biological hypothesis, prespecified model, correctly labelled independent patients, study-specific normalization, covariate/batch or pairing adjustments where relevant, harmonized gene/probe annotation, and independent replication with full result reporting. BIOQRA must show these requirements as **pending** until verified.
