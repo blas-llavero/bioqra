@@ -137,6 +137,10 @@ p <- tolower(paste(processing,collapse=" "))
 source_rma_reviewed <- !is.null(title_pairing) &&
   identical(basename(source_file),"GSE20347_series_matrix.txt.gz") &&
   grepl("GPL571",paste(meta[grepl("^!Series_platform_id",meta)],collapse=" "))
+external_rma_reviewed <- !is.null(external_platform) &&
+  !is.null(title_pairing) &&
+  grepl("\\brma\\b|rma\\(",p,perl=TRUE) &&
+  !grepl("raw counts|unnormalized",p)
 # The primary GSE20347 GEO record explicitly documents RMA background
 # correction and cross-sample normalization, while Bioconductor affy::rma
 # returns log2 expression values. Restrict this curated override to the
@@ -145,10 +149,12 @@ source_rma_reviewed <- !is.null(title_pairing) &&
 processing_verified <- grepl("log2|log 2|log-transformed|log transformed",p) &&
   grepl("normaliz|quantile|rma",p) &&
   !grepl("raw counts|unnormalized",p)
-if(!processing_verified && !source_rma_reviewed)
-  skip("Not explicitly normalized and log transformed")
+if(!processing_verified && !source_rma_reviewed && !external_rma_reviewed)
+  skip("Not explicitly normalized and log transformed; no reviewed RMA provenance")
 normalization_evidence <- if(processing_verified) {
   "Series Matrix data-processing metadata"
+} else if(external_rma_reviewed) {
+  "Original GSE23400 GEO sample processing states Bioconductor affy rma normalization; RMA produces log2-scale output, consistent with primary source. No raw CEL reprocessing or clinical validation performed."
 } else {
   "Reviewed primary GEO GSE20347 overall design: RMA on GPL571; Bioconductor affy RMA log2 expression. Verify numeric distribution and original CEL processing before biological claims."
 }
