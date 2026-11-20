@@ -132,10 +132,9 @@ public final class ArchiveFiles {
 
     public static Uri restorePdf(Context context,Uri tree,String project,String filename,
                                  byte[] bytes) throws Exception{
-        if(tree==null)throw new Exception("Select the PDF destination folder first.");
-        if(project==null||filename==null||!project.equals(cleanName(project))
-                || filename.contains("/")||filename.contains("\\")
-                || !filename.matches("[0-9]{6}-[^/\\\\]{1,90}\\.pdf"))
+        if(tree==null)return DefaultPdfStorage.restore(context,project,filename,bytes);
+        if(project==null||!project.matches("[0-9]{6}-[^/\\\\]{1,75}")||
+                filename==null||!filename.equals(project.substring(7)+".pdf"))
             throw new Exception("Invalid PDF archive path.");
         if(bytes==null||bytes.length<5||bytes.length>8_000_000
                 || bytes[0]!='%'||bytes[1]!='P'||bytes[2]!='D'
@@ -143,7 +142,8 @@ public final class ArchiveFiles {
             throw new Exception("Invalid PDF archive content.");
         Uri root=DocumentsContract.buildDocumentUriUsingTree(
                 tree,DocumentsContract.getTreeDocumentId(tree));
-        Uri folderUri=folder(context,tree,root,project);
+        Uri bioqra=folder(context,tree,root,"Bioqra");
+        Uri folderUri=folder(context,tree,bioqra,project);
         Uri target=existingPdf(context,tree,folderUri,filename);
         if(target!=null)return target; // Do not overwrite the user's existing PDFs.
         target=DocumentsContract.createDocument(context.getContentResolver(),
