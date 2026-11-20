@@ -198,7 +198,7 @@ public final class AiSettingsActivity extends Activity {
         pdfFolderStatus=label("",13);
         root.addView(pdfFolderStatus);
         updateFolderLabel();
-        Button selectFolder=button("Choose folder for automatic PDFs");
+        Button selectFolder=button("Optional: choose another PDF destination");
         root.addView(selectFolder,new LinearLayout.LayoutParams(-1,dp(53)));
         selectFolder.setOnClickListener(v->{
             Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -210,10 +210,10 @@ public final class AiSettingsActivity extends Activity {
         Button exportPdf=button("Export all saved results as PDFs");
         root.addView(exportPdf,new LinearLayout.LayoutParams(-1,dp(53)));
         exportPdf.setOnClickListener(v->exportAllPdfs());
-        root.addView(label("PDF location: selected folder / Challenge / YYMMDD-Challenge.pdf. "
-                +"Each challenge has one folder. A new date creates a new PDF; "
+        root.addView(label("Default PDF location: Downloads/Bioqra/YYMMDD-Project/Project.pdf. "
+                +"You can optionally choose another parent folder. New dates create separate project folders; "
                 +"exporting twice on the same day updates that file. "
-                +"For a new device, select the folder again after restoring.",13));
+                +"No folder configuration is needed for the default location.",13));
         backupStatus=label("Backups and PDFs stay on your device until you share them.",13);
         root.addView(backupStatus);
         loadModels();
@@ -250,19 +250,19 @@ public final class AiSettingsActivity extends Activity {
         if(pdfFolderStatus==null)return;
         String folder=settings.pdfTreeUri();
         pdfFolderStatus.setText(folder==null
-                ? "PDF folder: not configured (automatic PDF creation is disabled)."
-                : "PDF folder configured: "+Uri.parse(folder).getLastPathSegment());
+                ? "Default PDF folder: Downloads/Bioqra/YYMMDD-Project/ (no setup needed)."
+                : "Custom PDF folder: "+Uri.parse(folder).getLastPathSegment()+"/Bioqra/YYMMDD-Project/");
     }
     private void exportAllPdfs(){
         String folder=settings.pdfTreeUri();
-        if(folder==null){backupStatus.setText("Select a PDF folder first.");return;}
+
         List<AiPreferences.SavedResult> saved=settings.savedResults();
         if(saved.isEmpty()){backupStatus.setText("No saved AI results to export.");return;}
         backupStatus.setText("Exporting "+saved.size()+" research PDFs...");
         WORKER.execute(()->{
             int count=0;String failure="";
             for(AiPreferences.SavedResult item:saved){
-                try{ArchiveFiles.makePdf(this,Uri.parse(folder),item);count++;}
+                try{ArchiveFiles.makePdf(this,folder==null?null:Uri.parse(folder),item);count++;}
                 catch(Exception e){failure=e.getMessage();break;}
             }
             final int done=count;
