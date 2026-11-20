@@ -9,6 +9,8 @@ on:
       - 'tools/geo_external_cohort_audit.py'
       - 'tools/geo_platform_annotation_audit.py'
       - 'tools/geo_frozen_gene_candidates.py'
+      - 'tools/geo_external_title_pairing.R'
+      - 'tools/test_real_external_pairs.R'
       - 'tools/geo_limma_audit.R'
       - 'tools/geo_pairing.R'
       - 'tools/test_geo_pairing.R'
@@ -72,6 +74,14 @@ jobs:
             validation-results/GSE20347/limma-probe-results.csv \
             validation-results/platform-annotations \
             validation-results/frozen-gene-validation
+      - name: Verify original GSE23400 patient pairs by GPL
+        run: |
+          Rscript tools/test_real_external_pairs.R external-cohort-input/GSE23400-GPL96_series_matrix.txt.gz GPL96
+          Rscript tools/test_real_external_pairs.R external-cohort-input/GSE23400-GPL97_series_matrix.txt.gz GPL97
+      - name: Run independent cohort limma on real GSE23400 only when eligible
+        run: |
+          Rscript tools/geo_limma_audit.R external-cohort-input/GSE23400-GPL96_series_matrix.txt.gz validation-results/GSE23400/GPL96
+          Rscript tools/geo_limma_audit.R external-cohort-input/GSE23400-GPL97_series_matrix.txt.gz validation-results/GSE23400/GPL97
       - name: Publish scientific eligibility summary
         if: always()
         run: |
