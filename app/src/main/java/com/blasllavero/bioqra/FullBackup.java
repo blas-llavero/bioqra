@@ -175,13 +175,17 @@ public final class FullBackup {
                     else if("results.json".equals(name))results=bytes;
                     else if(name.startsWith("pdf/")){
                         String[] parts=name.split("/",-1);
-                        if(parts.length!=3||!safeProject(parts[1])
-                                || !parts[2].matches("[0-9]{6}-[^/\\\\]{1,90}\\.pdf"))
+                        boolean dated=parts.length==4 && "Bioqra".equals(parts[1])
+                                && parts[2].matches("[0-9]{6}-[^/\\\\]{1,75}")
+                                && parts[3].equals(parts[2].substring(7)+".pdf");
+                        boolean legacy=parts.length==3 && safeProject(parts[1])
+                                && parts[2].matches("[0-9]{6}-[^/\\\\]{1,90}\\.pdf");
+                        if(!dated && !legacy)
                             throw new Exception("Invalid PDF path in archive.");
                         if(bytes.length<5||bytes[0]!='%'||bytes[1]!='P'
                                 ||bytes[2]!='D'||bytes[3]!='F'||bytes[4]!='-')
                             throw new Exception("Not a PDF: "+name);
-                        pdfs.add(new PdfEntry(parts[1],parts[2],bytes));
+                        pdfs.add(new PdfEntry(dated?parts[2]:parts[1],dated?parts[3]:parts[2],bytes));
                     }else throw new Exception("Unexpected file in BIOQRA backup: "+name);
                     zip.closeEntry();
                 }
@@ -197,27 +201,22 @@ public final class FullBackup {
             || resultsObj.optInt("version")!=1)
             throw new Exception("Unsupported backup version.");
         Uri tree=null;
-        if(!pdfs.isEmpty()){
-            if(prefs.pdfTreeUri()==null)
-                throw new Exception("Choose a PDF folder in AI Settings before Import all.");
+        if(!pdfs.isEmpty() && prefs.pdfTreeUri()!=null){
             tree=Uri.parse(prefs.pdfTreeUri());
-            // Check persisted permission before changing local settings/results.
             boolean found=false;
             for(android.content.UriPermission perm:context.getContentResolver()
                     .getPersistedUriPermissions()){
                 if(perm.getUri().equals(tree) && perm.isWritePermission()){found=true;break;}
             }
-            if(!found)throw new Exception("The PDF folder permission was lost. Select it again.");
+            if(!found)throw new Exception("Custom PDF folder permission was lost. Select it again.");
         }
         // Validate before restoring PDFs. The existing JSON importers validate
         // input independently and preserve newer local results.
         settingsObj.getString("global_model");
         settingsObj.getJSONObject("overrides");
         resultsObj.getJSONArray("results");
-        if(tree!=null){
-            for(PdfEntry p:pdfs)
-                ArchiveFiles.restorePdf(context,tree,p.project,p.filename,p.data);
-        }
+        for(PdfEntry p:pdfs)
+            ArchiveFiles.restorePdf(context,tree,p.project,p.filename,p.data);
         prefs.importSettings(settingsObj); // disables unattended consent
         int restored=prefs.importResults(resultsObj);
         return new Report(restored,pdfs.size());
