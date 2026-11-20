@@ -66,6 +66,8 @@ The discovery study GSE20347 uses **GPL571**, so the GPL571 probe IDs and GPL96/
 
 The audit report `validation-results/GSE23400/cross-platform-audit.json` summarizes file availability, GPL annotations, sample counts, checksums and the reason replication remains blocked. If a download fails, this is reported and is not silently replaced by simulated measurements.
 
+**Verified GitHub Actions GSE23400 ingestion (20 November 2026):** GPL96 compressed matrix: **11,754,825 bytes and 106 GSM annotations**, SHA-256 `72d435f084731bc346804363f598721b075152d562f7f9fc247ca7f011c5fc13`; GPL97 compressed matrix: **6,111,273 bytes and 102 GSM annotations**, SHA-256 `cd1862ac2f465c4002355557ed2f96917e827513bf803a8c1a561455c60a1e2d`. These are platform-specific sample records and **not 208 independent people**. Independent tumor–normal patient pairing across these matrices remains unverified. No gene-annotation mapping or replicated effects have been calculated.
+
 Primary source: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE23400
 
 ## Next scientific milestones
