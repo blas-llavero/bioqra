@@ -81,6 +81,14 @@ jobs:
               f.write('**Status:** '+a.get('status','UNKNOWN')+'\n\n')
               f.write('**Reason:** '+a.get('reason','No reason')+'\n\n')
               f.write('**Model:** '+a.get('design','Not eligible')+'\n\n')
+              if a.get('status')=='EXPLORATORY_ANALYSIS_COMPLETED':
+                for label,key in [('Independent patient pairs','independent_patients'),
+                                  ('Control samples','samples_control'),
+                                  ('Tumor samples','samples_tumor'),
+                                  ('Probes tested','probes_tested'),
+                                  ('Probes with exploratory BH FDR < 0.05','probes_fdr_under_0_05')]:
+                  f.write('**'+label+':** '+str(a.get(key,'Not reported'))+'\n\n')
+                f.write('**Normalization evidence:** '+str(a.get('normalization_evidence','Not recorded'))+'\n\n')
             else:
               f.write('**Status:** Not executed; no audit output available\n\n')
             f.write('Scientific or clinical validation: not established.\n')
