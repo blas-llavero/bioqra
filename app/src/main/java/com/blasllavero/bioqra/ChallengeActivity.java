@@ -583,6 +583,9 @@ public final class ChallengeActivity extends Activity {
             Uri tree=folder==null?null:Uri.parse(folder);
             try{
                 Uri saved=ArchiveFiles.makePdf(this,tree,result);
+                try(android.os.ParcelFileDescriptor verified=SecurePdfAccess.open(this,saved,tree,result)){
+                    if(verified==null)throw new SecurityException("Saved PDF cannot be read");
+                }
                 pdf=saved;
                 message="PDF SAVED: "+(folder==null
                     ?DefaultPdfStorage.relativeDirectory(result)
@@ -976,12 +979,15 @@ public final class ChallengeActivity extends Activity {
                         }
                         if(record==null)throw new Exception("Saved draft not found.");
                         automaticallySavedPdf=ArchiveFiles.makePdf(this,destination==null?null:Uri.parse(destination),record);
+                        try(android.os.ParcelFileDescriptor verified=SecurePdfAccess.open(this,automaticallySavedPdf,destination==null?null:Uri.parse(destination),record)){
+                            if(verified==null)throw new SecurityException("Saved PDF cannot be read");
+                        }
                         automaticallySavedRecord=record;
                         pdfStatus=" · PDF saved: "+(destination==null
                             ?DefaultPdfStorage.relativeDirectory(record)
                             :"Selected folder/Bioqra/"+DefaultPdfStorage.projectFolder(record)+"/")
                             +DefaultPdfStorage.filename(record);
-                    }catch(Exception e){pdfStatus=" · PDF save failed: "+e.getMessage();}
+                    }catch(Exception e){automaticallySavedPdf=null;pdfStatus=" · PDF saved or checked with error: "+e.getMessage();}
                 }else{
                     pdfStatus=" · Manual mode: use Save as PDF to export this draft.";
                 }
