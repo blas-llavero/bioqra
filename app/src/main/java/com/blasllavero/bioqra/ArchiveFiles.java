@@ -94,32 +94,27 @@ public final class ArchiveFiles {
         return null;
     }
 
-    /** Exactly one folder per challenge: <chosen folder>/<challenge>/YYMMDD-<challenge>.pdf */
+    /** Default: Downloads/Bioqra/YYMMDD-Project/Project.pdf.
+     * A user-selected SAF tree remains a supported override. */
     public static Uri makePdf(Context context,Uri tree,AiPreferences.SavedResult result) throws Exception{
-        if(tree==null)throw new Exception("Choose a PDF folder in AI Settings first.");
-        LocalDate date;
-        try{date=LocalDate.parse(result.date);}
-        catch(Exception e){date=LocalDate.now();}
-        String project=cleanName(result.title);
-        String fileName=date.format(DateTimeFormatter.ofPattern("yyMMdd",Locale.ROOT))
-                +"-"+project+".pdf";
+        if(tree==null)return DefaultPdfStorage.save(context,result);
         Uri root=DocumentsContract.buildDocumentUriUsingTree(
                 tree,DocumentsContract.getTreeDocumentId(tree));
-        Uri challenge=folder(context,tree,root,project);
-        Uri target=existingPdf(context,tree,challenge,fileName);
+        Uri appFolder=folder(context,tree,root,"Bioqra");
+        Uri project=folder(context,tree,appFolder,DefaultPdfStorage.projectFolder(result));
+        String filename=DefaultPdfStorage.filename(result);
+        Uri target=existingPdf(context,tree,project,filename);
         boolean created=target==null;
         if(created)target=DocumentsContract.createDocument(context.getContentResolver(),
-                challenge,"application/pdf",fileName);
-        if(target==null)throw new Exception("Unable to create PDF.");
+                project,"application/pdf",filename);
+        if(target==null)throw new Exception("Could not create PDF");
         boolean ok=false;
         try(OutputStream out=context.getContentResolver().openOutputStream(target,"rwt")){
-            if(out==null)throw new Exception("Cannot open PDF.");
-            writePdf(out,result);
-            ok=true;
+            if(out==null)throw new Exception("Cannot open PDF");
+            writePdf(out,result);ok=true;
         }finally{
-            if(!ok && created)try{
-                DocumentsContract.deleteDocument(context.getContentResolver(),target);
-            }catch(Exception ignored){}
+            if(!ok&&created)try{DocumentsContract.deleteDocument(context.getContentResolver(),target);}
+                catch(Exception ignored){}
         }
         return target;
     }
@@ -131,12 +126,8 @@ public final class ArchiveFiles {
     }
 
     public static String archivePdfPath(AiPreferences.SavedResult result){
-        LocalDate date;
-        try{date=LocalDate.parse(result.date);}
-        catch(Exception e){date=LocalDate.now();}
-        String name=cleanName(result.title);
-        return "pdf/"+name+"/"+date.format(
-                DateTimeFormatter.ofPattern("yyMMdd",Locale.ROOT))+"-"+name+".pdf";
+        return "pdf/Bioqra/"+DefaultPdfStorage.projectFolder(result)+"/"
+                +DefaultPdfStorage.filename(result);
     }
 
     public static Uri restorePdf(Context context,Uri tree,String project,String filename,
