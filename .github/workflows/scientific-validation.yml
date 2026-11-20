@@ -11,6 +11,7 @@ on:
       - 'tools/geo_frozen_gene_candidates.py'
       - 'tools/geo_external_title_pairing.R'
       - 'tools/test_real_external_pairs.R'
+      - 'tools/geo_external_gene_retest.py'
       - 'tools/geo_limma_audit.R'
       - 'tools/geo_pairing.R'
       - 'tools/test_geo_pairing.R'
@@ -82,6 +83,13 @@ jobs:
         run: |
           Rscript tools/geo_limma_audit.R external-cohort-input/GSE23400-GPL96_series_matrix.txt.gz validation-results/GSE23400/GPL96
           Rscript tools/geo_limma_audit.R external-cohort-input/GSE23400-GPL97_series_matrix.txt.gz validation-results/GSE23400/GPL97
+      - name: Retest frozen discovery genes against independently fitted GSE23400 platforms
+        run: |
+          python3 tools/geo_external_gene_retest.py \
+            validation-results/frozen-gene-validation/frozen-discovery-gene-candidates.tsv \
+            validation-results/platform-annotations \
+            validation-results/GSE23400 \
+            validation-results/external-gene-retest
       - name: Publish scientific eligibility summary
         if: always()
         run: |
