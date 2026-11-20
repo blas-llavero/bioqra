@@ -51,6 +51,10 @@ public final class ChallengeActivity extends Activity {
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     private String title, url, mode, kind;
     private TextView status, output, statement, resolvedLink, deadlinesView, pdfFeedback;
+    private Button viewSavedPdf;
+    private Uri lastSavedPdf;
+    private Uri lastSavedPdfTree;
+    private AiPreferences.SavedResult lastSavedPdfResult;
     private TextView sectionHeading, searchCounter;
     private Button originalDocumentButton;
     private String activeDocumentUrl="";
@@ -260,6 +264,13 @@ public final class ChallengeActivity extends Activity {
         Button savePdf=button("Save this challenge result as PDF");
         root.addView(savePdf,new LinearLayout.LayoutParams(-1,dp(52)));
         savePdf.setOnClickListener(v->saveSavedPdf());
+        viewSavedPdf=button("View PDF");
+        viewSavedPdf.setVisibility(View.GONE);
+        viewSavedPdf.setOnClickListener(v->{
+            if(lastSavedPdf!=null && lastSavedPdfResult!=null)
+                ChallengePdfViewer.show(this,lastSavedPdf,lastSavedPdfTree,lastSavedPdfResult);
+        });
+        root.addView(viewSavedPdf,new LinearLayout.LayoutParams(-1,dp(52)));
         pdfFeedback=text("PDFs save by default to Downloads/Bioqra.",13,false);
         root.addView(pdfFeedback);
         updatePdfFeedback();
@@ -563,18 +574,32 @@ public final class ChallengeActivity extends Activity {
         if(record==null){pdfNotice("No saved AI result for this challenge; PDF not created.");return;}
         final AiPreferences.SavedResult result=record;
         String folder=aiPreferences.pdfTreeUri();
+        lastSavedPdf=null;
+        viewSavedPdf.setVisibility(View.GONE);
         pdfNotice("Saving PDF in Bioqra/"+DefaultPdfStorage.projectFolder(result)+"...");
         EXEC.execute(()->{
             String message;
+            Uri pdf=null;
+            Uri tree=folder==null?null:Uri.parse(folder);
             try{
-                Uri saved=ArchiveFiles.makePdf(this,folder==null?null:Uri.parse(folder),result);
+                Uri saved=ArchiveFiles.makePdf(this,tree,result);
+                pdf=saved;
                 message="PDF SAVED: "+(folder==null
                     ?DefaultPdfStorage.relativeDirectory(result)
                     :"Selected folder/Bioqra/"+DefaultPdfStorage.projectFolder(result)+"/")
                     +DefaultPdfStorage.filename(result);
             }catch(Exception e){message="PDF export failed: "+e.getMessage();}
             final String feedback=message;
-            runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())pdfNotice(feedback);});
+            final Uri confirmed=pdf;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                if(confirmed!=null){
+                    lastSavedPdf=confirmed;lastSavedPdfTree=tree;
+                    lastSavedPdfResult=result;
+                    viewSavedPdf.setVisibility(View.VISIBLE);
+                }
+                pdfNotice(feedback);
+            });
         });
     }
 
@@ -940,6 +965,8 @@ public final class ChallengeActivity extends Activity {
                     "Source: "+source+"\n\n"+researchSource+"\n\n"+liveEvidence,input,kind);
                 aiPreferences.storeResult(challengeKey,title,source,selection.label,answer);
                 String pdfStatus="";
+                Uri automaticallySavedPdf=null;
+                AiPreferences.SavedResult automaticallySavedRecord=null;
                 String destination=aiPreferences.pdfTreeUri();
                 if("automatic".equals(mode)){
                     try{
@@ -948,7 +975,8 @@ public final class ChallengeActivity extends Activity {
                             if(challengeKey.equals(r.key)){record=r;break;}
                         }
                         if(record==null)throw new Exception("Saved draft not found.");
-                        ArchiveFiles.makePdf(this,destination==null?null:Uri.parse(destination),record);
+                        automaticallySavedPdf=ArchiveFiles.makePdf(this,destination==null?null:Uri.parse(destination),record);
+                        automaticallySavedRecord=record;
                         pdfStatus=" · PDF saved: "+(destination==null
                             ?DefaultPdfStorage.relativeDirectory(record)
                             :"Selected folder/Bioqra/"+DefaultPdfStorage.projectFolder(record)+"/")
@@ -958,9 +986,17 @@ public final class ChallengeActivity extends Activity {
                     pdfStatus=" · Manual mode: use Save as PDF to export this draft.";
                 }
                 final String pdfResult=pdfStatus;
+                final Uri automaticPdf=automaticallySavedPdf;
+                final AiPreferences.SavedResult automaticRecord=automaticallySavedRecord;
+                final Uri automaticTree=destination==null?null:Uri.parse(destination);
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     busy=false;
+                    if(automaticPdf!=null && automaticRecord!=null){
+                        lastSavedPdf=automaticPdf;lastSavedPdfTree=automaticTree;
+                        lastSavedPdfResult=automaticRecord;
+                        viewSavedPdf.setVisibility(View.VISIBLE);
+                    }
                     renderProposal((isFunding()
                             ? "AI RESEARCH PROPOSAL — UNVERIFIED"
                             : "AI DRAFT — UNVERIFIED")
