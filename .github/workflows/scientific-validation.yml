@@ -12,6 +12,7 @@ on:
       - 'tools/geo_external_title_pairing.R'
       - 'tools/test_real_external_pairs.R'
       - 'tools/geo_external_gene_retest.py'
+      - 'tools/test_frozen_gene_retest.py'
       - 'tools/geo_limma_audit.R'
       - 'tools/geo_pairing.R'
       - 'tools/test_geo_pairing.R'
@@ -38,6 +39,8 @@ jobs:
         run: Rscript tools/test_geo_pairing.R
       - name: Test patient fixed-effect limma coefficients on nonclinical fixture
         run: Rscript tools/test_paired_limma.R
+      - name: Test external gene retest numerical BH calculations
+        run: python3 tools/test_frozen_gene_retest.py
       - name: Download authentic public NCBI GEO GSE17351
         run: python3 tools/geo_fetch_for_r.py --accession GSE17351 --out validation-input
       - name: Audit sample metadata and run limma only when scientifically eligible
@@ -90,6 +93,43 @@ jobs:
             validation-results/platform-annotations \
             validation-results/GSE23400 \
             validation-results/external-gene-retest
+      - name: Document external signal counts without claiming biological validation
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          report=pathlib.Path("validation-results/external-gene-retest/external-gene-retest.json")
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf-8") as out:
+            out.write("\n## Frozen gene external cohort exploratory retest\n\n")
+            if report.exists():
+              data=json.loads(report.read_text(encoding="utf-8"))
+              out.write("Discovery: GSE20347; external study: GSE23400.\n\n")
+              out.write("Frozen candidates: "+str(data["frozen_candidates"])+"\n\n")
+              for p in data["platforms"]:
+                out.write("**"+p["platform"]+"**: "+str(p.get("genes_tested","not tested"))+
+                  " genes tested; "+str(p.get("direction_concordant_genes","not tested"))+
+                  " same-direction; "+str(p.get("same_direction_and_external_fdr_under_0_05","not tested"))+
+                  " same-direction with external FDR < 0.05.\n\n")
+            else:
+              out.write("No external result calculated.\n\n")
+            out.write("**Independent donor, biological and clinical validation: NOT ESTABLISHED.**\n")
+          PY
+      - name: Preserve real downloaded study files and original platform annotation
+        if: always()
+        run: |
+          mkdir -p validation-results/source-files
+          for f in validation-input/GSE20347_series_matrix.txt.gz \
+                   external-cohort-input/GSE23400-GPL96_series_matrix.txt.gz \
+                   external-cohort-input/GSE23400-GPL97_series_matrix.txt.gz; do
+            if test -f "$f"; then cp "$f" validation-results/source-files/; fi
+          done
+          cat > validation-results/source-files/README.txt <<'EOF'
+          Original public NCBI GEO files used in this exploratory analysis.
+          Source URLs, file sizes and SHA-256 are recorded in the accompanying
+          source provenance and cross-platform audit manifests.
+          Data reuse remains subject to the source repository and study terms.
+          No patient identity inference or clinical validity is claimed.
+          EOF
       - name: Publish scientific eligibility summary
         if: always()
         run: |
