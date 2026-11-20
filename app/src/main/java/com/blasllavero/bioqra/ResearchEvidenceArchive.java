@@ -261,12 +261,18 @@ public final class ResearchEvidenceArchive {
     }
     public static void export(Context context,String key,Uri destination,
                               AiPreferences.SavedResult result) throws Exception{
+        try(OutputStream out=context.getContentResolver().openOutputStream(destination,"wt")){
+            if(out==null)throw new Exception("Cannot write evidence ZIP");
+            export(context,key,out,result);
+        }
+    }
+
+    public static void export(Context context,String key,OutputStream out,
+                              AiPreferences.SavedResult result) throws Exception{
         File directory=folder(context,key);
         File manifest=new File(directory,"manifest.json");
         if(!manifest.isFile())throw new Exception("No downloaded evidence manifest yet");
-        try(OutputStream out=context.getContentResolver().openOutputStream(destination,"wt")){
-            if(out==null)throw new Exception("Cannot write evidence ZIP");
-            try(ZipOutputStream zip=new ZipOutputStream(out)){
+        try(ZipOutputStream zip=new ZipOutputStream(out)){
                 try(InputStream in=new FileInputStream(manifest)){put(zip,"evidence/manifest.json",in);}
                 zip.putNextEntry(new ZipEntry("evidence/readiness.txt"));
                 zip.write(("BIOQRA dataset readiness assessment\\n"
@@ -321,7 +327,6 @@ public final class ResearchEvidenceArchive {
                     +"Review study terms and metadata. No executable analysis is included.\\n")
                     .getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 zip.closeEntry();
-            }
         }
     }
 }
