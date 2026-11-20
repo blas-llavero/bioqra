@@ -30,17 +30,10 @@ public final class DefaultEvidenceStorage {
             if(!folder.isDirectory()&&!folder.mkdirs())
                 throw new Exception("Cannot create research evidence folder");
             File file=new File(folder,filename(result));
-            // Use FileProvider-independent app-owned storage for legacy Android.
-            // ResearchEvidenceArchive.export accepts content URIs only; copy
-            // through a bounded app-private temporary ZIP instead.
-            File temp=new File(context.getCacheDir(),"research-evidence-"+key+".zip");
-            if(!key.matches("[a-f0-9]{32}"))throw new Exception("Invalid challenge key");
-            try {
-                Uri uri=Uri.fromFile(temp);
-                // On older Android the exporter needs a content:// provider.
-                // Do not attempt file scheme through ContentResolver.
-                throw new Exception("Automatic ZIP export requires Android 10 or later");
-            }finally{temp.delete();}
+            try(OutputStream out=new FileOutputStream(file,false)){
+                ResearchEvidenceArchive.export(context,key,out,result);
+            }
+            return Uri.fromFile(file);
         }
         ContentResolver resolver=context.getContentResolver();
         Uri collection=MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
