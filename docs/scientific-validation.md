@@ -70,6 +70,26 @@ The audit report `validation-results/GSE23400/cross-platform-audit.json` summari
 
 Primary source: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE23400
 
+## Official GEO probe-to-gene annotation availability
+
+The CI audit downloads official, free NCBI GEO annotation files for **GPL571**, **GPL96**, and **GPL97**, recording exact archive URLs, SHA-256 hashes, table headers, counts and rejected ambiguous rows in `validation-results/platform-annotations/annotation-eligibility.json`.
+
+Verified run (20 November 2026):
+
+| GPL platform | Total annotation rows | Probe rows with one unambiguous Entrez Gene ID |
+| --- | ---: | ---: |
+| GPL571 | 22,277 | 19,931 |
+| GPL96 | 22,283 | 19,933 |
+| GPL97 | 22,645 | 15,961 |
+
+The strict Entrez-ID inventories share **12,502 gene IDs** for GPL571 vs GPL96 and **4,378 gene IDs** for GPL571 vs GPL97. These counts refer to *annotation overlap only*; probe-to-gene ambiguity and many-to-one probes still require a prespecified gene-level summarization strategy. No cross-study effect replication or clinical validation has been performed.
+
+The annotation sources are official NCBI GEO archives:
+
+- https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPLnnn/GPL571/annot/GPL571.annot.gz
+- https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPLnnn/GPL96/annot/GPL96.annot.gz
+- https://ftp.ncbi.nlm.nih.gov/geo/platforms/GPLnnn/GPL97/annot/GPL97.annot.gz
+
 ## Next scientific milestones
 
 A truly externally validated finding requires a fully documented biological hypothesis, prespecified model, correctly labelled independent patients, study-specific normalization, covariate/batch or pairing adjustments where relevant, harmonized gene/probe annotation, and independent replication with full result reporting. BIOQRA must show these requirements as **pending** until verified.
