@@ -67,6 +67,16 @@ public final class SecurePdfAccess {
         if(b[0]!='%'||b[1]!='P'||b[2]!='D'||b[3]!='F'||b[4]!='-')
             throw new SecurityException("Document is not a PDF");
     }
+    /**
+     * Some Android MediaStore providers do not expose OWNER_PACKAGE_NAME for
+     * a readable app-created download. Reject any *different* reported owner;
+     * if unknown, require all other path/name/type/size checks and actual PDF
+     * read access. This method is called only with the URI returned by saving.
+     */
+    static boolean ownerMatchesIfReported(String reported,String ownPackage){
+        return reported==null || ownPackage.equals(reported);
+    }
+
     private static void verifyMediaStore(Context c,Uri uri,String project,String file)throws Exception{
         if(Build.VERSION.SDK_INT<29)throw new SecurityException("Unsupported Downloads provider");
         Uri downloads=MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
@@ -83,7 +93,7 @@ public final class SecurePdfAccess {
                     !safeName(cur.getString(0),file)||
                     !(Environment.DIRECTORY_DOWNLOADS+"/Bioqra/"+project+"/").equals(cur.getString(1))||
                     !"application/pdf".equalsIgnoreCase(cur.getString(2))||
-                    !c.getPackageName().equals(cur.getString(3))||
+                    !ownerMatchesIfReported(cur.isNull(3)?null:cur.getString(3),c.getPackageName())||
                     cur.isNull(4)||cur.getLong(4)<5||cur.getLong(4)>MAX_BYTES||
                     cur.moveToNext())throw new SecurityException("PDF metadata or ownership mismatch");
         }
