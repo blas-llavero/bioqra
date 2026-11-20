@@ -16,9 +16,6 @@ bioqra_external_title_pairs <- function(titles, sources, accession, platform) {
   if(any((group=="control" & sources!="adjacent normal tissue")|
          (group=="tumor" & sources!="tumor tissue")))
     return(skip("Source tissue classification contradicts GEO sample title"))
-  patient <- sub("^ae([0-9]{1,5})[nt]$","ae\1",labels)
-  # Avoid R substitution ambiguity: regenerate using substring with explicit
-  # removal of the final N/T class indicator.
   patient <- substr(labels,1,nchar(labels)-1L)
   cohorts <- split(group,patient)
   if(length(cohorts)*2L!=length(labels) ||
