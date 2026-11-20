@@ -40,22 +40,41 @@ public final class DefaultPdfStorage {
     }
 
     public static Uri save(Context context,AiPreferences.SavedResult result) throws Exception{
+        return saveVerifiedPdf(context,projectFolder(result),filename(result),
+                ArchiveFiles.generatedPdf(result),false);
+    }
+
+    /** Restore an archived PDF without overwriting a user-owned existing document. */
+    public static Uri restore(Context context,String project,String filename,byte[] bytes)
+            throws Exception{
+        if(project==null||!project.matches("[0-9]{6}-[^/\\\\]{1,75}")||
+           !project.equals(project.trim()) || filename==null||
+           !filename.equals(project.substring(7)+".pdf"))
+            throw new Exception("Unsafe archived project path");
+        return saveVerifiedPdf(context,project,filename,bytes,true);
+    }
+
+    private static Uri saveVerifiedPdf(Context context,String project,String name,
+                                       byte[] bytes,boolean keepExisting)throws Exception{
+        if(bytes==null||bytes.length<5||bytes.length>8_000_000||
+           bytes[0]!='%'||bytes[1]!='P'||bytes[2]!='D'||bytes[3]!='F'||bytes[4]!='-')
+            throw new Exception("Invalid PDF bytes");
         if(Build.VERSION.SDK_INT<29){
             File base=context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
             if(base==null)throw new Exception("No external documents storage");
-            File folder=new File(new File(base,"Bioqra"),projectFolder(result));
+            File folder=new File(new File(base,"Bioqra"),project);
             if(!folder.isDirectory()&&!folder.mkdirs())
                 throw new Exception("Could not create the Bioqra folder");
-            File target=new File(folder,filename(result));
+            File target=new File(folder,name);
+            if(keepExisting && target.exists())return Uri.fromFile(target);
             try(OutputStream out=new FileOutputStream(target,false)){
-                out.write(ArchiveFiles.generatedPdf(result));
+                out.write(bytes);
             }
             return Uri.fromFile(target);
         }
         ContentResolver resolver=context.getContentResolver();
         Uri collection=MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-        String path=Environment.DIRECTORY_DOWNLOADS+"/Bioqra/"+projectFolder(result)+"/";
-        String name=filename(result);
+        String path=Environment.DIRECTORY_DOWNLOADS+"/Bioqra/"+project+"/";
         Uri existing=null;
         try(Cursor cursor=resolver.query(collection,
                 new String[]{MediaStore.Downloads._ID},
@@ -64,6 +83,7 @@ public final class DefaultPdfStorage {
             if(cursor!=null && cursor.moveToFirst())
                 existing=ContentUris.withAppendedId(collection,cursor.getLong(0));
         }
+        if(keepExisting && existing!=null)return existing;
         boolean created=existing==null;
         Uri target=existing;
         if(created){
