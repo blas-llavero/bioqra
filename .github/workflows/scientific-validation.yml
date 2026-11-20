@@ -59,6 +59,10 @@ jobs:
           if test -f external-cohort-input/cross-platform-audit.json; then
             cp external-cohort-input/cross-platform-audit.json validation-results/GSE23400/cross-platform-audit.json
           fi
+      - name: Inspect real GSE23400 sample group metadata per platform
+        run: |
+          python3 tools/geo_metadata_audit.py external-cohort-input/GSE23400-GPL96_series_matrix.txt.gz validation-results/GSE23400/GPL96-metadata-audit.json
+          python3 tools/geo_metadata_audit.py external-cohort-input/GSE23400-GPL97_series_matrix.txt.gz validation-results/GSE23400/GPL97-metadata-audit.json
       - name: Audit official GPL annotation and cross-platform gene overlap
         run: python3 tools/geo_platform_annotation_audit.py validation-results/platform-annotations
       - name: Publish scientific eligibility summary
