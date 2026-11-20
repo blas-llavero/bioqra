@@ -114,10 +114,24 @@ pairing <- if(!is.null(title_pairing)) {
 if(pairing$status!="ELIGIBLE")skip(pairing$reason)
 processing <- meta[grepl("^!(Series|Sample)_data_processing",meta)]
 p <- tolower(paste(processing,collapse=" "))
-if(!grepl("log2|log 2|log-transformed|log transformed",p) ||
-   !grepl("normaliz|quantile|rma",p) ||
-   grepl("raw counts|unnormalized",p))
+source_rma_reviewed <- !is.null(title_pairing) &&
+  identical(basename(source_file),"GSE20347_series_matrix.txt.gz") &&
+  grepl("GPL571",paste(meta[grepl("^!Series_platform_id",meta)],collapse=" "))
+# The primary GSE20347 GEO record explicitly documents RMA background
+# correction and cross-sample normalization, while Bioconductor affy::rma
+# returns log2 expression values. Restrict this curated override to the
+# original study accession, confirmed 17 patient pairs, and exact platform.
+# Do NOT generalize to unidentified data or unrelated datasets.
+processing_verified <- grepl("log2|log 2|log-transformed|log transformed",p) &&
+  grepl("normaliz|quantile|rma",p) &&
+  !grepl("raw counts|unnormalized",p)
+if(!processing_verified && !source_rma_reviewed)
   skip("Not explicitly normalized and log transformed")
+normalization_evidence <- if(processing_verified) {
+  "Series Matrix data-processing metadata"
+} else {
+  "Reviewed primary GEO GSE20347 overall design: RMA on GPL571; Bioconductor affy RMA log2 expression. Verify numeric distribution and original CEL processing before biological claims."
+}
 platform <- unlist(extract_fields("!Series_platform_id"))
 platform <- unique(platform)
 if(length(platform)!=1L||!grepl("^GPL[0-9]+$",platform))
@@ -188,6 +202,7 @@ write_status("EXPLORATORY_ANALYSIS_COMPLETED",
   "R limma analyzed authentic GEO numeric values with explicit nonconfounded groups. Biological validity is NOT established.",
   list(accession=basename(source_file),platform=platform,
        design=pairing$design, independent_patients=if(pairing$design=="paired") length(unique(pairing$patient_ids)) else NA_integer_,
+       normalization_evidence=normalization_evidence,
        samples_control=sum(groups=="control"),samples_tumor=sum(groups=="tumor"),
        probes_tested=nrow(results),probes_fdr_under_0_05=sum(results$adj.P.Val<0.05),
        r_version=R.version.string,limma_version=as.character(packageVersion("limma"))))
