@@ -99,7 +99,7 @@ public final class DefaultPdfStorage {
         try{
             try(OutputStream out=resolver.openOutputStream(target,"rwt")){
                 if(out==null)throw new Exception("Cannot write PDF");
-                out.write(ArchiveFiles.generatedPdf(result));
+                out.write(bytes);
             }
             if(created){
                 ContentValues published=new ContentValues();
