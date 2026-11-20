@@ -12,7 +12,11 @@ source_file <- args[[1]]
 output_dir <- args[[2]]
 dir.create(output_dir, showWarnings=FALSE, recursive=TRUE)
 if (!file.exists(source_file)) stop("Real GEO file not found")
-if (file.info(source_file)$size > 8000000) stop("GEO file larger than safe limit")
+external_platform <- if(grepl("^GSE23400-GPL(96|97)_series_matrix[.]txt[.]gz$",basename(source_file))) {
+  sub("^GSE23400-(GPL[0-9]+)_series_matrix[.]txt[.]gz$","\\1",basename(source_file))
+} else NULL
+if(file.info(source_file)$size > if(is.null(external_platform)) 8000000 else 32000000)
+  stop("GEO file exceeds accession-specific safe limit")
 
 write_status <- function(status, reason, extra=list()) {
   record <- c(list(status=status, reason=reason,
@@ -99,6 +103,22 @@ if(anyNA(groups) && identical(basename(source_file),"GSE20347_series_matrix.txt.
   groups <- candidate$groups
   title_pairing <- candidate
 }
+if(!is.null(external_platform)) {
+  titles <- extract_fields("!Sample_title")
+  tissue <- extract_fields("!Sample_source_name_ch1")
+  if(length(titles)!=1L||length(tissue)!=1L||
+     length(titles[[1L]])!=length(sample_ids)||
+     length(tissue[[1L]])!=length(sample_ids))
+     skip("Original external sample title, tissue and GSM counts do not match")
+  source("tools/geo_external_title_pairing.R",local=TRUE)
+  candidate <- bioqra_external_title_pairs(titles[[1L]],tissue[[1L]],
+                                             "GSE23400",external_platform)
+  if(candidate$status!="ELIGIBLE")skip(candidate$reason)
+  if(any(!is.na(groups)&groups!=candidate$groups))
+    skip("GSE23400 source names contradict GEO characteristics")
+  groups <- candidate$groups
+  title_pairing <- candidate
+}
 if(anyNA(groups) || sum(groups=="control")<3L || sum(groups=="tumor")<3L)
   skip("Fewer than three clearly labeled samples per group")
 source("tools/geo_pairing.R",local=TRUE)
@@ -109,7 +129,7 @@ pairing <- if(!is.null(title_pairing)) {
       grepl("Batch, treatment or timepoint",metadata_check$reason))
       skip(metadata_check$reason)
   list(status="ELIGIBLE", design="paired", patient_ids=title_pairing$patient_ids,
-       reason="Verified GSE20347 source titles")
+       reason=title_pairing$reason)
 } else bioqra_paired_design(groups,metadata_fields,sample_ids)
 if(pairing$status!="ELIGIBLE")skip(pairing$reason)
 processing <- meta[grepl("^!(Series|Sample)_data_processing",meta)]
@@ -132,10 +152,18 @@ normalization_evidence <- if(processing_verified) {
 } else {
   "Reviewed primary GEO GSE20347 overall design: RMA on GPL571; Bioconductor affy RMA log2 expression. Verify numeric distribution and original CEL processing before biological claims."
 }
-platform <- unlist(extract_fields("!Series_platform_id"))
-platform <- unique(platform)
-if(length(platform)!=1L||!grepl("^GPL[0-9]+$",platform))
-  skip("Platform not uniquely specified")
+series_platforms <- unique(unlist(extract_fields("!Series_platform_id")))
+if(!is.null(external_platform)){
+  samples_platform <- unique(unlist(extract_fields("!Sample_platform_id")))
+  if(length(samples_platform)!=1L || samples_platform!=external_platform ||
+      !external_platform %in% series_platforms)
+    skip("GSE23400 platform-specific sample annotations contradict source")
+  platform <- external_platform
+} else {
+  platform <- series_platforms
+  if(length(platform)!=1L||!grepl("^GPL[0-9]+$",platform))
+    skip("Platform not uniquely specified")
+}
 # The base R reader handles quoted GEO sample names without implicit NA recoding.
 # The table can be large; read only bounded rows, and refuse any truncation.
 file_connection <- gzfile(source_file,"rt")
