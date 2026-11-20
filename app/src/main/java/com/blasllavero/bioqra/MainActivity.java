@@ -81,6 +81,9 @@ public class MainActivity extends Activity {
         aiPreferences = new AiPreferences(this);
         challengeMode = getSharedPreferences("bioqra_mode", MODE_PRIVATE)
                 .getString("mode","manual");
+        if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()
+                && !"manual".equals(challengeMode))
+            challengeMode="automatic";
         seed();
         researchItems.addAll(ResearchCatalog.initial());
         mergeGrand(GrandChallengeDiscovery.load(this));
@@ -267,6 +270,13 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         if(list!=null){
+            if(chatGptConnection!=null && chatGptConnection.canUsePlan()
+                    && aiPreferences.autoConsent()
+                    && "automatic".equals(getSharedPreferences("bioqra_mode",MODE_PRIVATE)
+                        .getString("mode","manual"))){
+                challengeMode="automatic";
+                updateModeControls();
+            }
             if(chatGptConnection!=null && !chatGptConnection.canUsePlan()){
                 aiModels.clear();
             }
@@ -276,17 +286,9 @@ public class MainActivity extends Activity {
     }
 
     private void setChallengeMode(String next) {
-        if ("automatic".equals(next) && !chatGptConnection.canUsePlan()) {
-            new AlertDialog.Builder(this)
-                .setTitle("Connect ChatGPT first")
-                .setMessage("Automatic Mode requires a ChatGPT account with AI permission. "
-                        +"Open AI Settings → ChatGPT account → ChatGPT login to connect. "
-                        +"You only need to sign in again if your existing session has expired "
-                        +"or needs reauthorization. Manual Mode works without ChatGPT.")
-                .setNegativeButton("Stay in Manual Mode",null)
-                .setPositiveButton("Open AI Settings",(dialog,which)->
-                        startActivity(new Intent(this,AiSettingsActivity.class)))
-                .show();
+        if("automatic".equals(next) && !chatGptConnection.canUsePlan()){
+            // An account grant is needed before automatic AI requests.
+            startActivity(new Intent(this,AiSettingsActivity.class));
             return;
         }
         challengeMode = "automatic".equals(next) ? "automatic" : "manual";
@@ -307,7 +309,7 @@ public class MainActivity extends Activity {
         // Use a short and readable confirmation in the existing status line.
         if(status!=null && status.getText().toString().startsWith("Mode:"))
             status.setText("Mode: "+("automatic".equals(challengeMode)
-                    ? "Automatic — AI draft after explicit consent" : "Manual — offline tools and no AI usage"));
+                    ? "Automatic — public research starts when a challenge opens" : "Manual — offline tools and no AI usage"));
     }
 
     private void refreshAiModels() {
