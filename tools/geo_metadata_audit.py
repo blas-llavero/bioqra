@@ -75,6 +75,11 @@ report={
     "characteristics_row_sizes":shape("!Sample_characteristics_ch1"),
     "sample_title_label_word_counts":summary_counts("!Sample_title"),
     "sample_title_grammar_templates":generalized_templates("!Sample_title"),
+    "redacted_sample_title_patterns":list(dict.fromkeys(
+        re.sub(r"[0-9]+", "<id>", text.lower())
+        for row in metadata.get("!Sample_title", [])
+        for text in row
+    ))[:12],
     "sample_source_label_word_counts":summary_counts("!Sample_source_name_ch1"),
     "sample_source_grammar_templates":generalized_templates("!Sample_source_name_ch1"),
     "sample_characteristics_label_word_counts":summary_counts("!Sample_characteristics_ch1"),
