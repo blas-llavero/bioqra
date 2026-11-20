@@ -58,6 +58,16 @@ NCBI's study record documents RMA background correction and normalization across
 
 The Android application does not yet implement this accession-specific paired model locally; the R audit executes within GitHub Actions.
 
+## External cohort GSE23400: cross-platform gate
+
+The separate scientific validation workflow now audits the authentic, freely available GSE23400 Series Matrix files for **GPL96** and **GPL97** and stores a SHA-256 provenance manifest if successfully retrieved. This is a candidate external cohort, **not** a completed independent replication.
+
+The discovery study GSE20347 uses **GPL571**, so the GPL571 probe IDs and GPL96/GPL97 probe IDs are not interchangeable. BIOQRA explicitly blocks probe-level claims across platforms until we have validated versioned platform annotation, gene mapping, unique-gene aggregation rules, independent patient confirmation and comparable clinical definitions.
+
+The audit report `validation-results/GSE23400/cross-platform-audit.json` summarizes file availability, GPL annotations, sample counts, checksums and the reason replication remains blocked. If a download fails, this is reported and is not silently replaced by simulated measurements.
+
+Primary source: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE23400
+
 ## Next scientific milestones
 
 A truly externally validated finding requires a fully documented biological hypothesis, prespecified model, correctly labelled independent patients, study-specific normalization, covariate/batch or pairing adjustments where relevant, harmonized gene/probe annotation, and independent replication with full result reporting. BIOQRA must show these requirements as **pending** until verified.
