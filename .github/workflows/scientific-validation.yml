@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'tools/geo_fetch_for_r.py'
+      - 'tools/geo_external_cohort_audit.py'
       - 'tools/geo_limma_audit.R'
       - 'tools/geo_pairing.R'
       - 'tools/test_geo_pairing.R'
@@ -48,6 +49,15 @@ jobs:
         run: |
           Rscript tools/geo_limma_audit.R \
             validation-input/GSE20347_series_matrix.txt.gz validation-results/GSE20347
+      - name: Verify real external GSE23400 cohort sources and GPL platforms
+        run: python3 tools/geo_external_cohort_audit.py external-cohort-input
+      - name: Attach cross-platform provenance and eligibility
+        if: always()
+        run: |
+          mkdir -p validation-results/GSE23400
+          if test -f external-cohort-input/cross-platform-audit.json; then
+            cp external-cohort-input/cross-platform-audit.json validation-results/GSE23400/cross-platform-audit.json
+          fi
       - name: Publish scientific eligibility summary
         if: always()
         run: |
