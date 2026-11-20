@@ -8,6 +8,7 @@ on:
       - 'tools/geo_fetch_for_r.py'
       - 'tools/geo_external_cohort_audit.py'
       - 'tools/geo_platform_annotation_audit.py'
+      - 'tools/geo_frozen_gene_candidates.py'
       - 'tools/geo_limma_audit.R'
       - 'tools/geo_pairing.R'
       - 'tools/test_geo_pairing.R'
@@ -65,6 +66,12 @@ jobs:
           python3 tools/geo_metadata_audit.py external-cohort-input/GSE23400-GPL97_series_matrix.txt.gz validation-results/GSE23400/GPL97-metadata-audit.json
       - name: Audit official GPL annotation and cross-platform gene overlap
         run: python3 tools/geo_platform_annotation_audit.py validation-results/platform-annotations
+      - name: Freeze discovery genes using official Entrez annotation
+        run: |
+          python3 tools/geo_frozen_gene_candidates.py \
+            validation-results/GSE20347/limma-probe-results.csv \
+            validation-results/platform-annotations \
+            validation-results/frozen-gene-validation
       - name: Publish scientific eligibility summary
         if: always()
         run: |
