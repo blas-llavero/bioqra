@@ -271,9 +271,16 @@ public final class ResearchEvidenceArchive {
                               AiPreferences.SavedResult result) throws Exception{
         File directory=folder(context,key);
         File manifest=new File(directory,"manifest.json");
-        if(!manifest.isFile())throw new Exception("No downloaded evidence manifest yet");
         try(ZipOutputStream zip=new ZipOutputStream(out)){
-                try(InputStream in=new FileInputStream(manifest)){put(zip,"evidence/manifest.json",in);}
+                if(manifest.isFile() && manifest.length()<=150000){
+                    try(InputStream in=new FileInputStream(manifest)){put(zip,"evidence/manifest.json",in);}
+                }else{
+                    zip.putNextEntry(new ZipEntry("evidence/data-availability.txt"));
+                    zip.write(("No verified GEO file manifest was available for this challenge. "
+                        +"No patient measurements or research observations have been fabricated.\n")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    zip.closeEntry();
+                }
                 zip.putNextEntry(new ZipEntry("evidence/readiness.txt"));
                 zip.write(("BIOQRA dataset readiness assessment\\n"
                     +ResearchReadiness.assess(context,key,null).describe()
