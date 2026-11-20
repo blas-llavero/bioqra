@@ -7,6 +7,7 @@ on:
     paths:
       - 'tools/geo_fetch_for_r.py'
       - 'tools/geo_external_cohort_audit.py'
+      - 'tools/geo_platform_annotation_audit.py'
       - 'tools/geo_limma_audit.R'
       - 'tools/geo_pairing.R'
       - 'tools/test_geo_pairing.R'
@@ -58,6 +59,8 @@ jobs:
           if test -f external-cohort-input/cross-platform-audit.json; then
             cp external-cohort-input/cross-platform-audit.json validation-results/GSE23400/cross-platform-audit.json
           fi
+      - name: Audit official GPL annotation and cross-platform gene overlap
+        run: python3 tools/geo_platform_annotation_audit.py validation-results/platform-annotations
       - name: Publish scientific eligibility summary
         if: always()
         run: |
