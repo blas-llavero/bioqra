@@ -33,6 +33,14 @@ public final class UiLanguage {
         add("3 · Ask ChatGPT for a solution proposal","3 · Demana una proposta de solució a ChatGPT","3 · Solicitar una propuesta de solución a ChatGPT");
         add("Results and limitations","Resultats i limitacions","Resultados y limitaciones");
         add("Save this challenge result as PDF","Desa el resultat del repte en PDF","Guardar resultado del reto en PDF");
+        add("View PDF","Mostra el PDF","Ver PDF");
+        add("PDF preview","Visualització del PDF","Vista previa del PDF");
+        add("Previous","Anterior","Anterior");
+        add("Next","Següent","Siguiente");
+        add("Close","Tanca","Cerrar");
+        add("Page","Pàgina","Página");
+        add("Loading PDF...","S’està carregant el PDF...","Cargando PDF...");
+        add("Could not display PDF","No es pot mostrar el PDF","No se puede mostrar el PDF");
         add("Research funding opportunity · Not a programming contest","Finançament de recerca · No és un concurs de programació","Financiación de investigación · No es un concurso de programación");
         add("Challenge","Repte","Reto");
         add("Impact","Impacte","Impacto");
