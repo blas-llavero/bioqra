@@ -76,6 +76,7 @@ report={
     "sample_title_label_word_counts":summary_counts("!Sample_title"),
     "sample_title_grammar_templates":generalized_templates("!Sample_title"),
     "sample_source_label_word_counts":summary_counts("!Sample_source_name_ch1"),
+    "sample_source_grammar_templates":generalized_templates("!Sample_source_name_ch1"),
     "sample_characteristics_label_word_counts":summary_counts("!Sample_characteristics_ch1"),
     "platform_fields_present":bool(metadata.get("!Series_platform_id") or metadata.get("!Sample_platform_id")),
     "processing_fields_present":bool(metadata.get("!Series_data_processing") or metadata.get("!Sample_data_processing")),
