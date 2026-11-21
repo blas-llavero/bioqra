@@ -158,7 +158,11 @@ public final class ChallengeActivity extends Activity {
         for(String action:new String[]{"Pause processing","Stop processing","Resume processing"}){
             Button control=button(UiLanguage.tr(this,action));
             control.setAllCaps(false);
-            processingControls.addView(control,new LinearLayout.LayoutParams(0,dp(58),1));
+            LinearLayout.LayoutParams spacing=new LinearLayout.LayoutParams(0,dp(58),1);
+            spacing.setMargins(dp(5),dp(5),dp(5),dp(5));
+            processingControls.addView(control,spacing);
+            control.setTag(action);
+            ProcessingControl.styleButton(control,action);
             control.setOnClickListener(v->{
                 if("Pause processing".equals(action))ProcessingControl.pause();
                 else if("Stop processing".equals(action))ProcessingControl.stop();
@@ -169,6 +173,10 @@ public final class ChallengeActivity extends Activity {
                         if(aiPreferences.lastResult(challengeKey)!=null)recoverQueueResult();
                         else retrieve();
                     }
+                }
+                for(int i=0;i<processingControls.getChildCount();i++){
+                    Button item=(Button)processingControls.getChildAt(i);
+                    ProcessingControl.styleButton(item,(String)item.getTag());
                 }
                 status.setText(UiLanguage.tr(this,ProcessingControl.label()));
                 refreshPdfProgress();
