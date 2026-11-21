@@ -34,12 +34,17 @@ public final class AiPreferences {
     }
 
     public String globalModel(){return prefs.getString("global_model",AUTO);}
-    public String override(String key){return prefs.getString("model_"+key,null);}
+    public boolean applyModelToAll(){return prefs.getBoolean("apply_model_to_all",true);}
+    public void setApplyModelToAll(boolean enabled){
+        prefs.edit().putBoolean("apply_model_to_all",enabled).apply();
+    }
+    public String override(String key){return applyModelToAll()?null:prefs.getString("model_"+key,null);}
     public String selected(String key){
         String override=override(key);
         return override==null?globalModel():override;
     }
     public void setOverride(String key,String model){
+        if(applyModelToAll())return;
         if(model==null || model.equals(globalModel())){
             prefs.edit().remove("model_"+key).apply();
         }else prefs.edit().putString("model_"+key,model).apply();
@@ -49,7 +54,7 @@ public final class AiPreferences {
     }
     /** Apply selected model to all (existing and future) challenges. */
     public void applyGlobalToAll(String model){
-        SharedPreferences.Editor e=prefs.edit().putString("global_model",model);
+        SharedPreferences.Editor e=prefs.edit().putString("global_model",model).putBoolean("apply_model_to_all",true);
         for(String key:prefs.getAll().keySet()){
             if(key.startsWith("model_"))e.remove(key);
         }
@@ -161,6 +166,7 @@ public final class AiPreferences {
             root.put("type","bioqra-settings");
             root.put("version",1);
             root.put("global_model",globalModel());
+            root.put("apply_model_to_all",applyModelToAll());
             root.put("daily_limit",dailyLimit());
             org.json.JSONObject overrides=new org.json.JSONObject();
             for(java.util.Map.Entry<String,?> e:prefs.getAll().entrySet()){
@@ -197,7 +203,8 @@ public final class AiPreferences {
         SharedPreferences.Editor edit=prefs.edit();
         for(String key:prefs.getAll().keySet())if(key.matches("model_[a-f0-9]{32}"))edit.remove(key);
         edit.putString("global_model",model).putInt("daily_limit",limit)
-                .putBoolean("auto_consent",false);
+                .putBoolean("auto_consent",false)
+                .putBoolean("apply_model_to_all",json.optBoolean("apply_model_to_all",true));
         for(java.util.Map.Entry<String,String> entry:validated.entrySet())
             edit.putString(entry.getKey(),entry.getValue());
         if(!edit.commit())throw new Exception("Could not save restored settings.");
