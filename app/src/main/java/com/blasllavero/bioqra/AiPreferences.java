@@ -136,6 +136,14 @@ public final class AiPreferences {
         return prefs.edit().putString("usage_day",today()).putInt("usage_count",used+1).commit();
     }
 
+    public boolean automaticExportCompleted(String key){
+        return prefs.getBoolean("auto_export_complete_"+key,false)
+                && lastResult(key)!=null;
+    }
+    public void markAutomaticExportCompleted(String key){
+        prefs.edit().putBoolean("auto_export_complete_"+key,true).apply();
+    }
+
     public boolean alreadyAttempted(String key){
         return today().equals(prefs.getString("attempt_"+key,""));
     }
