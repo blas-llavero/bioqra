@@ -651,6 +651,45 @@ public final class ChallengeActivity extends Activity {
         refreshPdfProgress();
     }
 
+    private void verifyFinishedPdf(Uri pdf,Uri tree,AiPreferences.SavedResult record)throws Exception{
+        android.os.ParcelFileDescriptor descriptor=SecurePdfAccess.open(this,pdf,tree,record);
+        android.graphics.pdf.PdfRenderer renderer=null;
+        try{
+            renderer=new android.graphics.pdf.PdfRenderer(descriptor);
+            if(renderer.getPageCount()<1||renderer.getPageCount()>150)
+                throw new Exception("Invalid PDF page count");
+            try(android.graphics.pdf.PdfRenderer.Page page=renderer.openPage(0)){
+                android.graphics.Bitmap test=android.graphics.Bitmap.createBitmap(120,170,
+                        android.graphics.Bitmap.Config.ARGB_8888);
+                try{page.render(test,null,null,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);}
+                finally{test.recycle();}
+            }
+        }finally{
+            if(renderer!=null)renderer.close();else descriptor.close();
+        }
+    }
+    private boolean insufficientEvidence(){
+        if(!isFunding() && !"benchmark".equals(kind))return false;
+        ResearchReadiness.Assessment assessment=ResearchReadiness.assess(this,challengeKey,discoveredDatasets);
+        return assessment.state==ResearchReadiness.State.NO_DATA
+                ||assessment.state==ResearchReadiness.State.SOURCE_IDENTIFIED
+                ||assessment.state==ResearchReadiness.State.FILES_ACQUIRED_UNVALIDATED;
+    }
+    private void finishVerifiedQueue(boolean insufficient){
+        aiPreferences.setProcessingOutcome(challengeKey,insufficient?"insufficient":"");
+        aiPreferences.markAutomaticExportCompleted(challengeKey);
+        refreshPdfProgress();
+        if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                && !ProcessingControl.paused()&&!ProcessingControl.stopped()){
+            // Let the final UI state be drawn before the next challenge opens.
+            viewSavedPdf.post(()->{
+                if(isFinishing()||isDestroyed()||ProcessingControl.paused()||ProcessingControl.stopped())return;
+                if(pdfOperations!=0||busy||datasetSearchInProgress||!viewSavedPdf.isEnabled())return;
+                setResult(RESULT_OK);finish();
+            });
+        }
+    }
+
     private void recoverQueueResult(){
         AiPreferences.SavedResult found=null;
         for(AiPreferences.SavedResult record:aiPreferences.savedResults())
@@ -661,24 +700,30 @@ public final class ChallengeActivity extends Activity {
         beginPdfOperation();
         EXEC.execute(()->{
             String error=null;
+            Uri verifiedPdf=null;
+            Uri verifiedTree=null;
+            boolean insufficient=insufficientEvidence();
             try{
                 String selected=aiPreferences.pdfTreeUri();
                 Uri tree=selected==null?null:Uri.parse(selected);
                 Uri pdf=ArchiveFiles.findSavedPdf(this,tree,record);
                 if(pdf==null)pdf=ArchiveFiles.makePdf(this,tree,record);
-                try(android.os.ParcelFileDescriptor fd=SecurePdfAccess.open(this,pdf,tree,record)){
-                    if(fd==null)throw new SecurityException("PDF read permission unavailable");
-                }
+                verifyFinishedPdf(pdf,tree,record);
                 DefaultEvidenceStorage.export(this,challengeKey,record);
+                verifiedPdf=pdf;verifiedTree=tree;
             }catch(Exception ex){error=ex.getMessage()==null?"Export failed":ex.getMessage();}
             final String failure=error;
+            final Uri readyPdf=verifiedPdf, readyTree=verifiedTree;
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
                 endPdfOperation();
-                if(failure!=null){pdfNotice("Automatic queue paused: "+failure);return;}
-                aiPreferences.markAutomaticExportCompleted(challengeKey);
-                setResult(RESULT_OK);
-                finish();
+                if(failure!=null){
+                    aiPreferences.setProcessingOutcome(challengeKey,"export_error");
+                    pdfNotice("Automatic queue paused: "+failure);return;
+                }
+                lastSavedPdf=readyPdf;lastSavedPdfTree=readyTree;lastSavedPdfResult=record;
+                pdfNotice(UiLanguage.tr(this,insufficient?"Insufficient research data":"Processing completed"));
+                finishVerifiedQueue(insufficient);
             });
         });
     }
@@ -1173,10 +1218,7 @@ public final class ChallengeActivity extends Activity {
                         runOnUiThread(this::beginPdfOperation);
                         try{
                             Uri created=ArchiveFiles.makePdf(this,selectedTree,record);
-                            try(android.os.ParcelFileDescriptor verified=
-                                    SecurePdfAccess.open(this,created,selectedTree,record)){
-                                if(verified==null)throw new SecurityException("PDF read permission unavailable");
-                            }
+                            verifyFinishedPdf(created,selectedTree,record);
                             automaticallySavedPdf=created;
                             pdfStatus=" · PDF saved: "+(destination==null
                                 ?DefaultPdfStorage.relativeDirectory(record)
@@ -1204,6 +1246,7 @@ public final class ChallengeActivity extends Activity {
                     pdfStatus=" · Manual mode: use Save as PDF to export this draft.";
                 }
                 ProcessingControl.checkpoint(processingToken);
+                final boolean insufficient=insufficientEvidence();
                 final String pdfResult=pdfStatus;
                 final Uri automaticPdf=automaticallySavedPdf;
                 final boolean automaticEvidenceSaved=evidenceSaved;
@@ -1225,12 +1268,9 @@ public final class ChallengeActivity extends Activity {
                     pdfNotice("AI draft saved locally for this challenge. "
                         +"Request limit remaining: "+aiPreferences.remaining()+pdfResult);
                     updateButtons();
-                    if("automatic".equals(mode) && automaticPdf!=null && automaticEvidenceSaved){
-                        aiPreferences.markAutomaticExportCompleted(challengeKey);
-                        if(getIntent().getBooleanExtra(AUTO_QUEUE,false) && !ProcessingControl.paused() && !ProcessingControl.stopped()){
-                            setResult(RESULT_OK);
-                            finish();
-                        }
+                    if("automatic".equals(mode)){
+                        if(automaticPdf!=null && automaticEvidenceSaved)finishVerifiedQueue(insufficient);
+                        else aiPreferences.setProcessingOutcome(challengeKey,"export_error");
                     }
                 });
             }catch(Exception e){
