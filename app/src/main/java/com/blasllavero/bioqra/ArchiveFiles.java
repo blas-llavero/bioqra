@@ -119,6 +119,12 @@ public final class ArchiveFiles {
         return target;
     }
 
+    /** Locate an existing PDF without creating directories or modifying files. */
+    public static Uri findSavedPdf(Context context,Uri tree,AiPreferences.SavedResult result)
+            throws Exception{
+        return SecurePdfAccess.findSaved(context,tree,result);
+    }
+
     public static byte[] generatedPdf(AiPreferences.SavedResult result) throws Exception{
         ByteArrayOutputStream out=new ByteArrayOutputStream();
         writePdf(out,result);
