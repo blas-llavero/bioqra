@@ -341,15 +341,19 @@ public class MainActivity extends Activity {
                 || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()){
             automaticRows.clear();automaticIndex=-1;return;
         }
-        if(aiPreferences.remaining()<=0){
-            status.setText(UiLanguage.tr(this,"Automatic queue paused: daily request limit reached."));
-            automaticRows.clear();automaticIndex=-1;return;
-        }
         while(++automaticIndex<automaticRows.size()){
             ResultRow row=automaticRows.get(automaticIndex);
             if(!TrustedChallengeReader.approved(row.url))continue;
             String key=AiPreferences.stableKey(row.title,row.title);
-            if(aiPreferences.alreadyAttempted(key))continue;
+            if(aiPreferences.automaticExportCompleted(key))continue;
+            if(aiPreferences.alreadyAttempted(key) && aiPreferences.lastResult(key)==null){
+                status.setText("Automatic queue paused: previous AI attempt has no saved result.");
+                return;
+            }
+            if(aiPreferences.remaining()<=0 && aiPreferences.lastResult(key)==null){
+                status.setText(UiLanguage.tr(this,"Automatic queue paused: daily request limit reached."));
+                return;
+            }
             launchChallenge(row.title,row.url,row.kind,true);
             return;
         }
