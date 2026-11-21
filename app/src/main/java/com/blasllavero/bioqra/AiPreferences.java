@@ -142,6 +142,10 @@ public final class AiPreferences {
         return prefs.edit().putString("usage_day",today()).putInt("usage_count",used+1).commit();
     }
 
+    public String processingOutcome(String key){return prefs.getString("processing_outcome_"+key,"");}
+    public void setProcessingOutcome(String key,String outcome){
+        prefs.edit().putString("processing_outcome_"+key,outcome).apply();
+    }
     public boolean automaticExportCompleted(String key){
         return prefs.getBoolean("auto_export_complete_"+key,false)
                 && lastResult(key)!=null;
@@ -228,7 +232,7 @@ public final class AiPreferences {
     }
     public void storeResult(String key,String title,String url,String model,String answer){
         if(answer!=null && answer.length()<=90000){
-            SharedPreferences.Editor edit=prefs.edit().remove("auto_export_complete_"+key).putString("latest_"+key,answer)
+            SharedPreferences.Editor edit=prefs.edit().remove("auto_export_complete_"+key).remove("processing_outcome_"+key).putString("latest_"+key,answer)
                 .putString("last_date_"+key,today()).putString("title_"+key,
                     title==null?"Challenge":title);
             if(url!=null)edit.putString("source_"+key,url);
