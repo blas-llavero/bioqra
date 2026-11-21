@@ -35,6 +35,7 @@ public final class AiSettingsActivity extends Activity {
     private AiPreferences settings;
     private ChatGptConnection account;
     private Spinner models,limitPicker;
+    private android.widget.CheckBox applyAll;
     private TextView info,remaining;
 
     private Button accountButton;
@@ -94,20 +95,11 @@ public final class AiSettingsActivity extends Activity {
         info=label("Loading the model list for your ChatGPT account...",13);
         root.addView(info);
         populateModels(new ArrayList<>());
-        Button apply=button("Apply this model to ALL challenges");
-        root.addView(apply,new LinearLayout.LayoutParams(-1,dp(56)));
-        apply.setOnClickListener(v->{
-            if(modelKeys.isEmpty())return;
-            String key=modelKeys.get(models.getSelectedItemPosition());
-            new AlertDialog.Builder(this)
-                .setTitle("Apply globally?")
-                .setMessage("Set this model for all current and future challenges, replacing any individual challenge selections saved on this device.")
-                .setNegativeButton("Cancel",null)
-                .setPositiveButton("Apply to all",(d,w)->{
-                    settings.applyGlobalToAll(key);
-                    info.setText("Applied globally. Each challenge now inherits this model unless changed individually.");
-                }).show();
-        });
+        applyAll=new android.widget.CheckBox(this);
+        applyAll.setText(UiLanguage.tr(this,"Apply this model to ALL challenges"));
+        applyAll.setChecked(settings.applyModelToAll());
+        root.addView(applyAll,new LinearLayout.LayoutParams(-1,-2));
+        applyAll.setOnCheckedChangeListener((button,checked)->settings.setApplyModelToAll(checked));
 
         TextView controlTitle=label("Automatic Mode",19);
         controlTitle.setTypeface(null,Typeface.BOLD);
@@ -299,6 +291,7 @@ public final class AiSettingsActivity extends Activity {
                 backupStatus.setText(message);
                 if(request==RESTORE_SETTINGS || request==IMPORT_ALL_ZIP){
                     populateModels(available);
+                    applyAll.setChecked(settings.applyModelToAll());
                     updateRemaining();
                     int[] limits={1,3,5,10};
                     for(int i=0;i<limits.length;i++)
