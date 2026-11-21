@@ -153,6 +153,28 @@ public final class ChallengeActivity extends Activity {
         back.setOnClickListener(v->finish());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(52)));
         root.addView(text(title,23,true));
+        LinearLayout processingControls=new LinearLayout(this);
+        processingControls.setOrientation(LinearLayout.HORIZONTAL);
+        for(String action:new String[]{"Pause processing","Stop processing","Resume processing"}){
+            Button control=button(UiLanguage.tr(this,action));
+            control.setAllCaps(false);
+            processingControls.addView(control,new LinearLayout.LayoutParams(0,dp(58),1));
+            control.setOnClickListener(v->{
+                if("Pause processing".equals(action))ProcessingControl.pause();
+                else if("Stop processing".equals(action))ProcessingControl.stop();
+                else{
+                    ProcessingControl.resume();
+                    if(!busy&&!datasetSearchInProgress&&pdfOperations==0
+                            &&"automatic".equals(mode)&&!aiPreferences.automaticExportCompleted(challengeKey)){
+                        if(aiPreferences.lastResult(challengeKey)!=null)recoverQueueResult();
+                        else retrieve();
+                    }
+                }
+                status.setText(UiLanguage.tr(this,ProcessingControl.label()));
+                refreshPdfProgress();
+            });
+        }
+        root.addView(processingControls);
         root.addView(text("Mode: "+("automatic".equals(mode)?"Automatic (ChatGPT)":"Manual (no AI)")
                 +" · Read-only · No contest submissions",14,false));
         root.addView(text(url,12,false));
@@ -786,7 +808,7 @@ public final class ChallengeActivity extends Activity {
 
     /** Live public metadata search, performed before AI in automatic mode. */
     private void beginDatasetDiscovery(boolean thenAi){
-        if(datasetSearchInProgress)return;
+        if(datasetSearchInProgress||ProcessingControl.stopped()||ProcessingControl.paused())return;
         datasetSearchInProgress=true;
         aiPreferences.setProcessingStage(challengeKey,2);
         refreshPdfProgress();
@@ -875,7 +897,7 @@ public final class ChallengeActivity extends Activity {
                     datasetStatus.setText("No dataset loaded. "+datasetDiscoveryNote);
                 }
                 datasetResults.addView(text("Only bounded exploratory QC is performed on downloaded real GEO matrices. No differential expression, clinical prediction, or challenge solution is established.",13,false));
-                if(thenAi && connection.canUsePlan() && aiPreferences.autoConsent()
+                if(thenAi && !ProcessingControl.stopped() && !ProcessingControl.paused() && connection.canUsePlan() && aiPreferences.autoConsent()
                         && !aiPreferences.alreadyAttempted(challengeKey) && specificPage)
                     chooseModelAndRun(true);
                 refreshPdfProgress();
@@ -884,7 +906,7 @@ public final class ChallengeActivity extends Activity {
     }
 
     private void retrieve(){
-        if(busy)return;
+        if(busy||ProcessingControl.stopped()||ProcessingControl.paused())return;
         if(!TrustedChallengeReader.approved(url)){
             showError("Blocked: URL is not a trusted HTTPS research domain. Open only after independent review.");
             return;
@@ -936,7 +958,7 @@ public final class ChallengeActivity extends Activity {
                     deadlinesView.setText(sources.toString());
                     status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
                     busy=false;updateButtons();
-                    if("automatic".equals(mode) && specificPage){
+                    if("automatic".equals(mode) && specificPage && !ProcessingControl.stopped() && !ProcessingControl.paused()){
                         // Search public metadata independently of AI consent.
                         boolean authorized=connection.canUsePlan() && aiPreferences.autoConsent()
                             && !aiPreferences.alreadyAttempted(challengeKey);
@@ -981,7 +1003,7 @@ public final class ChallengeActivity extends Activity {
 
     /** Automatic mode uses saved preferences and does not prompt for a model. */
     private void chooseModelAndRun(boolean unattended){
-        if(busy)return;
+        if(busy||ProcessingControl.stopped()||ProcessingControl.paused())return;
         if(unattended && (!aiPreferences.autoConsent()
                 || aiPreferences.alreadyAttempted(challengeKey)))return;
         if(aiPreferences.remaining()<=0){
@@ -1004,8 +1026,10 @@ public final class ChallengeActivity extends Activity {
                 +ResearchEvidenceArchive.summary(this,challengeKey);
         // Unattended requests never send typed user samples, even if present.
         final String input=unattended?"":sample.getText().toString();
+        final long processingToken=ProcessingControl.token();
         EXEC.execute(()->{
             try{
+                ProcessingControl.checkpoint(processingToken);
                 List<ChatGptConnection.Model> offered=connection.models();
                 AiPreferences.Selection selection=AiPreferences.choose(
                         offered,aiPreferences.selected(challengeKey));
@@ -1016,6 +1040,7 @@ public final class ChallengeActivity extends Activity {
                 // explicit user-configured quota, not unbounded agent activity.
                 for(int round=1;unattended && round<=2 && aiPreferences.remaining()>=2
                         && aiPreferences.autoConsent() && connection.canUsePlan();round++){
+                    ProcessingControl.checkpoint(processingToken);
                     if(!aiPreferences.reserve(true))break;
                     final int currentRound=round;
                     try{
@@ -1108,6 +1133,7 @@ public final class ChallengeActivity extends Activity {
                 evidenceLog.append("\n\nFINAL DATA READINESS CHECK:\n")
                     .append(ResearchReadiness.assess(this,challengeKey,discoveredDatasets).describe());
                 String liveEvidence=ChallengeTextFormatter.truncate(evidenceLog.toString(),6500);
+                ProcessingControl.checkpoint(processingToken);
                 if(!aiPreferences.reserve(unattended))
                     throw new Exception("Local limit reached or automatic permission disabled.");
                 aiPreferences.markAttempted(challengeKey);
@@ -1120,6 +1146,7 @@ public final class ChallengeActivity extends Activity {
                     "Source: "+source+"\n\n"+researchSource+"\n\n"+liveEvidence,input,kind);
                 aiPreferences.storeResult(challengeKey,title,source,selection.label,answer);
                 aiPreferences.setProcessingStage(challengeKey,4);
+                ProcessingControl.checkpoint(processingToken);
                 String pdfStatus="";
                 Uri automaticallySavedPdf=null;
                 boolean evidenceSaved=false;
@@ -1152,6 +1179,7 @@ public final class ChallengeActivity extends Activity {
                         }finally{
                             runOnUiThread(this::endPdfOperation);
                         }
+                        ProcessingControl.checkpoint(processingToken);
                         // An evidence archive should not depend on the PDF
                         // preview check succeeding. The saved proposal is preserved.
                         try{
@@ -1167,6 +1195,7 @@ public final class ChallengeActivity extends Activity {
                 }else{
                     pdfStatus=" · Manual mode: use Save as PDF to export this draft.";
                 }
+                ProcessingControl.checkpoint(processingToken);
                 final String pdfResult=pdfStatus;
                 final Uri automaticPdf=automaticallySavedPdf;
                 final boolean automaticEvidenceSaved=evidenceSaved;
@@ -1190,7 +1219,7 @@ public final class ChallengeActivity extends Activity {
                     updateButtons();
                     if("automatic".equals(mode) && automaticPdf!=null && automaticEvidenceSaved){
                         aiPreferences.markAutomaticExportCompleted(challengeKey);
-                        if(getIntent().getBooleanExtra(AUTO_QUEUE,false)){
+                        if(getIntent().getBooleanExtra(AUTO_QUEUE,false) && !ProcessingControl.paused() && !ProcessingControl.stopped()){
                             setResult(RESULT_OK);
                             finish();
                         }
