@@ -12,6 +12,13 @@ public final class UiLanguage {
     private static final Map<String,String[]> LABELS=new HashMap<>();
     private static void add(String en,String ca,String es){LABELS.put(en,new String[]{ca,es});}
     static{
+        add("Processing pending","Processament pendent","Procesamiento pendiente");
+        add("Challenge statement retrieved / in preparation","Preparació de l’enunciat del repte","Preparación del enunciado del reto");
+        add("Dataset search and analysis","Cerca i anàlisi de dades","Búsqueda y análisis de datos");
+        add("AI proposal in preparation","Generació de la proposta amb IA","Generación de la propuesta con IA");
+        add("PDF and ZIP export pending","Preparació del PDF i ZIP","Preparación del PDF y ZIP");
+        add("Processing completed","Processament completat","Procesamiento completado");
+
         add("Project files","Fitxers del projecte","Archivos del proyecto");
         add("No readable research ZIP found","No s’ha trobat cap ZIP de recerca llegible","No se ha encontrado ningún ZIP de investigación legible");
         add("Open research ZIP","Obre el ZIP de recerca","Abrir el ZIP de investigación");
