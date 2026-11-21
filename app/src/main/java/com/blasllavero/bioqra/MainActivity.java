@@ -441,6 +441,18 @@ public class MainActivity extends Activity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         picker.setAdapter(adapter);
         String key=AiPreferences.stableKey(title,title);
+        int stage=aiPreferences.processingStage(key);
+        String[] stageLabels={"Processing pending","Challenge statement retrieved / in preparation",
+                "Dataset search and analysis","AI proposal in preparation",
+                "PDF and ZIP export pending","Processing completed"};
+        TextView processing=text(UiLanguage.tr(this,stageLabels[Math.max(0,Math.min(5,stage))]),14,true);
+        processing.setTextColor(stage==5?GREEN:BLUE);
+        card.addView(processing,new LinearLayout.LayoutParams(-1,-2));
+        android.widget.ProgressBar progress=new android.widget.ProgressBar(
+                this,null,android.R.attr.progressBarStyleHorizontal);
+        progress.setMax(5);
+        progress.setProgress(stage);
+        card.addView(progress,new LinearLayout.LayoutParams(-1,dp(12)));
         String override=aiPreferences.override(key);
         if(override!=null && !keys.contains(override)){
             names.add("Unavailable saved model: "+override);
