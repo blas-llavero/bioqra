@@ -12,6 +12,10 @@ public final class UiLanguage {
     private static final Map<String,String[]> LABELS=new HashMap<>();
     private static void add(String en,String ca,String es){LABELS.put(en,new String[]{ca,es});}
     static{
+        add("Project files","Fitxers del projecte","Archivos del proyecto");
+        add("No readable research ZIP found","No s’ha trobat cap ZIP de recerca llegible","No se ha encontrado ningún ZIP de investigación legible");
+        add("Open research ZIP","Obre el ZIP de recerca","Abrir el ZIP de investigación");
+        add("Open this ZIP with a file manager","Obre aquest ZIP amb un gestor de fitxers","Abre este ZIP con un gestor de archivos");
         add("Preparing PDF...","S’està preparant el PDF...","Preparando el PDF...");
         add("Apply this model to ALL challenges","Aplica aquest model a TOTS els reptes","Aplica este modelo a TODOS los retos");
         add("Use global model","Utilitza el model global","Utiliza el modelo global");
