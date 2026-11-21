@@ -12,6 +12,13 @@ public final class UiLanguage {
     private static final Map<String,String[]> LABELS=new HashMap<>();
     private static void add(String en,String ca,String es){LABELS.put(en,new String[]{ca,es});}
     static{
+        add("Pause processing","Pausa","Pausar");
+        add("Stop processing","Atura","Detener");
+        add("Resume processing","Reprèn","Reanudar");
+        add("Processing paused","Processament en pausa","Procesamiento en pausa");
+        add("Processing stopped","Processament aturat","Procesamiento detenido");
+        add("Processing resumed","Processament reprès","Procesamiento reanudado");
+
         add("Processing pending","Processament pendent","Procesamiento pendiente");
         add("Challenge statement retrieved / in preparation","Preparació de l’enunciat del repte","Preparación del enunciado del reto");
         add("Dataset search and analysis","Cerca i anàlisi de dades","Búsqueda y análisis de datos");
