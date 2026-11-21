@@ -627,6 +627,7 @@ public final class ChallengeActivity extends Activity {
             if(challengeKey.equals(record.key)){found=record;break;}
         if(found==null){showError("Saved result unavailable");return;}
         final AiPreferences.SavedResult record=found;
+        aiPreferences.setProcessingStage(challengeKey,4);
         beginPdfOperation();
         EXEC.execute(()->{
             String error=null;
@@ -710,14 +711,16 @@ public final class ChallengeActivity extends Activity {
         final AiPreferences.SavedResult result=record;
         String folder=aiPreferences.pdfTreeUri();
         lastSavedPdf=null;
+        aiPreferences.setProcessingStage(challengeKey,4);
         beginPdfOperation();
         pdfNotice("Saving PDF in Bioqra/"+DefaultPdfStorage.projectFolder(result)+"...");
         EXEC.execute(()->{
             String message;
+            boolean zipSaved=false;
             Uri pdf=null;
             Uri tree=folder==null?null:Uri.parse(folder);
             try{
-                try{DefaultEvidenceStorage.export(this,challengeKey,result);}
+                try{DefaultEvidenceStorage.export(this,challengeKey,result);zipSaved=true;}
                 catch(Exception zipError){android.util.Log.w("BIOQRA","Evidence ZIP export unavailable",zipError);}
                 Uri saved=ArchiveFiles.makePdf(this,tree,result);
                 try(android.os.ParcelFileDescriptor verified=SecurePdfAccess.open(this,saved,tree,result)){
@@ -735,10 +738,12 @@ public final class ChallengeActivity extends Activity {
                     ?e.getMessage():"PDF export failed: "+e.getMessage();}
             final String feedback=message;
             final Uri confirmed=pdf;
+            final boolean confirmedZip=zipSaved;
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
                 endPdfOperation();
                 if(confirmed!=null){
+                    if(confirmedZip)aiPreferences.markAutomaticExportCompleted(challengeKey);
                     lastSavedPdf=confirmed;lastSavedPdfTree=tree;
                     lastSavedPdfResult=result;
                     viewSavedPdf.setVisibility(View.VISIBLE);
@@ -783,6 +788,7 @@ public final class ChallengeActivity extends Activity {
     private void beginDatasetDiscovery(boolean thenAi){
         if(datasetSearchInProgress)return;
         datasetSearchInProgress=true;
+        aiPreferences.setProcessingStage(challengeKey,2);
         refreshPdfProgress();
         discoveredDatasets=null;
         datasetStatus.setText("Searching NCBI GEO for real study metadata...");
@@ -884,6 +890,7 @@ public final class ChallengeActivity extends Activity {
             return;
         }
         busy=true;
+        aiPreferences.setProcessingStage(challengeKey,1);
         status.setText("Checking official organizer links for the detailed challenge statement...");
         updateButtons();
         EXEC.execute(()->{
@@ -982,6 +989,7 @@ public final class ChallengeActivity extends Activity {
             return;
         }
         busy=true;
+        aiPreferences.setProcessingStage(challengeKey,3);
         status.setText("Checking your saved model selection...");
         updateButtons();
         final String publicStatement=fetchedText;
@@ -1111,6 +1119,7 @@ public final class ChallengeActivity extends Activity {
                 String answer=connection.respond(selection.slug,title,
                     "Source: "+source+"\n\n"+researchSource+"\n\n"+liveEvidence,input,kind);
                 aiPreferences.storeResult(challengeKey,title,source,selection.label,answer);
+                aiPreferences.setProcessingStage(challengeKey,4);
                 String pdfStatus="";
                 Uri automaticallySavedPdf=null;
                 boolean evidenceSaved=false;
@@ -1179,11 +1188,12 @@ public final class ChallengeActivity extends Activity {
                     pdfNotice("AI draft saved locally for this challenge. "
                         +"Request limit remaining: "+aiPreferences.remaining()+pdfResult);
                     updateButtons();
-                    if("automatic".equals(mode) && getIntent().getBooleanExtra(AUTO_QUEUE,false)
-                            && automaticPdf!=null && automaticEvidenceSaved){
+                    if("automatic".equals(mode) && automaticPdf!=null && automaticEvidenceSaved){
                         aiPreferences.markAutomaticExportCompleted(challengeKey);
-                        setResult(RESULT_OK);
-                        finish();
+                        if(getIntent().getBooleanExtra(AUTO_QUEUE,false)){
+                            setResult(RESULT_OK);
+                            finish();
+                        }
                     }
                 });
             }catch(Exception e){
