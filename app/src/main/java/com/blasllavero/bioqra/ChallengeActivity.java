@@ -298,8 +298,13 @@ public final class ChallengeActivity extends Activity {
 
         // Automatic mode retrieves the public challenge on opening.
         // Actual ChatGPT usage still requires consent to transmit each statement.
-        if("automatic".equals(mode))retrieve();
-        recoverSavedPdf();
+        if("automatic".equals(mode) && getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                && aiPreferences.lastResult(challengeKey)!=null){
+            recoverQueueResult();
+        }else{
+            if("automatic".equals(mode))retrieve();
+            recoverSavedPdf();
+        }
     }
 
     private LinearLayout createSectionNavigation(){
@@ -614,6 +619,37 @@ public final class ChallengeActivity extends Activity {
         if(isFinishing()||isDestroyed())return;
         pdfOperations=Math.max(0,pdfOperations-1);
         refreshPdfProgress();
+    }
+
+    private void recoverQueueResult(){
+        AiPreferences.SavedResult found=null;
+        for(AiPreferences.SavedResult record:aiPreferences.savedResults())
+            if(challengeKey.equals(record.key)){found=record;break;}
+        if(found==null){showError("Saved result unavailable");return;}
+        final AiPreferences.SavedResult record=found;
+        beginPdfOperation();
+        EXEC.execute(()->{
+            String error=null;
+            try{
+                String selected=aiPreferences.pdfTreeUri();
+                Uri tree=selected==null?null:Uri.parse(selected);
+                Uri pdf=ArchiveFiles.findSavedPdf(this,tree,record);
+                if(pdf==null)pdf=ArchiveFiles.makePdf(this,tree,record);
+                try(android.os.ParcelFileDescriptor fd=SecurePdfAccess.open(this,pdf,tree,record)){
+                    if(fd==null)throw new SecurityException("PDF read permission unavailable");
+                }
+                DefaultEvidenceStorage.export(this,challengeKey,record);
+            }catch(Exception ex){error=ex.getMessage()==null?"Export failed":ex.getMessage();}
+            final String failure=error;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                endPdfOperation();
+                if(failure!=null){pdfNotice("Automatic queue paused: "+failure);return;}
+                aiPreferences.markAutomaticExportCompleted(challengeKey);
+                setResult(RESULT_OK);
+                finish();
+            });
+        });
     }
 
     private void recoverSavedPdf(){recoverSavedPdf(false);}
@@ -1145,6 +1181,7 @@ public final class ChallengeActivity extends Activity {
                     updateButtons();
                     if("automatic".equals(mode) && getIntent().getBooleanExtra(AUTO_QUEUE,false)
                             && automaticPdf!=null && automaticEvidenceSaved){
+                        aiPreferences.markAutomaticExportCompleted(challengeKey);
                         setResult(RESULT_OK);
                         finish();
                     }
