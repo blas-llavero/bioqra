@@ -386,7 +386,7 @@ public class MainActivity extends Activity {
         Spinner picker=new Spinner(this);
         List<String> names=new ArrayList<>();
         List<String> keys=new ArrayList<>();
-        names.add("Use global model / Auto highest-tier");keys.add(AiPreferences.AUTO);
+        names.add(UiLanguage.tr(this,"Use global model"));keys.add(AiPreferences.AUTO);
         for(ChatGptConnection.Model model:aiModels){
             names.add(model.title);keys.add(model.slug);
         }
@@ -403,7 +403,7 @@ public class MainActivity extends Activity {
         }
         int selected=override==null?0:keys.indexOf(override);
         picker.setSelection(Math.max(0,selected));
-        picker.setEnabled(!aiModels.isEmpty());
+        picker.setEnabled(!aiModels.isEmpty() && !aiPreferences.applyModelToAll());
         picker.setContentDescription("Select ChatGPT model for "+title);
         picker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
             @Override public void onItemSelected(android.widget.AdapterView<?> parent,
