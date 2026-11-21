@@ -227,6 +227,29 @@ public class MainActivity extends Activity {
                 () -> setChallengeMode("manual"),
                 () -> setChallengeMode("automatic"));
         updateModeControls();
+        LinearLayout controls=new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        for(String action:new String[]{"Pause processing","Stop processing","Resume processing"}){
+            Button control=button(action);
+            control.setAllCaps(false);
+            controls.addView(control,new LinearLayout.LayoutParams(0,dp(58),1));
+            control.setOnClickListener(v->{
+                if("Pause processing".equals(action))ProcessingControl.pause();
+                else if("Stop processing".equals(action)){
+                    ProcessingControl.stop();
+                    automaticRows.clear();automaticIndex=-1;
+                }else{
+                    ProcessingControl.resume();
+                    if(automaticIndex>=0 && automaticIndex<automaticRows.size()
+                            && "automatic".equals(challengeMode)){
+                        ResultRow pending=automaticRows.get(automaticIndex);
+                        launchChallenge(pending.title,pending.url,pending.kind,true);
+                    }
+                }
+                status.setText(UiLanguage.tr(this,ProcessingControl.label()));
+            });
+        }
+        root.addView(controls);
         row("Cancer Research", "Refresh", () -> showSection("Cancer Research"), () -> {
             refresh();
             refreshGrand();
@@ -337,6 +360,7 @@ public class MainActivity extends Activity {
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
         if(request!=AUTOMATIC_CHALLENGE)return;
+        if(ProcessingControl.paused())return;
         if(result!=RESULT_OK || !"automatic".equals(challengeMode)
                 || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()){
             automaticRows.clear();automaticIndex=-1;return;
@@ -362,6 +386,16 @@ public class MainActivity extends Activity {
     }
 
     private void openChallenge(String title, String url, String kind){
+        String key=AiPreferences.stableKey(title,title);
+        if(aiPreferences.automaticExportCompleted(key) || ProcessingControl.paused() || ProcessingControl.stopped()){
+            Intent review=new Intent(this,ChallengeActivity.class);
+            review.putExtra(ChallengeActivity.TITLE,title);
+            review.putExtra(ChallengeActivity.URL,url);
+            review.putExtra(ChallengeActivity.KIND,kind);
+            review.putExtra(ChallengeActivity.MODE,"manual");
+            startActivity(review);
+            return;
+        }
         automaticRows.clear();automaticIndex=-1;
         if("automatic".equals(challengeMode) && "Challenges".equals(section)){
             automaticRows.addAll(displayedRows);
