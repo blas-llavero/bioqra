@@ -13,8 +13,6 @@ import android.text.Spanned;
 import android.text.style.StyleSpan;
 import android.text.style.TypefaceSpan;
 import android.text.style.UnderlineSpan;
-import android.text.style.ForegroundColorSpan;
-import android.text.style.URLSpan;
 import org.commonmark.node.*;
 import org.commonmark.parser.Parser;
 import org.commonmark.ext.gfm.tables.*;
@@ -24,7 +22,7 @@ import java.util.Collections;
 /** Local Markdown-to-PDF layout. No HTML execution or external resource loading. */
 final class ResearchPdfLayout {
     private static final int W=595,H=842,M=45,TOP=53,BOTTOM=793;
-    private static final int INK=Color.rgb(25,38,45), ACCENT=Color.rgb(19,66,80);
+    private static final int INK=0xff19262d, ACCENT=0xff134250;
     private final PdfDocument pdf=new PdfDocument();
     private PdfDocument.Page page;
     private Canvas canvas;
