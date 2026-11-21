@@ -635,6 +635,8 @@ public final class ChallengeActivity extends Activity {
             try{
                 recovered=ArchiveFiles.findSavedPdf(this,tree,record);
                 if(recovered==null && (openWhenReady || "automatic".equals(mode))){
+                    try{DefaultEvidenceStorage.export(this,challengeKey,record);}
+                    catch(Exception zipError){android.util.Log.w("BIOQRA","Evidence ZIP export unavailable",zipError);}
                     recovered=ArchiveFiles.makePdf(this,tree,record);
                     try(android.os.ParcelFileDescriptor fd=
                             SecurePdfAccess.open(this,recovered,tree,record)){
@@ -678,6 +680,8 @@ public final class ChallengeActivity extends Activity {
             Uri pdf=null;
             Uri tree=folder==null?null:Uri.parse(folder);
             try{
+                try{DefaultEvidenceStorage.export(this,challengeKey,result);}
+                catch(Exception zipError){android.util.Log.w("BIOQRA","Evidence ZIP export unavailable",zipError);}
                 Uri saved=ArchiveFiles.makePdf(this,tree,result);
                 try(android.os.ParcelFileDescriptor verified=SecurePdfAccess.open(this,saved,tree,result)){
                     if(verified==null)throw new SecurityException("Saved PDF cannot be read");
