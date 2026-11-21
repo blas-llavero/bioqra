@@ -21,6 +21,14 @@ public final class SecurePdfAccess {
         return expected!=null && expected.endsWith(".pdf") && expected.equals(actual)
             && !expected.contains("/") && !expected.contains("\\");
     }
+    static boolean versionedName(String actual,String expected){
+        if(safeName(actual,expected))return true;
+        if(actual==null||expected==null||!expected.endsWith(".pdf")||
+                actual.contains("/")||actual.contains("\\"))return false;
+        String stem=expected.substring(0,expected.length()-4);
+        return actual.matches(java.util.regex.Pattern.quote(stem)+" ?\\([1-9][0-9]{0,8}\\)\\.pdf");
+    }
+
     public static ParcelFileDescriptor open(Context context,Uri uri,Uri tree,
                                              AiPreferences.SavedResult saved) throws Exception {
         if(uri==null||saved==null)throw new SecurityException("No saved PDF");
@@ -78,12 +86,21 @@ public final class SecurePdfAccess {
             target=Uri.fromFile(file);
         }else{
             Uri collection=MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-            try(Cursor cur=c.getContentResolver().query(collection,new String[]{MediaStore.Downloads._ID},
-                    MediaStore.Downloads.DISPLAY_NAME+"=? AND "+MediaStore.Downloads.RELATIVE_PATH+"=?",
-                    new String[]{name,DefaultPdfStorage.relativeDirectory(record)},null)){
-                if(cur==null||!cur.moveToFirst())return null;
-                target=android.content.ContentUris.withAppendedId(collection,cur.getLong(0));
-                if(cur.moveToNext())throw new SecurityException("Ambiguous saved PDF");
+            try(Cursor cur=c.getContentResolver().query(collection,
+                    new String[]{MediaStore.Downloads._ID,MediaStore.Downloads.DISPLAY_NAME},
+                    MediaStore.Downloads.RELATIVE_PATH+"=? AND "+MediaStore.Downloads.MIME_TYPE+"=?",
+                    new String[]{DefaultPdfStorage.relativeDirectory(record),"application/pdf"},
+                    MediaStore.Downloads.DATE_MODIFIED+" DESC, "+MediaStore.Downloads._ID+" DESC")){
+                if(cur==null)return null;
+                int checked=0;
+                while(cur.moveToNext() && checked++<1000){
+                    if(!versionedName(cur.getString(1),name))continue;
+                    Uri candidate=android.content.ContentUris.withAppendedId(collection,cur.getLong(0));
+                    try(ParcelFileDescriptor fd=open(c,candidate,null,record)){
+                        if(fd!=null)return candidate;
+                    }catch(Exception rejected){ }
+                }
+                return null;
             }
         }
         try(ParcelFileDescriptor fd=open(c,target,tree,record)){
@@ -125,7 +142,7 @@ public final class SecurePdfAccess {
                 MediaStore.Downloads.MIME_TYPE,MediaStore.Downloads.OWNER_PACKAGE_NAME,
                 MediaStore.Downloads.SIZE},null,null,null)){
             if(cur==null||!cur.moveToFirst()||
-                    !safeName(cur.getString(0),file)||
+                    !versionedName(cur.getString(0),file)||
                     !(Environment.DIRECTORY_DOWNLOADS+"/Bioqra/"+project+"/").equals(cur.getString(1))||
                     !"application/pdf".equalsIgnoreCase(cur.getString(2))||
                     !ownerMatchesIfReported(cur.isNull(3)?null:cur.getString(3),c.getPackageName())||
