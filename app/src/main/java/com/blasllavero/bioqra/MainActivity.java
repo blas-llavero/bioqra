@@ -230,14 +230,13 @@ public class MainActivity extends Activity {
         LinearLayout controls=new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);
         for(String action:new String[]{"Pause processing","Stop processing","Resume processing"}){
-            Button control=button(action);
+            Button control=button(UiLanguage.tr(this,action));
             control.setAllCaps(false);
             controls.addView(control,new LinearLayout.LayoutParams(0,dp(58),1));
             control.setOnClickListener(v->{
                 if("Pause processing".equals(action))ProcessingControl.pause();
                 else if("Stop processing".equals(action)){
                     ProcessingControl.stop();
-                    automaticRows.clear();automaticIndex=-1;
                 }else{
                     ProcessingControl.resume();
                     if(automaticIndex>=0 && automaticIndex<automaticRows.size()
@@ -360,7 +359,7 @@ public class MainActivity extends Activity {
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
         if(request!=AUTOMATIC_CHALLENGE)return;
-        if(ProcessingControl.paused())return;
+        if(ProcessingControl.paused()||ProcessingControl.stopped())return;
         if(result!=RESULT_OK || !"automatic".equals(challengeMode)
                 || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()){
             automaticRows.clear();automaticIndex=-1;return;
