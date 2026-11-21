@@ -275,9 +275,7 @@ public final class ChallengeActivity extends Activity {
         viewSavedPdf=button("View PDF");
         viewSavedPdf.setVisibility(View.VISIBLE);
         viewSavedPdf.setOnClickListener(v->{
-            if(lastSavedPdf!=null && lastSavedPdfResult!=null)
-                ChallengePdfViewer.show(this,lastSavedPdf,lastSavedPdfTree,lastSavedPdfResult);
-            else recoverSavedPdf(true);
+            recoverSavedPdf(true);
         });
         pdfActions.addView(viewSavedPdf,new LinearLayout.LayoutParams(-1,dp(52)));
         pdfFeedback=text("PDFs save by default to Downloads/Bioqra.",13,false);
@@ -619,11 +617,8 @@ public final class ChallengeActivity extends Activity {
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
                 viewSavedPdf.setEnabled(true);
-                if(lastSavedPdf!=null){
-                    if(openWhenReady && lastSavedPdfResult!=null)
-                        ChallengePdfViewer.show(this,lastSavedPdf,lastSavedPdfTree,lastSavedPdfResult);
-                    return;
-                }
+                if(!openWhenReady && lastSavedPdf!=null)return;
+                if(openWhenReady){lastSavedPdf=null;lastSavedPdfResult=null;}
                 if(pdf!=null){
                     lastSavedPdf=pdf;lastSavedPdfTree=destination;
                     lastSavedPdfResult=record;
