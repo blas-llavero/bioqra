@@ -110,8 +110,8 @@ public final class AiSettingsActivity extends Activity {
         if(account.canUsePlan())settings.setAutoConsent(true);
 
         limitPicker=new Spinner(this);
-        final int[] limits={1,3,5,10};
-        String[] limitLabels={"1 attempt","3 attempts (default)","5 attempts","10 attempts"};
+        final int[] limits={1,3,5,10,20,40};
+        String[] limitLabels={"1 attempt","3 attempts","5 attempts","10 attempts","20 attempts","40 attempts (default)"};
         ArrayAdapter<String> limitsAdapter=new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,limitLabels);
         limitsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -126,7 +126,7 @@ public final class AiSettingsActivity extends Activity {
             @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
         });
         remaining=label("",14);root.addView(remaining);updateRemaining();
-        root.addView(label("A local limit of up to 3 ChatGPT attempts per day applies by default; provider plan restrictions also apply.",13));
+        root.addView(label("A local limit of up to 40 ChatGPT attempts per day applies by default; provider plan restrictions also apply.",13));
         root.addView(label("AI-generated plans are proposals, not validated experiments, clinical findings or cancer treatments.",13));
         Button reload=button("Refresh models from ChatGPT");
         root.addView(reload,new LinearLayout.LayoutParams(-1,dp(52)));
@@ -293,7 +293,7 @@ public final class AiSettingsActivity extends Activity {
                     populateModels(available);
                     applyAll.setChecked(settings.applyModelToAll());
                     updateRemaining();
-                    int[] limits={1,3,5,10};
+                    int[] limits={1,3,5,10,20,40};
                     for(int i=0;i<limits.length;i++)
                         if(settings.dailyLimit()==limits[i])limitPicker.setSelection(i);
                 }
