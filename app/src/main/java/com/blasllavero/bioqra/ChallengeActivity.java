@@ -262,6 +262,9 @@ public final class ChallengeActivity extends Activity {
                 : "No solution proposal or independent verification yet.",14,false);
         output.setTextIsSelectable(true);
         root.addView(text("Results and limitations",18,true));
+        LinearLayout pdfActions=new LinearLayout(this);
+        pdfActions.setOrientation(LinearLayout.VERTICAL);
+        root.addView(pdfActions,new LinearLayout.LayoutParams(-1,-2));
         output.setLineSpacing(dp(5),1.12f);
         output.setPadding(dp(5),dp(12),dp(5),dp(20));
         root.addView(output);
@@ -276,7 +279,7 @@ public final class ChallengeActivity extends Activity {
             if(lastSavedPdf!=null && lastSavedPdfResult!=null)
                 ChallengePdfViewer.show(this,lastSavedPdf,lastSavedPdfTree,lastSavedPdfResult);
         });
-        root.addView(viewSavedPdf,new LinearLayout.LayoutParams(-1,dp(52)));
+        pdfActions.addView(viewSavedPdf,new LinearLayout.LayoutParams(-1,dp(52)));
         pdfFeedback=text("PDFs save by default to Downloads/Bioqra.",13,false);
         root.addView(pdfFeedback);
         updatePdfFeedback();
@@ -285,6 +288,7 @@ public final class ChallengeActivity extends Activity {
         // Automatic mode retrieves the public challenge on opening.
         // Actual ChatGPT usage still requires consent to transmit each statement.
         if("automatic".equals(mode))retrieve();
+        recoverSavedPdf();
     }
 
     private LinearLayout createSectionNavigation(){
@@ -579,6 +583,44 @@ public final class ChallengeActivity extends Activity {
     @Override protected void onResume(){
         super.onResume();
         if(aiPreferences!=null)updatePdfFeedback();
+    }
+
+    private void recoverSavedPdf(){
+        AiPreferences.SavedResult found=null;
+        for(AiPreferences.SavedResult stored:aiPreferences.savedResults())
+            if(challengeKey.equals(stored.key)){found=stored;break;}
+        if(found==null)return;
+        final AiPreferences.SavedResult record=found;
+        final String selected=aiPreferences.pdfTreeUri();
+        EXEC.execute(()->{
+            Uri tree=selected==null?null:Uri.parse(selected);
+            Uri recovered=null;
+            String failure=null;
+            try{
+                recovered=ArchiveFiles.findSavedPdf(this,tree,record);
+                if(recovered==null && "automatic".equals(mode)){
+                    recovered=ArchiveFiles.makePdf(this,tree,record);
+                    try(android.os.ParcelFileDescriptor fd=
+                            SecurePdfAccess.open(this,recovered,tree,record)){
+                        if(fd==null)throw new SecurityException("PDF read permission unavailable");
+                    }
+                }
+            }catch(Exception ex){recovered=null;failure=ex.getMessage();}
+            final Uri pdf=recovered;
+            final Uri destination=tree;
+            final String error=failure;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed()||lastSavedPdf!=null)return;
+                if(pdf!=null){
+                    lastSavedPdf=pdf;lastSavedPdfTree=destination;
+                    lastSavedPdfResult=record;
+                    viewSavedPdf.setVisibility(View.VISIBLE);
+                    pdfFeedback.setText(UiLanguage.tr(this,"View PDF")+": "+DefaultPdfStorage.filename(record));
+                }else if(error!=null){
+                    pdfFeedback.setText("PDF preview unavailable: "+error);
+                }
+            });
+        });
     }
 
     private void saveSavedPdf(){
