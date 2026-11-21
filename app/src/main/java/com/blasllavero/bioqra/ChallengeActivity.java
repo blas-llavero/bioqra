@@ -48,6 +48,7 @@ public final class ChallengeActivity extends Activity {
     public static final String URL="challenge_url";
     public static final String MODE="challenge_mode";
     public static final String KIND="challenge_kind";
+    public static final String AUTO_QUEUE="automatic_queue";
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     private String title, url, mode, kind;
     private TextView status, output, statement, resolvedLink, deadlinesView, pdfFeedback;
@@ -1076,6 +1077,7 @@ public final class ChallengeActivity extends Activity {
                 aiPreferences.storeResult(challengeKey,title,source,selection.label,answer);
                 String pdfStatus="";
                 Uri automaticallySavedPdf=null;
+                boolean evidenceSaved=false;
                 AiPreferences.SavedResult automaticallySavedRecord=null;
                 String destination=aiPreferences.pdfTreeUri();
                 if("automatic".equals(mode)){
@@ -1109,6 +1111,7 @@ public final class ChallengeActivity extends Activity {
                         // preview check succeeding. The saved proposal is preserved.
                         try{
                             DefaultEvidenceStorage.export(this,challengeKey,record);
+                            evidenceSaved=true;
                             pdfStatus+=" · Research ZIP saved: "
                                 +DefaultEvidenceStorage.relativeDirectory(record)
                                 +DefaultEvidenceStorage.filename(record);
@@ -1121,6 +1124,7 @@ public final class ChallengeActivity extends Activity {
                 }
                 final String pdfResult=pdfStatus;
                 final Uri automaticPdf=automaticallySavedPdf;
+                final boolean automaticEvidenceSaved=evidenceSaved;
                 final AiPreferences.SavedResult automaticRecord=automaticallySavedRecord;
                 final Uri automaticTree=destination==null?null:Uri.parse(destination);
                 runOnUiThread(()->{
@@ -1139,6 +1143,11 @@ public final class ChallengeActivity extends Activity {
                     pdfNotice("AI draft saved locally for this challenge. "
                         +"Request limit remaining: "+aiPreferences.remaining()+pdfResult);
                     updateButtons();
+                    if("automatic".equals(mode) && getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                            && automaticPdf!=null && automaticEvidenceSaved){
+                        setResult(RESULT_OK);
+                        finish();
+                    }
                 });
             }catch(Exception e){
                 runOnUiThread(()->{
