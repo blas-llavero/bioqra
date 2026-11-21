@@ -112,6 +112,7 @@ public final class ChallengeActivity extends Activity {
         if(aiButton!=null)aiButton.setEnabled(!busy && connection.canUsePlan()
                 && specificPage && fetchedText.length()>=100);
         if(offlineButton!=null)offlineButton.setEnabled(!busy);
+        refreshPdfProgress();
     }
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
@@ -594,25 +595,24 @@ public final class ChallengeActivity extends Activity {
         if(aiPreferences!=null)updatePdfFeedback();
     }
 
+    private void refreshPdfProgress(){
+        if(pdfProgress==null)return;
+        boolean active=pdfOperations>0 || ("automatic".equals(mode)
+                && (busy || datasetSearchInProgress));
+        pdfProgressLabel.setVisibility(active?View.VISIBLE:View.GONE);
+        pdfProgress.setVisibility(active?View.VISIBLE:View.GONE);
+        viewSavedPdf.setEnabled(!active);
+        savePdf.setEnabled(!active);
+    }
     private void beginPdfOperation(){
         if(isFinishing()||isDestroyed())return;
         pdfOperations++;
-        pdfProgressLabel.setText(UiLanguage.tr(this,"Preparing PDF..."));
-        pdfProgressLabel.setVisibility(View.VISIBLE);
-        pdfProgress.setVisibility(View.VISIBLE);
-        viewSavedPdf.setEnabled(false);
-        savePdf.setEnabled(false);
+        refreshPdfProgress();
     }
-
     private void endPdfOperation(){
         if(isFinishing()||isDestroyed())return;
         pdfOperations=Math.max(0,pdfOperations-1);
-        if(pdfOperations==0){
-            pdfProgress.setVisibility(View.GONE);
-            pdfProgressLabel.setVisibility(View.GONE);
-            viewSavedPdf.setEnabled(true);
-            savePdf.setEnabled(true);
-        }
+        refreshPdfProgress();
     }
 
     private void recoverSavedPdf(){recoverSavedPdf(false);}
@@ -742,6 +742,7 @@ public final class ChallengeActivity extends Activity {
     private void beginDatasetDiscovery(boolean thenAi){
         if(datasetSearchInProgress)return;
         datasetSearchInProgress=true;
+        refreshPdfProgress();
         discoveredDatasets=null;
         datasetStatus.setText("Searching NCBI GEO for real study metadata...");
         datasetResults.removeAllViews();
@@ -830,6 +831,7 @@ public final class ChallengeActivity extends Activity {
                 if(thenAi && connection.canUsePlan() && aiPreferences.autoConsent()
                         && !aiPreferences.alreadyAttempted(challengeKey) && specificPage)
                     chooseModelAndRun(true);
+                refreshPdfProgress();
             });
         });
     }
