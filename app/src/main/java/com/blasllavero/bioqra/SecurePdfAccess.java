@@ -56,6 +56,41 @@ public final class SecurePdfAccess {
         return result;
     }
 
+    public static Uri findSaved(Context c,Uri tree,AiPreferences.SavedResult record)throws Exception{
+        String name=DefaultPdfStorage.filename(record);
+        String project=DefaultPdfStorage.projectFolder(record);
+        Uri target;
+        if(tree!=null){
+            boolean permitted=false;
+            for(android.content.UriPermission grant:c.getContentResolver().getPersistedUriPermissions())
+                if(grant.getUri().equals(tree)&&grant.isReadPermission())permitted=true;
+            if(!permitted||!DocumentsContract.isTreeUri(tree))
+                throw new SecurityException("Document tree read permission unavailable");
+            Uri root=DocumentsContract.buildDocumentUriUsingTree(tree,DocumentsContract.getTreeDocumentId(tree));
+            Uri app=findChild(c,tree,root,"Bioqra",DocumentsContract.Document.MIME_TYPE_DIR);
+            Uri folder=findChild(c,tree,app,project,DocumentsContract.Document.MIME_TYPE_DIR);
+            target=findChild(c,tree,folder,name,"application/pdf");
+        }else if(Build.VERSION.SDK_INT<29){
+            File base=c.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
+            if(base==null)return null;
+            File file=new File(new File(new File(base,"Bioqra"),project),name);
+            if(!file.isFile())return null;
+            target=Uri.fromFile(file);
+        }else{
+            Uri collection=MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            try(Cursor cur=c.getContentResolver().query(collection,new String[]{MediaStore.Downloads._ID},
+                    MediaStore.Downloads.DISPLAY_NAME+"=? AND "+MediaStore.Downloads.RELATIVE_PATH+"=?",
+                    new String[]{name,DefaultPdfStorage.relativeDirectory(record)},null)){
+                if(cur==null||!cur.moveToFirst())return null;
+                target=android.content.ContentUris.withAppendedId(collection,cur.getLong(0));
+                if(cur.moveToNext())throw new SecurityException("Ambiguous saved PDF");
+            }
+        }
+        try(ParcelFileDescriptor fd=open(c,target,tree,record)){
+            return target;
+        }
+    }
+
     private static void checkMagic(InputStream in) throws Exception{
         byte[] b=new byte[5];
         int count=0;
