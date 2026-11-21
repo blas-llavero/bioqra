@@ -329,13 +329,55 @@ public class MainActivity extends Activity {
         });
     }
 
+    private final List<ResultRow> automaticRows=new ArrayList<>();
+    private final List<ResultRow> displayedRows=new ArrayList<>();
+    private int automaticIndex=-1;
+    private static final int AUTOMATIC_CHALLENGE=8124;
+
+    @Override protected void onActivityResult(int request,int result,Intent data){
+        super.onActivityResult(request,result,data);
+        if(request!=AUTOMATIC_CHALLENGE)return;
+        if(result!=RESULT_OK || !"automatic".equals(challengeMode)
+                || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()){
+            automaticRows.clear();automaticIndex=-1;return;
+        }
+        if(aiPreferences.remaining()<=0){
+            status.setText(UiLanguage.tr(this,"Automatic queue paused: daily request limit reached."));
+            automaticRows.clear();automaticIndex=-1;return;
+        }
+        while(++automaticIndex<automaticRows.size()){
+            ResultRow row=automaticRows.get(automaticIndex);
+            if(!TrustedChallengeReader.approved(row.url))continue;
+            String key=AiPreferences.stableKey(row.title,row.title);
+            if(aiPreferences.alreadyAttempted(key))continue;
+            launchChallenge(row.title,row.url,row.kind,true);
+            return;
+        }
+        status.setText(UiLanguage.tr(this,"Automatic queue finished."));
+        automaticRows.clear();automaticIndex=-1;
+    }
+
     private void openChallenge(String title, String url, String kind){
+        automaticRows.clear();automaticIndex=-1;
+        if("automatic".equals(challengeMode) && "Challenges".equals(section)){
+            automaticRows.addAll(displayedRows);
+            for(int i=0;i<automaticRows.size();i++){
+                ResultRow row=automaticRows.get(i);
+                if(row.title.equals(title)&&row.url.equals(url)){automaticIndex=i;break;}
+            }
+        }
+        launchChallenge(title,url,kind,automaticIndex>=0);
+    }
+
+    private void launchChallenge(String title,String url,String kind,boolean queue){
         Intent intent=new Intent(this,ChallengeActivity.class);
         intent.putExtra(ChallengeActivity.TITLE,title);
         intent.putExtra(ChallengeActivity.URL,url);
         intent.putExtra(ChallengeActivity.MODE,challengeMode);
         intent.putExtra(ChallengeActivity.KIND,kind);
-        startActivity(intent);
+        intent.putExtra(ChallengeActivity.AUTO_QUEUE,queue);
+        if(queue)startActivityForResult(intent,AUTOMATIC_CHALLENGE);
+        else startActivity(intent);
     }
 
     private void playApprovedIntroduction() {
@@ -433,6 +475,7 @@ public class MainActivity extends Activity {
     }
 
     private void displayPage(List<ResultRow> rows) {
+        displayedRows.clear();displayedRows.addAll(rows);
         int total=rows.size();
         int pageCount=Math.max(1, (total + ResearchCatalog.PAGE_SIZE - 1)
                 / ResearchCatalog.PAGE_SIZE);
