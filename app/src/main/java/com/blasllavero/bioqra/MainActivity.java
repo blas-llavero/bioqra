@@ -232,7 +232,11 @@ public class MainActivity extends Activity {
         for(String action:new String[]{"Pause processing","Stop processing","Resume processing"}){
             Button control=button(UiLanguage.tr(this,action));
             control.setAllCaps(false);
-            controls.addView(control,new LinearLayout.LayoutParams(0,dp(58),1));
+            LinearLayout.LayoutParams spacing=new LinearLayout.LayoutParams(0,dp(58),1);
+            spacing.setMargins(dp(5),dp(5),dp(5),dp(5));
+            controls.addView(control,spacing);
+            control.setTag(action);
+            ProcessingControl.styleButton(control,action);
             control.setOnClickListener(v->{
                 if("Pause processing".equals(action))ProcessingControl.pause();
                 else if("Stop processing".equals(action)){
@@ -244,6 +248,10 @@ public class MainActivity extends Activity {
                         ResultRow pending=automaticRows.get(automaticIndex);
                         launchChallenge(pending.title,pending.url,pending.kind,true);
                     }
+                }
+                for(int i=0;i<controls.getChildCount();i++){
+                    Button item=(Button)controls.getChildAt(i);
+                    ProcessingControl.styleButton(item,(String)item.getTag());
                 }
                 status.setText(UiLanguage.tr(this,ProcessingControl.label()));
             });
@@ -479,7 +487,14 @@ public class MainActivity extends Activity {
                 "Dataset search and analysis","AI proposal in preparation",
                 "PDF and ZIP export pending","Processing completed"};
         TextView processing=text(UiLanguage.tr(this,stageLabels[Math.max(0,Math.min(5,stage))]),14,true);
-        processing.setTextColor(stage==5?GREEN:BLUE);
+        String outcome=aiPreferences.processingOutcome(key);
+        if("insufficient".equals(outcome)){
+            processing.setText(UiLanguage.tr(this,"Insufficient research data"));
+            processing.setTextColor(Color.rgb(157,102,18));
+        }else if("export_error".equals(outcome)){
+            processing.setText(UiLanguage.tr(this,"PDF or ZIP export failed"));
+            processing.setTextColor(Color.rgb(160,48,48));
+        }else processing.setTextColor(stage==5?GREEN:BLUE);
         card.addView(processing,new LinearLayout.LayoutParams(-1,-2));
         android.widget.ProgressBar progress=new android.widget.ProgressBar(
                 this,null,android.R.attr.progressBarStyleHorizontal);
