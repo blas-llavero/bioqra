@@ -185,6 +185,13 @@ final class ResearchPdfLayout {
     static void write(OutputStream out,AiPreferences.SavedResult result)throws Exception{
         ResearchPdfLayout r=new ResearchPdfLayout();
         try{
+            r.newPage();
+            SpannableStringBuilder projectLink=new SpannableStringBuilder("Open project files / research evidence ZIP");
+            projectLink.setSpan(new UnderlineSpan(),0,projectLink.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            r.block(projectLink,0,12,true,false,ACCENT,8,false);
+            r.block("Research evidence directory: "+DefaultEvidenceStorage.relativeDirectory(result)
+                    +"\nArchive: "+DefaultEvidenceStorage.filename(result)
+                    +"\nAvailability is checked when opened in BIOQRA.",0,10,false,false,INK,12,false);
             r.block("BIOQRA — Unverified AI research draft",0,20,true,false,ACCENT,12,false);
             r.block(result.title,0,16,true,false,INK,12,false);
             r.block("Date: "+result.date+"\nAI model: "+result.model+"\nPublic source: "+result.source,
@@ -193,7 +200,21 @@ final class ResearchPdfLayout {
             r.block("BIOQRA does not establish clinical efficacy or independently verify the AI proposal.",
                     0,10,true,false,ACCENT,8,false);
             if(r.page!=null){r.pdf.finishPage(r.page);r.page=null;}
-            r.pdf.writeTo(out);
+            java.io.ByteArrayOutputStream raw=new java.io.ByteArrayOutputStream();
+            r.pdf.writeTo(raw);
+            try(com.tom_roush.pdfbox.pdmodel.PDDocument document=
+                    com.tom_roush.pdfbox.pdmodel.PDDocument.load(raw.toByteArray())){
+                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink link=
+                    new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink();
+                link.setRectangle(new com.tom_roush.pdfbox.pdmodel.common.PDRectangle(
+                    M,H-TOP-23,W-2*M,25));
+                com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI action=
+                    new com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI();
+                action.setURI("bioqra://project/results");
+                link.setAction(action);
+                document.getPage(0).getAnnotations().add(link);
+                document.save(out);
+            }
         }finally{
             if(r.page!=null){r.pdf.finishPage(r.page);r.page=null;}
             r.pdf.close();
