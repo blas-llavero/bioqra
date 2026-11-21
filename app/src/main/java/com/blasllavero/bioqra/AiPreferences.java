@@ -112,11 +112,17 @@ public final class AiPreferences {
 
     public boolean autoConsent(){return prefs.getBoolean("auto_consent",false);}
     public void setAutoConsent(boolean consent){prefs.edit().putBoolean("auto_consent",consent).apply();}
-    public int dailyLimit(){return prefs.getInt("daily_limit",3);}
+    public int dailyLimit(){return prefs.getInt("daily_limit_v2",40);}
+    public int processingStage(String key){
+        return automaticExportCompleted(key)?5:prefs.getInt("processing_stage_"+key,0);
+    }
+    public void setProcessingStage(String key,int stage){
+        prefs.edit().putInt("processing_stage_"+key,Math.max(0,Math.min(4,stage))).apply();
+    }
     public void setDailyLimit(int limit){
-        if(limit!=1&&limit!=3&&limit!=5&&limit!=10)
+        if(limit!=1&&limit!=3&&limit!=5&&limit!=10&&limit!=20&&limit!=40)
             throw new IllegalArgumentException("Unsupported limit");
-        prefs.edit().putInt("daily_limit",limit).apply();
+        prefs.edit().putInt("daily_limit_v2",limit).apply();
     }
 
     private String today(){return LocalDate.now().toString();}
@@ -195,7 +201,7 @@ public final class AiPreferences {
         String model=json.getString("global_model");
         if(model.length()>160 || model.isEmpty())throw new Exception("Invalid model name.");
         int limit=json.getInt("daily_limit");
-        if(limit!=1 && limit!=3 && limit!=5 && limit!=10)
+        if(limit!=1 && limit!=3 && limit!=5 && limit!=10 && limit!=20 && limit!=40)
             throw new Exception("Invalid daily request limit.");
         org.json.JSONObject overrides=json.getJSONObject("overrides");
         if(overrides.length()>1500)throw new Exception("Too many model overrides.");
@@ -222,7 +228,7 @@ public final class AiPreferences {
     }
     public void storeResult(String key,String title,String url,String model,String answer){
         if(answer!=null && answer.length()<=90000){
-            SharedPreferences.Editor edit=prefs.edit().putString("latest_"+key,answer)
+            SharedPreferences.Editor edit=prefs.edit().remove("auto_export_complete_"+key).putString("latest_"+key,answer)
                 .putString("last_date_"+key,today()).putString("title_"+key,
                     title==null?"Challenge":title);
             if(url!=null)edit.putString("source_"+key,url);
