@@ -51,7 +51,10 @@ public final class ChallengeActivity extends Activity {
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     private String title, url, mode, kind;
     private TextView status, output, statement, resolvedLink, deadlinesView, pdfFeedback;
-    private Button viewSavedPdf;
+    private Button viewSavedPdf, savePdf;
+    private android.widget.ProgressBar pdfProgress;
+    private TextView pdfProgressLabel;
+    private int pdfOperations=0;
     private Uri lastSavedPdf;
     private Uri lastSavedPdfTree;
     private AiPreferences.SavedResult lastSavedPdfResult;
@@ -268,7 +271,7 @@ public final class ChallengeActivity extends Activity {
         output.setPadding(dp(5),dp(12),dp(5),dp(20));
         root.addView(output);
         renderProposal(output.getText().toString());
-        Button savePdf=button("Save this challenge result as PDF");
+        savePdf=button("Save this challenge result as PDF");
         root.addView(savePdf,new LinearLayout.LayoutParams(-1,dp(52)));
         if("automatic".equals(mode))savePdf.setVisibility(View.GONE);
         savePdf.setOnClickListener(v->saveSavedPdf());
@@ -277,6 +280,13 @@ public final class ChallengeActivity extends Activity {
         viewSavedPdf.setOnClickListener(v->{
             recoverSavedPdf(true);
         });
+        pdfProgressLabel=text("Preparing PDF...",13,false);
+        pdfProgressLabel.setVisibility(View.GONE);
+        pdfActions.addView(pdfProgressLabel,new LinearLayout.LayoutParams(-1,-2));
+        pdfProgress=new android.widget.ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);
+        pdfProgress.setIndeterminate(true);
+        pdfProgress.setVisibility(View.GONE);
+        pdfActions.addView(pdfProgress,new LinearLayout.LayoutParams(-1,dp(12)));
         pdfActions.addView(viewSavedPdf,new LinearLayout.LayoutParams(-1,dp(52)));
         pdfFeedback=text("PDFs save by default to Downloads/Bioqra.",13,false);
         root.addView(pdfFeedback);
@@ -584,6 +594,27 @@ public final class ChallengeActivity extends Activity {
         if(aiPreferences!=null)updatePdfFeedback();
     }
 
+    private void beginPdfOperation(){
+        if(isFinishing()||isDestroyed())return;
+        pdfOperations++;
+        pdfProgressLabel.setText(UiLanguage.tr(this,"Preparing PDF..."));
+        pdfProgressLabel.setVisibility(View.VISIBLE);
+        pdfProgress.setVisibility(View.VISIBLE);
+        viewSavedPdf.setEnabled(false);
+        savePdf.setEnabled(false);
+    }
+
+    private void endPdfOperation(){
+        if(isFinishing()||isDestroyed())return;
+        pdfOperations=Math.max(0,pdfOperations-1);
+        if(pdfOperations==0){
+            pdfProgress.setVisibility(View.GONE);
+            pdfProgressLabel.setVisibility(View.GONE);
+            viewSavedPdf.setEnabled(true);
+            savePdf.setEnabled(true);
+        }
+    }
+
     private void recoverSavedPdf(){recoverSavedPdf(false);}
 
     private void recoverSavedPdf(boolean openWhenReady){
@@ -596,7 +627,7 @@ public final class ChallengeActivity extends Activity {
         }
         final AiPreferences.SavedResult record=found;
         final String selected=aiPreferences.pdfTreeUri();
-        if(openWhenReady)viewSavedPdf.setEnabled(false);
+        beginPdfOperation();
         EXEC.execute(()->{
             Uri tree=selected==null?null:Uri.parse(selected);
             Uri recovered=null;
@@ -616,7 +647,7 @@ public final class ChallengeActivity extends Activity {
             final String error=failure;
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
-                viewSavedPdf.setEnabled(true);
+                endPdfOperation();
                 if(!openWhenReady && lastSavedPdf!=null)return;
                 if(openWhenReady){lastSavedPdf=null;lastSavedPdfResult=null;}
                 if(pdf!=null){
@@ -640,7 +671,7 @@ public final class ChallengeActivity extends Activity {
         final AiPreferences.SavedResult result=record;
         String folder=aiPreferences.pdfTreeUri();
         lastSavedPdf=null;
-        viewSavedPdf.setEnabled(false);
+        beginPdfOperation();
         pdfNotice("Saving PDF in Bioqra/"+DefaultPdfStorage.projectFolder(result)+"...");
         EXEC.execute(()->{
             String message;
@@ -665,7 +696,7 @@ public final class ChallengeActivity extends Activity {
             final Uri confirmed=pdf;
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
-                viewSavedPdf.setEnabled(true);
+                endPdfOperation();
                 if(confirmed!=null){
                     lastSavedPdf=confirmed;lastSavedPdfTree=tree;
                     lastSavedPdfResult=result;
@@ -1051,6 +1082,7 @@ public final class ChallengeActivity extends Activity {
                     }else{
                         automaticallySavedRecord=record;
                         Uri selectedTree=destination==null?null:Uri.parse(destination);
+                        runOnUiThread(this::beginPdfOperation);
                         try{
                             Uri created=ArchiveFiles.makePdf(this,selectedTree,record);
                             try(android.os.ParcelFileDescriptor verified=
@@ -1064,6 +1096,8 @@ public final class ChallengeActivity extends Activity {
                                 +DefaultPdfStorage.filename(record);
                         }catch(Exception pdfError){
                             pdfStatus=" · PDF unavailable: "+pdfError.getMessage();
+                        }finally{
+                            runOnUiThread(this::endPdfOperation);
                         }
                         // An evidence archive should not depend on the PDF
                         // preview check succeeding. The saved proposal is preserved.
