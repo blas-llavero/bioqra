@@ -12,6 +12,9 @@ public final class UiLanguage {
     private static final Map<String,String[]> LABELS=new HashMap<>();
     private static void add(String en,String ca,String es){LABELS.put(en,new String[]{ca,es});}
     static{
+        add("Insufficient research data","Dades insuficients per completar el projecte","Datos insuficientes para completar el proyecto");
+        add("PDF or ZIP export failed","No s’ha pogut generar correctament el PDF o ZIP","No se ha podido generar correctamente el PDF o ZIP");
+
         add("Pause processing","Pausa","Pausar");
         add("Stop processing","Atura","Detener");
         add("Resume processing","Reprèn","Reanudar");
