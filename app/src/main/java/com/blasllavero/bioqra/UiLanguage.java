@@ -12,6 +12,8 @@ public final class UiLanguage {
     private static final Map<String,String[]> LABELS=new HashMap<>();
     private static void add(String en,String ca,String es){LABELS.put(en,new String[]{ca,es});}
     static{
+        add("Apply this model to ALL challenges","Aplica aquest model a TOTS els reptes","Aplica este modelo a TODOS los retos");
+        add("Use global model","Utilitza el model global","Utiliza el modelo global");
         add("← Back to challenges","← Torna als reptes","← Volver a los retos");
         add("1 · Find detailed challenge statement","1 · Cerca l'enunciat detallat","1 · Buscar el enunciado detallado");
         add("View original challenge in browser","Mostra el repte original al navegador","Ver el reto original en el navegador");
