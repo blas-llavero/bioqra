@@ -47,6 +47,11 @@ public final class ChallengePdfViewer {
         actions.addView(previous,new LinearLayout.LayoutParams(0,dp(activity,54),1));
         actions.addView(next,new LinearLayout.LayoutParams(0,dp(activity,54),1));
         layout.addView(actions);
+        Button projectFiles=new Button(activity);
+        projectFiles.setAllCaps(false);
+        projectFiles.setText(UiLanguage.tr(activity,"Project files"));
+        projectFiles.setOnClickListener(v->ProjectEvidenceViewer.show(activity,result));
+        layout.addView(projectFiles);
 
         AlertDialog dialog=new AlertDialog.Builder(activity)
             .setTitle(UiLanguage.tr(activity,"PDF preview"))
@@ -57,6 +62,24 @@ public final class ChallengePdfViewer {
         int[] selected={0}, total={0};
         Bitmap[] visible={null};
         boolean[] closed={false};
+        boolean[] evidenceLink={false};
+        image.setOnTouchListener((v,event)->{
+            if(!evidenceLink[0]||selected[0]!=0||image.getDrawable()==null)return false;
+            android.graphics.Matrix inverse=new android.graphics.Matrix();
+            if(!image.getImageMatrix().invert(inverse))return false;
+            float[] point={event.getX()-image.getPaddingLeft(),event.getY()-image.getPaddingTop()};
+            inverse.mapPoints(point);
+            android.graphics.Rect bounds=image.getDrawable().getBounds();
+            if(bounds.width()==0||bounds.height()==0)return false;
+            float x=(point[0]-bounds.left)*595f/bounds.width();
+            float y=(point[1]-bounds.top)*842f/bounds.height();
+            if(x<45||x>550||y<51||y>76)return false;
+            if(event.getAction()==android.view.MotionEvent.ACTION_UP){
+                image.performClick();
+                ProjectEvidenceViewer.show(activity,result);
+            }
+            return true;
+        });
         class Navigator {
             void openPage(int index){
                 if(closed[0]||index<0||(total[0]>0&&index>=total[0]))return;
@@ -86,6 +109,26 @@ public final class ChallengePdfViewer {
                             page.render(rendered,null,null,PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
                         }
                     }catch(Exception ex){error=ex.getMessage();}
+                    boolean linked=false;
+                    if(index==0 && error==null){
+                        try(ParcelFileDescriptor fd=SecurePdfAccess.open(activity,uri,tree,result);
+                            java.io.InputStream in=new ParcelFileDescriptor.AutoCloseInputStream(fd);
+                            com.tom_roush.pdfbox.pdmodel.PDDocument doc=
+                                com.tom_roush.pdfbox.pdmodel.PDDocument.load(in)){
+                            for(com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation annotation:
+                                    doc.getPage(0).getAnnotations()){
+                                if(annotation instanceof com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink){
+                                    com.tom_roush.pdfbox.pdmodel.interactive.action.PDAction action=
+                                        ((com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink)annotation).getAction();
+                                    if(action instanceof com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI
+                                        && "bioqra://project/results".equals(((com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI)action).getURI())){
+                                        linked=true;break;
+                                    }
+                                }
+                            }
+                        }catch(Exception ignored){}
+                    }
+                    final boolean hasEvidenceLink=linked;
                     final Bitmap output=rendered;
                     final String failure=error;
                     final int count=pages;
@@ -103,6 +146,7 @@ public final class ChallengePdfViewer {
                         Bitmap old=visible[0];visible[0]=output;
                         if(old!=null)old.recycle();
                         total[0]=count;selected[0]=index;
+                        evidenceLink[0]=hasEvidenceLink;
                         label.setText(UiLanguage.tr(activity,"Page")+" "+(index+1)+" / "+count);
                         previous.setEnabled(index>0);
                         next.setEnabled(index+1<count);
