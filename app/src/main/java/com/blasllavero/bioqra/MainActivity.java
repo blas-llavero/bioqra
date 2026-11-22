@@ -524,14 +524,30 @@ public class MainActivity extends Activity {
                 "PDF and ZIP export pending","Processing completed"};
         TextView processing=text(UiLanguage.tr(this,stageLabels[Math.max(0,Math.min(5,stage))]),14,true);
         String outcome=aiPreferences.processingOutcome(key);
-        if("insufficient".equals(outcome)){
-            processing.setText(UiLanguage.tr(this,"Insufficient research data"));
-            processing.setTextColor(Color.rgb(157,102,18));
-        }else if("export_error".equals(outcome)){
+        if("export_error".equals(outcome)){
             processing.setText(UiLanguage.tr(this,"PDF or ZIP export failed"));
             processing.setTextColor(Color.rgb(160,48,48));
         }else processing.setTextColor(stage==5?GREEN:BLUE);
         card.addView(processing,new LinearLayout.LayoutParams(-1,-2));
+        if(stage==5 && !"export_error".equals(outcome)){
+            String evidenceNote="";
+            if("insufficient".equals(outcome)){
+                // Older releases incorrectly labelled every unvalidated dataset
+                // insufficient. Recheck local files without repeating an AI call.
+                evidenceNote=ResearchEvidenceArchive.downloadedCount(this,key)>0
+                        ?"Research data downloaded; scientific validation pending"
+                        :"No real research data downloaded";
+            }else if("no_research_data".equals(outcome)){
+                evidenceNote="No real research data downloaded";
+            }else if("data_unvalidated".equals(outcome)){
+                evidenceNote="Research data downloaded; scientific validation pending";
+            }
+            if(!evidenceNote.isEmpty()){
+                TextView note=text(UiLanguage.tr(this,evidenceNote),13,false);
+                note.setTextColor(Color.rgb(157,102,18));
+                card.addView(note,new LinearLayout.LayoutParams(-1,-2));
+            }
+        }
         android.widget.ProgressBar progress=new android.widget.ProgressBar(
                 this,null,android.R.attr.progressBarStyleHorizontal);
         progress.setMax(5);
