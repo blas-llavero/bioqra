@@ -243,10 +243,15 @@ public class MainActivity extends Activity {
                     ProcessingControl.stop();
                 }else{
                     ProcessingControl.resume();
-                    if(automaticIndex>=0 && automaticIndex<automaticRows.size()
-                            && "automatic".equals(challengeMode)){
-                        ResultRow pending=automaticRows.get(automaticIndex);
-                        launchChallenge(pending.title,pending.url,pending.kind,true);
+                    if("automatic".equals(challengeMode)){
+                        if(automaticRows.isEmpty()){
+                            automaticIndex=-1;
+                            showItems();
+                            startAutomaticQueue();
+                        }else if(automaticIndex>=0 && automaticIndex<automaticRows.size()){
+                            ResultRow pending=automaticRows.get(automaticIndex);
+                            launchChallenge(pending.title,pending.url,pending.kind,true);
+                        }
                     }
                 }
                 for(int i=0;i<controls.getChildCount();i++){
@@ -325,6 +330,53 @@ public class MainActivity extends Activity {
         getSharedPreferences("bioqra_mode",MODE_PRIVATE).edit()
                 .putString("mode",challengeMode).apply();
         updateModeControls();
+        if("automatic".equals(challengeMode)){
+            showItems();
+            startAutomaticQueue();
+        }else{
+            automaticRows.clear();
+            automaticIndex=-1;
+        }
+    }
+
+    /** Start from the first eligible challenge in the current filtered list.
+     * No user click on an individual challenge is required. */
+    private void startAutomaticQueue(){
+        if(!"automatic".equals(challengeMode)
+                ||!chatGptConnection.canUsePlan()||!aiPreferences.autoConsent())return;
+        if(automaticIndex>=0 && automaticIndex<automaticRows.size())return;
+        ProcessingControl.resume();
+        automaticRows.clear();
+        if(!"Challenges".equals(section))showSection("Challenges");
+        automaticRows.addAll(displayedRows);
+        automaticIndex=-1;
+        continueAutomaticQueue();
+    }
+
+    private void continueAutomaticQueue(){
+        if(ProcessingControl.paused()||ProcessingControl.stopped()
+                ||!"automatic".equals(challengeMode))return;
+        while(++automaticIndex<automaticRows.size()){
+            ResultRow next=automaticRows.get(automaticIndex);
+            if(!TrustedChallengeReader.approved(next.url))continue;
+            String key=AiPreferences.stableKey(next.title,next.title);
+            if(aiPreferences.automaticExportCompleted(key))continue;
+            if(aiPreferences.alreadyAttempted(key) && aiPreferences.lastResult(key)==null){
+                status.setText("Automatic processing paused: previous attempt has no saved result for "
+                        +next.title);
+                return;
+            }
+            if(aiPreferences.remaining()<=0 && aiPreferences.lastResult(key)==null){
+                status.setText(UiLanguage.tr(this,"Automatic queue paused: daily request limit reached."));
+                return;
+            }
+            status.setText("Automatic processing: "+next.title);
+            launchChallenge(next.title,next.url,next.kind,true);
+            return;
+        }
+        status.setText(UiLanguage.tr(this,"Automatic queue finished."));
+        automaticRows.clear();
+        automaticIndex=-1;
     }
 
     private void updateModeControls() {
@@ -372,24 +424,8 @@ public class MainActivity extends Activity {
                 || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()){
             automaticRows.clear();automaticIndex=-1;return;
         }
-        while(++automaticIndex<automaticRows.size()){
-            ResultRow row=automaticRows.get(automaticIndex);
-            if(!TrustedChallengeReader.approved(row.url))continue;
-            String key=AiPreferences.stableKey(row.title,row.title);
-            if(aiPreferences.automaticExportCompleted(key))continue;
-            if(aiPreferences.alreadyAttempted(key) && aiPreferences.lastResult(key)==null){
-                status.setText("Automatic queue paused: previous AI attempt has no saved result.");
-                return;
-            }
-            if(aiPreferences.remaining()<=0 && aiPreferences.lastResult(key)==null){
-                status.setText(UiLanguage.tr(this,"Automatic queue paused: daily request limit reached."));
-                return;
-            }
-            launchChallenge(row.title,row.url,row.kind,true);
-            return;
-        }
-        status.setText(UiLanguage.tr(this,"Automatic queue finished."));
-        automaticRows.clear();automaticIndex=-1;
+        showItems();
+        continueAutomaticQueue();
     }
 
     private void openChallenge(String title, String url, String kind){
