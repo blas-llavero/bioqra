@@ -154,6 +154,11 @@ public final class AiPreferences {
         prefs.edit().putBoolean("auto_export_complete_"+key,true).apply();
     }
 
+    public void invalidateAutomaticExport(String key){
+        prefs.edit().putBoolean("auto_export_complete_"+key,false)
+                .putString("processing_outcome_"+key,"export_error").apply();
+    }
+
     public boolean alreadyAttempted(String key){
         return today().equals(prefs.getString("attempt_"+key,""));
     }
