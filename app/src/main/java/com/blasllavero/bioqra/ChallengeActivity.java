@@ -1247,7 +1247,7 @@ public final class ChallengeActivity extends Activity {
                     pdfStatus=" · Manual mode: use Save as PDF to export this draft.";
                 }
                 ProcessingControl.checkpoint(processingToken);
-                final boolean insufficient=insufficientEvidence();
+                final String researchOutcome=evidenceOutcome();
                 final String pdfResult=pdfStatus;
                 final Uri automaticPdf=automaticallySavedPdf;
                 final boolean automaticEvidenceSaved=evidenceSaved;
@@ -1270,7 +1270,7 @@ public final class ChallengeActivity extends Activity {
                         +"Request limit remaining: "+aiPreferences.remaining()+pdfResult);
                     updateButtons();
                     if("automatic".equals(mode)){
-                        if(automaticPdf!=null && automaticEvidenceSaved)finishVerifiedQueue(insufficient);
+                        if(automaticPdf!=null && automaticEvidenceSaved)finishVerifiedQueue(researchOutcome);
                         else aiPreferences.setProcessingOutcome(challengeKey,"export_error");
                     }
                 });
