@@ -50,6 +50,8 @@ public final class ChallengeActivity extends Activity {
     public static final String KIND="challenge_kind";
     public static final String AUTO_QUEUE="automatic_queue";
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
+    // PDF viewing must not wait behind a long-running research or ChatGPT operation.
+    private static final ExecutorService PDF_READS=Executors.newFixedThreadPool(2);
     private String title, url, mode, kind;
     private TextView status, output, statement, resolvedLink, deadlinesView, pdfFeedback;
     private Button viewSavedPdf, savePdf;
@@ -310,7 +312,10 @@ public final class ChallengeActivity extends Activity {
         viewSavedPdf=button("View PDF");
         viewSavedPdf.setVisibility(View.VISIBLE);
         viewSavedPdf.setOnClickListener(v->{
-            recoverSavedPdf(true);
+            if(lastSavedPdf!=null&&lastSavedPdfResult!=null
+                    && aiPreferences.automaticExportCompleted(challengeKey)){
+                ChallengePdfViewer.show(this,lastSavedPdf,lastSavedPdfTree,lastSavedPdfResult);
+            }else recoverSavedPdf(true);
         });
         pdfProgressLabel=text("Preparing PDF...",13,false);
         pdfProgressLabel.setVisibility(View.GONE);
@@ -328,7 +333,11 @@ public final class ChallengeActivity extends Activity {
 
         // Automatic mode retrieves the public challenge on opening.
         // Actual ChatGPT usage still requires consent to transmit each statement.
-        if("automatic".equals(mode) && getIntent().getBooleanExtra(AUTO_QUEUE,false)
+        if(aiPreferences.automaticExportCompleted(challengeKey)
+                && !getIntent().getBooleanExtra(AUTO_QUEUE,false)){
+            // Reviewing a completed challenge never regenerates files or reissues AI calls.
+            inspectCompletedPdf();
+        }else if("automatic".equals(mode) && getIntent().getBooleanExtra(AUTO_QUEUE,false)
                 && aiPreferences.lastResult(challengeKey)!=null){
             recoverQueueResult();
         }else{
@@ -628,7 +637,8 @@ public final class ChallengeActivity extends Activity {
 
     @Override protected void onResume(){
         super.onResume();
-        if(aiPreferences!=null)updatePdfFeedback();
+        if(aiPreferences!=null && lastSavedPdf==null
+                && !aiPreferences.automaticExportCompleted(challengeKey))updatePdfFeedback();
     }
 
     private void refreshPdfProgress(){
@@ -729,6 +739,47 @@ public final class ChallengeActivity extends Activity {
         });
     }
 
+    private void inspectCompletedPdf(){
+        status.setText(UiLanguage.tr(this,"Processing completed"));
+        pdfFeedback.setText(UiLanguage.tr(this,"Checking saved PDF..."));
+        final AiPreferences.SavedResult record=findSavedRecord();
+        if(record==null){
+            pdfFeedback.setText(UiLanguage.tr(this,"Saved PDF unavailable"));
+            return;
+        }
+        final String location=aiPreferences.pdfTreeUri();
+        PDF_READS.execute(()->{
+            Uri pdf=null, tree=location==null?null:Uri.parse(location);
+            String error=null;
+            try{
+                pdf=ArchiveFiles.findSavedPdf(this,tree,record);
+                if(pdf==null)error="Saved PDF missing";
+                else verifyFinishedPdf(pdf,tree,record);
+            }catch(Exception e){error=e.getMessage();}
+            final Uri found=pdf, selectedTree=tree;
+            final String reason=error;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                if(reason!=null){
+                    lastSavedPdf=null;
+                    lastSavedPdfResult=null;
+                    pdfFeedback.setText(UiLanguage.tr(this,"Saved PDF unavailable")+": "+reason);
+                    return;
+                }
+                lastSavedPdf=found;lastSavedPdfTree=selectedTree;lastSavedPdfResult=record;
+                pdfFeedback.setText(UiLanguage.tr(this,"Processing completed")
+                    +" · "+DefaultPdfStorage.filename(record));
+                refreshPdfProgress();
+            });
+        });
+    }
+
+    private AiPreferences.SavedResult findSavedRecord(){
+        for(AiPreferences.SavedResult record:aiPreferences.savedResults())
+            if(challengeKey.equals(record.key))return record;
+        return null;
+    }
+
     private void recoverSavedPdf(){recoverSavedPdf(false);}
 
     private void recoverSavedPdf(boolean openWhenReady){
@@ -742,7 +793,7 @@ public final class ChallengeActivity extends Activity {
         final AiPreferences.SavedResult record=found;
         final String selected=aiPreferences.pdfTreeUri();
         beginPdfOperation();
-        EXEC.execute(()->{
+        PDF_READS.execute(()->{
             Uri tree=selected==null?null:Uri.parse(selected);
             Uri recovered=null;
             String failure=null;
