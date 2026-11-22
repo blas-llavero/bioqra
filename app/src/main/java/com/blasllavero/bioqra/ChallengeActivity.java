@@ -668,15 +668,15 @@ public final class ChallengeActivity extends Activity {
             if(renderer!=null)renderer.close();else descriptor.close();
         }
     }
-    private boolean insufficientEvidence(){
-        if(!isFunding() && !"benchmark".equals(kind))return false;
-        ResearchReadiness.Assessment assessment=ResearchReadiness.assess(this,challengeKey,discoveredDatasets);
-        return assessment.state==ResearchReadiness.State.NO_DATA
-                ||assessment.state==ResearchReadiness.State.SOURCE_IDENTIFIED
-                ||assessment.state==ResearchReadiness.State.FILES_ACQUIRED_UNVALIDATED;
+    private String evidenceOutcome(){
+        if(!isFunding() && !"benchmark".equals(kind))return "";
+        // The existence of authentic downloaded files is distinct from scientific
+        // validation. Both states may accompany a successfully generated report.
+        return ResearchEvidenceArchive.downloadedCount(this,challengeKey)>0
+                ?"data_unvalidated":"no_research_data";
     }
-    private void finishVerifiedQueue(boolean insufficient){
-        aiPreferences.setProcessingOutcome(challengeKey,insufficient?"insufficient":"");
+    private void finishVerifiedQueue(String researchOutcome){
+        aiPreferences.setProcessingOutcome(challengeKey,researchOutcome);
         aiPreferences.markAutomaticExportCompleted(challengeKey);
         refreshPdfProgress();
         if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
@@ -702,7 +702,7 @@ public final class ChallengeActivity extends Activity {
             String error=null;
             Uri verifiedPdf=null;
             Uri verifiedTree=null;
-            boolean insufficient=insufficientEvidence();
+            String researchOutcome=evidenceOutcome();
             try{
                 String selected=aiPreferences.pdfTreeUri();
                 Uri tree=selected==null?null:Uri.parse(selected);
@@ -722,8 +722,9 @@ public final class ChallengeActivity extends Activity {
                     pdfNotice("Automatic queue paused: "+failure);return;
                 }
                 lastSavedPdf=readyPdf;lastSavedPdfTree=readyTree;lastSavedPdfResult=record;
-                pdfNotice(UiLanguage.tr(this,insufficient?"Insufficient research data":"Processing completed"));
-                finishVerifiedQueue(insufficient);
+                pdfNotice(UiLanguage.tr(this,"Processing completed")
+                        +("no_research_data".equals(researchOutcome)?" · "+UiLanguage.tr(this,"No real research data downloaded"):""));
+                finishVerifiedQueue(researchOutcome);
             });
         });
     }
