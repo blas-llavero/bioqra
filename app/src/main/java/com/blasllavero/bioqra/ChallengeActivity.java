@@ -742,9 +742,12 @@ public final class ChallengeActivity extends Activity {
     private void inspectCompletedPdf(){
         status.setText(UiLanguage.tr(this,"Processing completed"));
         pdfFeedback.setText(UiLanguage.tr(this,"Checking saved PDF..."));
+        viewSavedPdf.setEnabled(false);
         final AiPreferences.SavedResult record=findSavedRecord();
         if(record==null){
+            aiPreferences.invalidateAutomaticExport(challengeKey);
             pdfFeedback.setText(UiLanguage.tr(this,"Saved PDF unavailable"));
+            viewSavedPdf.setEnabled(true);
             return;
         }
         final String location=aiPreferences.pdfTreeUri();
@@ -763,13 +766,17 @@ public final class ChallengeActivity extends Activity {
                 if(reason!=null){
                     lastSavedPdf=null;
                     lastSavedPdfResult=null;
+                    aiPreferences.invalidateAutomaticExport(challengeKey);
                     pdfFeedback.setText(UiLanguage.tr(this,"Saved PDF unavailable")+": "+reason);
+                    status.setText(UiLanguage.tr(this,"PDF or ZIP export failed"));
+                    viewSavedPdf.setEnabled(true);
                     return;
                 }
                 lastSavedPdf=found;lastSavedPdfTree=selectedTree;lastSavedPdfResult=record;
                 pdfFeedback.setText(UiLanguage.tr(this,"Processing completed")
                     +" · "+DefaultPdfStorage.filename(record));
                 refreshPdfProgress();
+                viewSavedPdf.setEnabled(true);
             });
         });
     }
