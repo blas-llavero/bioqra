@@ -234,7 +234,6 @@ public final class AiSettingsActivity extends Activity {
         Button exportPdf=button("Export all saved results as PDFs");
         root.addView(exportPdf,new LinearLayout.LayoutParams(-1,dp(53)));
         exportPdf.setOnClickListener(v->exportAllPdfs());
-        root.addView(label("Default PDF location: Downloads/Bioqra/YYMMDD-Project/Project.pdf. You can optionally choose another parent folder. New dates create separate project folders; exporting twice on the same day updates that file. No folder configuration is needed for the default location.",13));
         backupStatus=label("Backups and PDFs stay on your device until you share them.",13);
         root.addView(backupStatus);
         loadModels();
