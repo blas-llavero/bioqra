@@ -111,18 +111,30 @@ public final class AiSettingsActivity extends Activity {
                 settings.setAutoTranslatePublicSections(false);
                 return;
             }
+            settings.setAutoTranslatePublicSections(true);
+            if(settings.automaticTranslationAuthorized())return;
             new AlertDialog.Builder(this)
                 .setTitle(UiLanguage.tr(this,"Authorize automatic public translations?"))
                 .setMessage(UiLanguage.tr(this,
                     "BIOQRA will send approved PUBLIC source sections to your connected ChatGPT account when viewed. Each uncached section can use one of your daily AI requests. Source originals stay unchanged. No patient data is transmitted."))
-                .setNegativeButton(UiLanguage.tr(this,"Cancel"),(dialog,which)->
-                    automaticTranslation.setChecked(false))
-                .setOnCancelListener(dialog->automaticTranslation.setChecked(false))
-                .setPositiveButton(UiLanguage.tr(this,"Enable"),(dialog,which)->
-                    settings.setAutoTranslatePublicSections(true))
+                .setNegativeButton(UiLanguage.tr(this,"Not now"),(dialog,which)->{})
+                .setPositiveButton(UiLanguage.tr(this,"Authorize"),(dialog,which)->
+                    settings.authorizeAutomaticTranslation())
                 .show();
         });
         root.addView(automaticTranslation);
+        Button authorizeTranslations=button("Authorize ChatGPT translations");
+        authorizeTranslations.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle(UiLanguage.tr(this,"Authorize automatic public translations?"))
+            .setMessage(UiLanguage.tr(this,
+                "BIOQRA will send approved PUBLIC source sections to your connected ChatGPT account when viewed. Each uncached section can use one of your daily AI requests. Source originals stay unchanged. No patient data is transmitted."))
+            .setNegativeButton(UiLanguage.tr(this,"Not now"),null)
+            .setPositiveButton(UiLanguage.tr(this,"Authorize"),(dialog,which)->{
+                settings.authorizeAutomaticTranslation();
+                automaticTranslation.setChecked(true);
+            }).show());
+        root.addView(authorizeTranslations,new LinearLayout.LayoutParams(-1,dp(50)));
+
 
         Button back=button("← Back to BIOQRA");
         back.setOnClickListener(v->finish());
