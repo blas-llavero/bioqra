@@ -251,6 +251,13 @@ public final class UiLanguage {
         add("A local limit of up to 40 ChatGPT attempts per day applies by default; provider plan restrictions also apply.","Per defecte, el límit local és de fins a 40 consultes diàries a ChatGPT; també s'apliquen els límits del pla.","De forma predeterminada, el límite local es de hasta 40 consultas diarias a ChatGPT; también se aplican los límites del plan.");
         add("AI-generated plans are proposals, not validated experiments, clinical findings or cancer treatments.","Els plans generats per IA són propostes, no experiments validats, resultats clínics ni tractaments contra el càncer.","Los planes generados por IA son propuestas, no experimentos validados, resultados clínicos ni tratamientos contra el cáncer.");
         add("Refresh models from ChatGPT","Actualitza els models de ChatGPT","Actualizar modelos de ChatGPT");
+        add("Gastroesophageal transformation into cancer","Transformació gastroesofàgica en càncer","Transformación gastroesofágica en cáncer");
+        add("Global variation in gastroesophageal cancer","Variació mundial del càncer gastroesofàgic","Variación mundial del cáncer gastroesofágico");
+        add("The dark proteome","El proteoma fosc","El proteoma oscuro");
+        add("Cancer avoidance","Evasió del càncer","Evasión del cáncer");
+        add("The nervous system and cancer","El sistema nerviós i el càncer","El sistema nervioso y el cáncer");
+        add("Rewiring cancer cells","Reprogramació de les cèl·lules canceroses","Reprogramación de las células cancerosas");
+        add("Mechanisms driving mutational signatures","Mecanismes que originen signatures mutacionals","Mecanismos que originan firmas mutacionales");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
