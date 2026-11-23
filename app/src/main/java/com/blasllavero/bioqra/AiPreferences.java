@@ -110,6 +110,14 @@ public final class AiPreferences {
         return new Selection(preferred.slug,preferred.title);
     }
 
+    /** Automatic translation requires separate opt-in from research processing. */
+    public boolean autoTranslatePublicSections(){
+        return prefs.getBoolean("auto_translate_public_sections",false);
+    }
+    public void setAutoTranslatePublicSections(boolean enabled){
+        prefs.edit().putBoolean("auto_translate_public_sections",enabled).apply();
+    }
+
     public boolean autoConsent(){return prefs.getBoolean("auto_consent",false);}
     public void setAutoConsent(boolean consent){prefs.edit().putBoolean("auto_consent",consent).apply();}
     public int dailyLimit(){return prefs.getInt("daily_limit_v2",40);}
