@@ -311,7 +311,7 @@ public final class ChallengeActivity extends Activity {
         if("automatic".equals(mode))aiButton.setVisibility(View.GONE);
         aiButton.setOnClickListener(v->confirmAI());
         String oldResult=aiPreferences.lastResult(challengeKey);
-        output=text(oldResult!=null ? "SAVED AI DRAFT (not reverified)\n\n"+oldResult
+        output=text(oldResult!=null ? UiLanguage.tr(this,"Original saved result (language may differ from your selected language).")+"\n\n"+oldResult
                 : isFunding() ? "No research proposal or independent validation yet."
                 : "No solution proposal or independent verification yet.",14,false);
         output.setTextIsSelectable(true);
@@ -625,7 +625,7 @@ public final class ChallengeActivity extends Activity {
 
     private void showSection(String key){
         if(navigation==null){
-            status.setText("First retrieve the official challenge statement.");
+            status.setText(UiLanguage.tr(this,"First retrieve the official challenge statement."));
             return;
         }
         ChallengeSectionNavigator.Section selected=navigation.get(key);
@@ -635,17 +635,17 @@ public final class ChallengeActivity extends Activity {
         if(selected!=null){
             renderStatement(selected.body);
             setDocumentLink(selected.url);
-            resolvedLink.setText("Official source: "+selected.url);
+            resolvedLink.setText(UiLanguage.tr(this,"Official source: ")+selected.url);
         }else if(link==null){
             setDocumentLink(navigation.sourceUrl);
             renderStatement("This section was not identified in the public official "
                 +"statement. BIOQRA will not invent missing challenge details. "
                 +"Use the original organizer page for more information.");
-            resolvedLink.setText("Source: "+navigation.sourceUrl);
+            resolvedLink.setText(UiLanguage.tr(this,"Source: ")+navigation.sourceUrl);
         }else{
             renderStatement("Official link identified. Retrieving the public section...");
             setDocumentLink(link);
-            resolvedLink.setText("Official source to check: "+link);
+            resolvedLink.setText(UiLanguage.tr(this,"Official source to check: ")+link);
         }
         highlightSearch(false);
         maybeAutoTranslateSection();
@@ -666,8 +666,8 @@ public final class ChallengeActivity extends Activity {
                             if(loaded!=null){
                                 renderStatement(loaded.body);
                                 setDocumentLink(loaded.url);
-                                resolvedLink.setText("Official source: "+loaded.url);
-                            }else renderStatement("This linked section is not accessible.");
+                                resolvedLink.setText(UiLanguage.tr(this,"Official source: ")+loaded.url);
+                            }else renderStatement(UiLanguage.tr(this,"This linked section is not accessible."));
                             highlightSearch(false);
                             maybeAutoTranslateSection();
                             pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
@@ -764,9 +764,9 @@ public final class ChallengeActivity extends Activity {
     private void updatePdfFeedback(){
         if(pdfFeedback==null)return;
         String folder=aiPreferences.pdfTreeUri();
-        pdfFeedback.setText(folder==null
+        pdfFeedback.setText(UiLanguage.tr(this,folder==null
             ?"PDFs save automatically to Downloads/Bioqra/YYMMDD-Project/."
-            :"PDFs save to Bioqra/YYMMDD-Project/ inside your selected folder.");
+            :"PDFs save to Bioqra/YYMMDD-Project/ inside your selected folder."));
     }
 
     @Override protected void onResume(){
