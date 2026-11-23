@@ -1,5 +1,14 @@
 # BIOQRA — Open Bioinformatics Research & Patient Assistance
 
+## Language preferences and challenge numbering (experimental)
+
+BIOQRA now offers **AI Settings → Language**, with **Device language (automatic)** as the default, or an explicit choice of **Català / Español / English**. Device languages beyond these initial translations currently fall back to English. The preference remains stored on the Android device and the home screen refreshes after returning from settings. The basic challenge labels, some catalog titles, source and availability filters, and selected buttons use the existing local translation dictionary. This is a **partial localization milestone**, not a guarantee that every dynamic label or external source is translated.
+
+The challenge list displays one-based consecutive numbers across the complete filtered result set, even when it spans multiple pages. Tapping an item passes its visible number into the challenge detail header; the same numbering is used by the automatic queue when items are in the current filtered list. Numbers may change when the user changes filters, search results or the source refreshes; challenge identity and saved research remain tied to the original title/key, **not** the displayed list number.
+
+When a new research proposal is generated through the existing ChatGPT integration, BIOQRA asks for human-readable commentary in the selected language while preserving scientific codes, public-source quotes, links and executable code. Existing saved proposals and official third-party HTML/PDF documents are **not translated by this change**. Those must retain accessible originals and require an additional safe, provenance-labelled translation workflow; they are not silently rewritten.
+
+
 ![BIOQRA — Official full logo](docs/images/bioqra_full_logo.png)
 
 BIOQRA is an open-source project for Android and the web. It aims to help researchers discover bioinformatics challenges, develop reproducible computational approaches, and verify results with scientific software. A separate, privacy-first patient research module is planned to help people document their experiences, securely manage health records, and optionally contribute de-identified information to ethically reviewed research. BIOQRA is not a diagnostic, treatment, vaccine-testing, or medication-safety determination tool.
