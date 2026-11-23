@@ -628,8 +628,9 @@ public class MainActivity extends Activity {
         }
         int start=currentPage * ResearchCatalog.PAGE_SIZE;
         int end=Math.min(total,start + ResearchCatalog.PAGE_SIZE);
-        TextView summary=text("Showing "+(start+1)+"–"+end+" of "+total+
-                " · Page "+(currentPage+1)+" / "+pageCount,14,true);
+        TextView summary=text(UiLanguage.tr(this,"Showing")+" "+(start+1)+"–"+end
+                +" "+UiLanguage.tr(this,"of")+" "+total+" · "+UiLanguage.tr(this,"Page")
+                +" "+(currentPage+1)+" / "+pageCount,14,true);
         summary.setPadding(0,dp(8),0,dp(12));
         list.addView(summary);
         for (int i=start; i<end; i++) {
@@ -678,7 +679,8 @@ public class MainActivity extends Activity {
             if (availability.equals("Educational exercises") || availability.equals("All records")) {
                 if (source.equals("All sources") || source.equals(ResearchCatalog.ROSALIND)) {
                     for (Challenge challenge:challenges) {
-                        String haystack=(challenge.title+" "+challenge.id+" Rosalind").toLowerCase(Locale.ROOT);
+                        String haystack=(challenge.title+" "+UiLanguage.challengeTitle(this,challenge.title)
+                                +" "+challenge.id+" Rosalind").toLowerCase(Locale.ROOT);
                         if(haystack.contains(query)) rows.add(new ResultRow(challenge.title,
                                 "Rosalind · Educational exercise · "+challenge.id.toUpperCase(Locale.ROOT),
                                 challenge.url, "educational"));
@@ -687,7 +689,9 @@ public class MainActivity extends Activity {
             }
             for(ResearchCatalog.Item item:researchItems) {
                 if(!source.equals("All sources") && !source.equals(item.source)) continue;
-                String haystack=(item.title+" "+item.source+" "+item.summary+" "+item.topic)
+                String haystack=(item.title+" "+UiLanguage.challengeTitle(this,item.title)
+                        +" "+item.source+" "+item.summary+" "+UiLanguage.translateNote(this,item.summary)
+                        +" "+item.topic)
                         .toLowerCase(Locale.ROOT);
                 if(!haystack.contains(query)) continue;
                 String state=item.availability();
