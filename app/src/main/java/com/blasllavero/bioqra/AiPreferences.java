@@ -111,11 +111,21 @@ public final class AiPreferences {
     }
 
     /** Automatic translation requires separate opt-in from research processing. */
+    /** Translation is requested by default, but never transmitted without a separate grant. */
     public boolean autoTranslatePublicSections(){
-        return prefs.getBoolean("auto_translate_public_sections",false);
+        return prefs.getBoolean("auto_translate_public_sections",true);
+    }
+    public boolean automaticTranslationAuthorized(){
+        return prefs.getBoolean("auto_translate_public_sections_authorized",false);
     }
     public void setAutoTranslatePublicSections(boolean enabled){
-        prefs.edit().putBoolean("auto_translate_public_sections",enabled).apply();
+        SharedPreferences.Editor editor=prefs.edit().putBoolean("auto_translate_public_sections",enabled);
+        if(!enabled)editor.putBoolean("auto_translate_public_sections_authorized",false);
+        editor.apply();
+    }
+    public void authorizeAutomaticTranslation(){
+        prefs.edit().putBoolean("auto_translate_public_sections",true)
+            .putBoolean("auto_translate_public_sections_authorized",true).apply();
     }
 
     public boolean autoConsent(){return prefs.getBoolean("auto_consent",false);}
