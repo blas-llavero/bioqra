@@ -367,15 +367,14 @@ public class MainActivity extends Activity {
             String key=AiPreferences.stableKey(next.title,next.title);
             if(aiPreferences.automaticExportCompleted(key))continue;
             if(aiPreferences.alreadyAttempted(key) && aiPreferences.lastResult(key)==null){
-                status.setText("Automatic processing paused: previous attempt has no saved result for "
-                        +next.title);
+                status.setText(UiLanguage.format(this,"Automatic processing paused: previous attempt has no saved result for %s",UiLanguage.challengeTitle(this,next.title)));
                 return;
             }
             if(aiPreferences.remaining()<=0 && aiPreferences.lastResult(key)==null){
                 status.setText(UiLanguage.tr(this,"Automatic queue paused: daily request limit reached."));
                 return;
             }
-            status.setText("Automatic processing: "+next.title);
+            status.setText(UiLanguage.format(this,"Automatic processing: %s",UiLanguage.challengeTitle(this,next.title)));
             launchChallenge(next.title,next.url,next.kind,true);
             return;
         }
@@ -395,8 +394,8 @@ public class MainActivity extends Activity {
         }
         // Use a short and readable confirmation in the existing status line.
         if(status!=null && status.getText().toString().startsWith("Mode:"))
-            status.setText("Mode: "+("automatic".equals(challengeMode)
-                    ? "Automatic — public research starts when a challenge opens" : "Manual — offline tools and no AI usage"));
+            status.setText(UiLanguage.format(this,"Mode: %s",UiLanguage.tr(this,"automatic".equals(challengeMode)
+                    ? "Automatic — public research starts when a challenge opens" : "Manual — offline tools and no AI usage")));
     }
 
     private void refreshAiModels() {
@@ -747,8 +746,7 @@ public class MainActivity extends Activity {
                 GrandChallengeDiscovery.save(this,updated);
                 runOnUiThread(() -> {
                     mergeGrand(updated);
-                    status.setText("Official Grand Challenge index refreshed: "
-                            + updated.size()+" accepting/upcoming entries · Rosalind and Open Problems available");
+                    status.setText(UiLanguage.format(this,"Official Grand Challenge index refreshed: %d accepting/upcoming entries · Rosalind and Open Problems available",updated.size()));
                     showItems();
                 });
             } catch(Exception e) {
