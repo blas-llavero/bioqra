@@ -594,8 +594,8 @@ public class MainActivity extends Activity {
     }
 
     private void addResearch(List<ResultRow> rows, ResearchCatalog.Item item) {
-        rows.add(new ResultRow(item.title, item.source+" · "+item.label()
-                +"\n"+item.summary, item.url, item.kind));
+        rows.add(new ResultRow(item.title, item.source+" · "+UiLanguage.researchStatus(this,item)
+                +"\n"+UiLanguage.translateNote(this,item.summary), item.url, item.kind));
     }
 
     private String[] localizedOptions(String[] options){
