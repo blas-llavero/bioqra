@@ -15,6 +15,14 @@ The workbench retains the original official text as the primary, unmodified evid
 
 This is not automatic, universal or offline translation. Full-document translation across every source, saved result and export remains a separate milestone. A translation is never an authoritative official version; verify claims against the original organizer document.
 
+## Android 24 November: automatic-mode default, visible Catalan labels and PDF settings cleanup
+
+On new installations, **Automatic mode** is the initial screen selection instead of Manual mode; an explicitly saved manual choice is retained. An automatic AI run still requires the user's connected ChatGPT account, the existing automatic consent grant and remaining usage allowance. The first queue starts only after the public Grand Challenge catalog refresh finishes, not on a partially loaded list. The user may pause, stop or switch back to manual mode at any time.
+
+The Catalan/Spanish workbench now renders structured research opportunity status and eligibility text from canonical catalog fields rather than relying on unrecognized English sentences; common official index boilerplate and three titles from the provided tablet screenshots are translated locally. **External organizer titles and unrecognized source summaries may still appear in their original language** until source-preserving translations are available and consented; BIOQRA does not present an untranslated official quote as a verified translation.
+
+The Settings backup/PDF area shows the default path **once**, above the optional folder-selection button. The duplicate explanatory paragraph was removed; the user still sees the destination and can choose another location.
+
 ## Language preferences and challenge numbering (experimental)
 
 BIOQRA now offers **AI Settings → Language**, with **Device language (automatic)** as the default, or an explicit choice of **Català / Español / English**. Device languages beyond these initial translations currently fall back to English. The preference remains stored on the Android device and the home screen refreshes after returning from settings. The basic challenge labels, some catalog titles, source and availability filters, and selected buttons use the existing local translation dictionary. This is a **partial localization milestone**, not a guarantee that every dynamic label or external source is translated.
