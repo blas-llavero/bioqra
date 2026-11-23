@@ -48,12 +48,12 @@ public final class AiSettingsActivity extends Activity {
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private TextView label(String content,int size){
         TextView t=new TextView(this);
-        t.setText(content);t.setTextSize(size);t.setTextColor(Color.rgb(24,72,91));
+        t.setText(UiLanguage.tr(this,content));t.setTextSize(size);t.setTextColor(Color.rgb(24,72,91));
         t.setPadding(dp(2),dp(12),dp(2),dp(9));
         return t;
     }
     private Button button(String title){
-        Button b=new Button(this);b.setText(title);b.setAllCaps(false);return b;
+        Button b=new Button(this);b.setText(UiLanguage.tr(this,title));b.setAllCaps(false);return b;
     }
 
     @Override public void onCreate(Bundle state){
@@ -75,6 +75,33 @@ public final class AiSettingsActivity extends Activity {
             return insets;
         });
         scroll.addView(root);setContentView(scroll);
+        TextView languageLabel=label(UiLanguage.tr(this,"Language"),17);
+        root.addView(languageLabel);
+        Spinner languagePicker=new Spinner(this);
+        String[] codes={"system","ca","es","en"};
+        String[] names={
+            UiLanguage.tr(this,"Device language (automatic)"),
+            "Català","Español","English"
+        };
+        ArrayAdapter<String> languageAdapter=new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item,names);
+        languageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languagePicker.setAdapter(languageAdapter);
+        String preferred=UiLanguage.preference(this);
+        for(int i=0;i<codes.length;i++)if(codes[i].equals(preferred))
+            languagePicker.setSelection(i);
+        languagePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            private boolean initialized=false;
+            @Override public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){
+                String next=codes[position];
+                if(!initialized){initialized=true;return;}
+                if(next.equals(UiLanguage.preference(AiSettingsActivity.this)))return;
+                UiLanguage.setPreference(AiSettingsActivity.this,next);
+                recreate();
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
+        });
+        root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(52)));
         Button back=button("← Back to BIOQRA");
         back.setOnClickListener(v->finish());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(55)));
