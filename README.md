@@ -1,5 +1,11 @@
 # BIOQRA — Open Bioinformatics Research & Patient Assistance
 
+## Opt-in translations of official challenge sections (preview)
+
+The workbench retains the original official text as the primary, unmodified evidence. A new **Translate official section with ChatGPT** button can show a separate, explicitly labelled machine translation in the currently selected application language (Catalan, Spanish or English). **Each request requires confirmation**, uses the account model selected for the challenge, consumes one of the configured local daily requests, and sends at most 10,000 characters of already-retrieved public official text from an approved HTTPS URL. Longer sections are not silently truncated; the user is notified. A translated section is kept only in memory during the current workbench session and is invalidated when the underlying official source changes. No translation overwrites the canonical challenge statement, application deadlines, PDF or stored scientific results.
+
+This is not automatic, universal or offline translation. Full-document translation across every source, saved result and export remains a separate milestone. A translation is never an authoritative official version; verify claims against the original organizer document.
+
 ## Language preferences and challenge numbering (experimental)
 
 BIOQRA now offers **AI Settings → Language**, with **Device language (automatic)** as the default, or an explicit choice of **Català / Español / English**. Device languages beyond these initial translations currently fall back to English. The preference remains stored on the Android device and the home screen refreshes after returning from settings. The basic challenge labels, some catalog titles, source and availability filters, and selected buttons use the existing local translation dictionary. This is a **partial localization milestone**, not a guarantee that every dynamic label or external source is translated.
