@@ -129,6 +129,9 @@ public final class UiLanguage {
         add("Cell-Cell Communication","Comunicació entre cèl·lules","Comunicación entre células");
         add("Denoising","Eliminació de soroll","Eliminación de ruido");
         add("Foundation Models","Models fundacionals","Modelos fundacionales");
+        add("Showing","Mostrant","Mostrando");
+        add("of","de","de");
+        add("Page","Pàgina","Página");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
