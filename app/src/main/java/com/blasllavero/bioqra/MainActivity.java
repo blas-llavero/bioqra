@@ -64,7 +64,8 @@ public class MainActivity extends Activity {
     private Spinner sourcePicker, availabilityPicker;
     private int currentPage = 0;
     private final List<ResearchCatalog.Item> researchItems = new ArrayList<>();
-    private String section = "Challenges";\n    private String lastLanguage="en";
+    private String section = "Challenges";
+    private String lastLanguage="en";
 
     private static class Challenge {
         final String id, title, url;
@@ -74,7 +75,8 @@ public class MainActivity extends Activity {
     }
 
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state);\n        lastLanguage=UiLanguage.language(this);
+        super.onCreate(state);
+        lastLanguage=UiLanguage.language(this);
         getWindow().setStatusBarColor(BLUE);
         getWindow().setNavigationBarColor(Color.BLACK);
         chatGptConnection = new ChatGptConnection(this);
@@ -304,7 +306,10 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        if(list!=null){\n            if(!lastLanguage.equals(UiLanguage.language(this))){\n                recreate();return;\n            }
+        if(list!=null){
+            if(!lastLanguage.equals(UiLanguage.language(this))){
+                recreate();return;
+            }
             if(chatGptConnection!=null && chatGptConnection.canUsePlan()
                     && aiPreferences.autoConsent()
                     && "automatic".equals(getSharedPreferences("bioqra_mode",MODE_PRIVATE)
@@ -432,7 +437,8 @@ public class MainActivity extends Activity {
         String key=AiPreferences.stableKey(title,title);
         if(aiPreferences.automaticExportCompleted(key) || ProcessingControl.paused() || ProcessingControl.stopped()){
             Intent review=new Intent(this,ChallengeActivity.class);
-            review.putExtra(ChallengeActivity.TITLE,title);\n            review.putExtra(ChallengeActivity.NUMBER,numberFor(title,url));
+            review.putExtra(ChallengeActivity.TITLE,title);
+            review.putExtra(ChallengeActivity.NUMBER,numberFor(title,url));
             review.putExtra(ChallengeActivity.URL,url);
             review.putExtra(ChallengeActivity.KIND,kind);
             review.putExtra(ChallengeActivity.MODE,"manual");
@@ -452,7 +458,8 @@ public class MainActivity extends Activity {
 
     private void launchChallenge(String title,String url,String kind,boolean queue){
         Intent intent=new Intent(this,ChallengeActivity.class);
-        intent.putExtra(ChallengeActivity.TITLE,title);\n        intent.putExtra(ChallengeActivity.NUMBER,numberFor(title,url));
+        intent.putExtra(ChallengeActivity.TITLE,title);
+        intent.putExtra(ChallengeActivity.NUMBER,numberFor(title,url));
         intent.putExtra(ChallengeActivity.URL,url);
         intent.putExtra(ChallengeActivity.MODE,challengeMode);
         intent.putExtra(ChallengeActivity.KIND,kind);
