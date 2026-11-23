@@ -317,14 +317,16 @@ public final class ChallengeActivity extends Activity {
                 ChallengePdfViewer.show(this,lastSavedPdf,lastSavedPdfTree,lastSavedPdfResult);
             }else recoverSavedPdf(true);
         });
-        pdfProgressLabel=text("Preparing PDF...",13,false);
+        pdfProgressLabel=text("Preparing PDF and ZIP...",13,false);
         pdfProgressLabel.setVisibility(View.GONE);
-        pdfActions.addView(pdfProgressLabel,new LinearLayout.LayoutParams(-1,-2));
         pdfProgress=new android.widget.ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);
         pdfProgress.setIndeterminate(true);
         pdfProgress.setVisibility(View.GONE);
-        pdfActions.addView(pdfProgress,new LinearLayout.LayoutParams(-1,dp(12)));
         pdfActions.addView(viewSavedPdf,new LinearLayout.LayoutParams(-1,dp(52)));
+        // The processing indicator belongs at the very bottom of the result
+        // section, after the PDF viewer action.
+        pdfActions.addView(pdfProgressLabel,new LinearLayout.LayoutParams(-1,-2));
+        pdfActions.addView(pdfProgress,new LinearLayout.LayoutParams(-1,dp(12)));
         pdfFeedback=text("PDFs save by default to Downloads/Bioqra.",13,false);
         root.addView(pdfFeedback);
         root.addView(pdfActions,new LinearLayout.LayoutParams(-1,-2));
@@ -341,8 +343,11 @@ public final class ChallengeActivity extends Activity {
                 && aiPreferences.lastResult(challengeKey)!=null){
             recoverQueueResult();
         }else{
-            if("automatic".equals(mode))retrieve();
-            recoverSavedPdf();
+            if("automatic".equals(mode)){
+                // Do not queue a second PDF recovery while AI research and
+                // exports are already running; it would block queue completion.
+                retrieve();
+            }else recoverSavedPdf();
         }
     }
 
@@ -690,13 +695,12 @@ public final class ChallengeActivity extends Activity {
         aiPreferences.markAutomaticExportCompleted(challengeKey);
         refreshPdfProgress();
         if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
-                && !ProcessingControl.paused()&&!ProcessingControl.stopped()){
-            // Let the final UI state be drawn before the next challenge opens.
-            viewSavedPdf.post(()->{
-                if(isFinishing()||isDestroyed()||ProcessingControl.paused()||ProcessingControl.stopped())return;
-                if(pdfOperations!=0||busy||datasetSearchInProgress||!viewSavedPdf.isEnabled())return;
-                setResult(RESULT_OK);finish();
-            });
+                && !ProcessingControl.paused() && !ProcessingControl.stopped()){
+            // PDF rendering and ZIP writing have both completed and been
+            // verified before this callback. UI state must never be a gate
+            // to the next item in the queue.
+            setResult(RESULT_OK);
+            finish();
         }
     }
 
@@ -1274,7 +1278,6 @@ public final class ChallengeActivity extends Activity {
                     }else{
                         automaticallySavedRecord=record;
                         Uri selectedTree=destination==null?null:Uri.parse(destination);
-                        runOnUiThread(this::beginPdfOperation);
                         try{
                             Uri created=ArchiveFiles.makePdf(this,selectedTree,record);
                             verifyFinishedPdf(created,selectedTree,record);
@@ -1285,8 +1288,6 @@ public final class ChallengeActivity extends Activity {
                                 +DefaultPdfStorage.filename(record);
                         }catch(Exception pdfError){
                             pdfStatus=" · PDF unavailable: "+pdfError.getMessage();
-                        }finally{
-                            runOnUiThread(this::endPdfOperation);
                         }
                         ProcessingControl.checkpoint(processingToken);
                         // An evidence archive should not depend on the PDF
