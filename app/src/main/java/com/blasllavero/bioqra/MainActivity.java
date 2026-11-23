@@ -64,7 +64,7 @@ public class MainActivity extends Activity {
     private Spinner sourcePicker, availabilityPicker;
     private int currentPage = 0;
     private final List<ResearchCatalog.Item> researchItems = new ArrayList<>();
-    private String section = "Challenges";
+    private String section = "Challenges";\n    private String lastLanguage="en";
 
     private static class Challenge {
         final String id, title, url;
@@ -74,7 +74,7 @@ public class MainActivity extends Activity {
     }
 
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state);
+        super.onCreate(state);\n        lastLanguage=UiLanguage.language(this);
         getWindow().setStatusBarColor(BLUE);
         getWindow().setNavigationBarColor(Color.BLACK);
         chatGptConnection = new ChatGptConnection(this);
@@ -191,7 +191,7 @@ public class MainActivity extends Activity {
         root.addView(status);
         search = new EditText(this);
         search.setSingleLine(true);
-        search.setHint("Search challenges...");
+        search.setHint(UiLanguage.tr(this,"Search challenges..."));
         search.setTextSize(16);
         root.addView(search);
         search.addTextChangedListener(new TextWatcher() {
@@ -201,7 +201,7 @@ public class MainActivity extends Activity {
         });
         sourcePicker = new Spinner(this);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item,
-                ResearchCatalog.FILTERS);
+                localizedOptions(ResearchCatalog.FILTERS));
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         sourcePicker.setAdapter(adapter);
         sourcePicker.setContentDescription("Filter bioinformatics challenges by source");
@@ -213,7 +213,7 @@ public class MainActivity extends Activity {
         });
         availabilityPicker = new Spinner(this);
         ArrayAdapter<String> availabilityAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, ResearchCatalog.AVAILABILITY_FILTERS);
+                android.R.layout.simple_spinner_item,localizedOptions(ResearchCatalog.AVAILABILITY_FILTERS));
         availabilityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         availabilityPicker.setAdapter(availabilityAdapter);
         availabilityPicker.setContentDescription("Filter by competition availability");
@@ -304,7 +304,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        if(list!=null){
+        if(list!=null){\n            if(!lastLanguage.equals(UiLanguage.language(this))){\n                recreate();return;\n            }
             if(chatGptConnection!=null && chatGptConnection.canUsePlan()
                     && aiPreferences.autoConsent()
                     && "automatic".equals(getSharedPreferences("bioqra_mode",MODE_PRIVATE)
@@ -432,7 +432,7 @@ public class MainActivity extends Activity {
         String key=AiPreferences.stableKey(title,title);
         if(aiPreferences.automaticExportCompleted(key) || ProcessingControl.paused() || ProcessingControl.stopped()){
             Intent review=new Intent(this,ChallengeActivity.class);
-            review.putExtra(ChallengeActivity.TITLE,title);
+            review.putExtra(ChallengeActivity.TITLE,title);\n            review.putExtra(ChallengeActivity.NUMBER,numberFor(title,url));
             review.putExtra(ChallengeActivity.URL,url);
             review.putExtra(ChallengeActivity.KIND,kind);
             review.putExtra(ChallengeActivity.MODE,"manual");
@@ -452,7 +452,7 @@ public class MainActivity extends Activity {
 
     private void launchChallenge(String title,String url,String kind,boolean queue){
         Intent intent=new Intent(this,ChallengeActivity.class);
-        intent.putExtra(ChallengeActivity.TITLE,title);
+        intent.putExtra(ChallengeActivity.TITLE,title);\n        intent.putExtra(ChallengeActivity.NUMBER,numberFor(title,url));
         intent.putExtra(ChallengeActivity.URL,url);
         intent.putExtra(ChallengeActivity.MODE,challengeMode);
         intent.putExtra(ChallengeActivity.KIND,kind);
@@ -487,10 +487,10 @@ public class MainActivity extends Activity {
     }
 
     private void addLink(String title, String description, String url) {
-        addLink(title, description, url, "directory");
+        addLink(title, description, url, "directory",0);
     }
 
-    private void addLink(String title, String description, String url, String kind) {
+    private void addLink(String title, String description, String url, String kind,int number) {
         LinearLayout card=new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackground(bg(Color.WHITE));
@@ -498,7 +498,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams outer=new LinearLayout.LayoutParams(-1,-2);
         outer.setMargins(0,dp(4),0,dp(8));
         list.addView(card,outer);
-        TextView t=text(title+"\n"+description,16,false);
+        TextView t=text((number>0?number+". ":"")+UiLanguage.challengeTitle(this,title)+"\n"+UiLanguage.translateNote(this,description),16,false);
         card.addView(t);
         t.setOnClickListener(v->openChallenge(title,url,kind));
         LinearLayout modelRow=new LinearLayout(this);
@@ -590,6 +590,25 @@ public class MainActivity extends Activity {
                 +"\n"+item.summary, item.url, item.kind));
     }
 
+    private String[] localizedOptions(String[] options){
+        String[] result=new String[options.length];
+        for(int i=0;i<options.length;i++)result[i]=UiLanguage.tr(this,options[i]);
+        return result;
+    }
+
+    /** The visible 1-based number follows the filtered catalog and its pages. */
+    private int numberFor(String title,String url){
+        for(int i=0;i<displayedRows.size();i++){
+            ResultRow item=displayedRows.get(i);
+            if(item.title.equals(title)&&item.url.equals(url))return i+1;
+        }
+        for(int i=0;i<automaticRows.size();i++){
+            ResultRow item=automaticRows.get(i);
+            if(item.title.equals(title)&&item.url.equals(url))return i+1;
+        }
+        return 0;
+    }
+
     private void displayPage(List<ResultRow> rows) {
         displayedRows.clear();displayedRows.addAll(rows);
         int total=rows.size();
@@ -608,7 +627,7 @@ public class MainActivity extends Activity {
         list.addView(summary);
         for (int i=start; i<end; i++) {
             ResultRow row=rows.get(i);
-            addLink(row.title,row.description,row.url,row.kind);
+            addLink(row.title,row.description,row.url,row.kind,i+1);
         }
         LinearLayout nav=new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
@@ -639,13 +658,13 @@ public class MainActivity extends Activity {
     private void showItems() {
         if (list == null) return;
         list.removeAllViews();
-        heading.setText(section);
+        heading.setText(UiLanguage.tr(this,section));
         List<ResultRow> rows=new ArrayList<>();
         if (section.equals("Challenges")) {
             String query=search.getText().toString().trim().toLowerCase(Locale.ROOT);
-            String source=(String) sourcePicker.getSelectedItem();
+            String source=ResearchCatalog.FILTERS[sourcePicker.getSelectedItemPosition()<0?0:sourcePicker.getSelectedItemPosition()];
             if (source==null) source="All sources";
-            String availability=(String) availabilityPicker.getSelectedItem();
+            String availability=ResearchCatalog.AVAILABILITY_FILTERS[availabilityPicker.getSelectedItemPosition()<0?0:availabilityPicker.getSelectedItemPosition()];
             if (availability==null) availability="Open / Upcoming";
 
             // Real competitions, research benchmarks and education are separated.
