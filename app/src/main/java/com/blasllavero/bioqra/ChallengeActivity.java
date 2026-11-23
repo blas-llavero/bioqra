@@ -45,6 +45,7 @@ import java.util.concurrent.Executors;
  */
 public final class ChallengeActivity extends Activity {
     public static final String TITLE="challenge_title";
+    public static final String NUMBER="challenge_number";
     public static final String URL="challenge_url";
     public static final String MODE="challenge_mode";
     public static final String KIND="challenge_kind";
@@ -53,6 +54,7 @@ public final class ChallengeActivity extends Activity {
     // PDF viewing must not wait behind a long-running research or ChatGPT operation.
     private static final ExecutorService PDF_READS=Executors.newFixedThreadPool(2);
     private String title, url, mode, kind;
+    private int challengeNumber=0;
     private TextView status, output, statement, resolvedLink, deadlinesView, pdfFeedback;
     private Button viewSavedPdf, savePdf;
     private android.widget.ProgressBar pdfProgress;
@@ -122,6 +124,7 @@ public final class ChallengeActivity extends Activity {
         connection=new ChatGptConnection(this);
         aiPreferences=new AiPreferences(this);
         title=getIntent().getStringExtra(TITLE);
+        challengeNumber=Math.max(0,getIntent().getIntExtra(NUMBER,0));
         url=getIntent().getStringExtra(URL);
         mode=getIntent().getStringExtra(MODE);
         kind=getIntent().getStringExtra(KIND);
@@ -154,7 +157,8 @@ public final class ChallengeActivity extends Activity {
         Button back=button("← Back to challenges");
         back.setOnClickListener(v->finish());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(52)));
-        root.addView(text(title,23,true));
+        root.addView(text((challengeNumber>0?challengeNumber+". ":"")
+                +UiLanguage.challengeTitle(this,title),23,true));
         LinearLayout processingControls=new LinearLayout(this);
         processingControls.setOrientation(LinearLayout.HORIZONTAL);
         for(String action:new String[]{"Pause processing","Stop processing","Resume processing"}){
