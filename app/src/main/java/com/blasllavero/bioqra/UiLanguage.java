@@ -258,6 +258,28 @@ public final class UiLanguage {
         add("The nervous system and cancer","El sistema nerviós i el càncer","El sistema nervioso y el cáncer");
         add("Rewiring cancer cells","Reprogramació de les cèl·lules canceroses","Reprogramación de las células cancerosas");
         add("Mechanisms driving mutational signatures","Mecanismes que originen signatures mutacionals","Mecanismos que originan firmas mutacionales");
+        add("Current competitions are prioritized. Open / Upcoming is a dated snapshot, not a guarantee of registration. Use All records to include educational and historical entries.","Es prioritzen els concursos actuals. La llista Oberts / Properament és una instantània amb data i no garanteix que les inscripcions estiguin obertes. Utilitza Tots els registres per incloure exercicis educatius i reptes històrics.","Se priorizan los concursos actuales. La lista Abiertos / Próximamente es una instantánea con fecha y no garantiza que el registro esté abierto. Utiliza Todos los registros para incluir ejercicios educativos y retos históricos.");
+        add("Open challenge","Obre el repte","Abrir el reto");
+        add("Automatic mode selected. Connect ChatGPT in Settings to start research.","Mode automàtic seleccionat. Connecta ChatGPT des de Configuració per iniciar la recerca.","Modo automático seleccionado. Conecta ChatGPT desde Configuración para iniciar la investigación.");
+        add("Grand Challenge live search unavailable; saved list kept. Use Refresh to retry.","La cerca de Grand Challenge no està disponible; es conserva la llista desada. Prem Actualitza per tornar-ho a provar.","La búsqueda de Grand Challenge no está disponible; se conserva la lista guardada. Pulsa Actualizar para reintentarlo.");
+        add("Accepting submissions (checked %s) · confirm on organizer site","S'accepten propostes (comprovat el %s) · confirma-ho al web de l'organitzador","Se aceptan propuestas (comprobado el %s) · confírmalo en la web del organizador");
+        add("Funding applications · deadline %s · eligibility and pre-screening required · checked %s","Sol·licituds de finançament · termini %s · cal complir requisits i selecció prèvia · comprovat el %s","Solicitudes de financiación · plazo %s · se requieren criterios y preselección · comprobado el %s");
+        add("UPCOMING · pre-register with organizer","PROPERAMENT · inscripció prèvia amb l'organitzador","PRÓXIMAMENTE · preinscripción con el organizador");
+        add("UPCOMING · next submission phase opens %s","PROPERAMENT · la fase d'inscripció comença el %s","PRÓXIMAMENTE · la fase de inscripción empieza el %s");
+        add("Research benchmark · not a timed contest","Repte científic de referència · sense termini de concurs","Reto científico de referencia · sin plazo de concurso");
+        add("Educational exercise","Exercici educatiu","Ejercicio educativo");
+        add("Funded project · applications closed","Projecte finançat · inscripcions tancades","Proyecto financiado · inscripciones cerradas");
+        add("Closed · no longer accepting applications","Tancat · ja no s'accepten sol·licituds","Cerrado · ya no se aceptan solicitudes");
+        add("Restricted eligibility · check organizer conditions","Participació restringida · comprova els requisits de l'organitzador","Participación restringida · comprueba los requisitos del organizador");
+        add("Status unverified or stale · check organizer (last review %s)","Estat no verificat o desactualitzat · consulta l'organitzador (última revisió %s)","Estado no verificado o desactualizado · consulta al organizador (última revisión %s)");
+        add("Official index: ","Índex oficial: ","Índice oficial: ");
+        add("Verify registration and eligibility.","Comprova la inscripció i els requisits.","Comprueba la inscripción y los requisitos.");
+        add("Official index","Índex oficial","Índice oficial");
+        add("Accepting submissions","S'accepten sol·licituds","Se aceptan solicitudes");
+        add("Observing What Models Learn","Observant què aprenen els models","Observando qué aprenden los modelos");
+        add("Light My Cells 2 : Transmitted Light to Fluorescence Challenge","Il·lumina les meves cèl·lules 2: repte de llum transmesa a fluorescència","Ilumina mis células 2: reto de luz transmitida a fluorescencia");
+        add("Cone-beam CT reconstruction for radiation therapy challenge","Repte de reconstrucció TC de feix cònic per a radioteràpia","Reto de reconstrucción TC de haz cónico para radioterapia");
+        add("Grand Challenge","Grand Challenge","Grand Challenge");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
