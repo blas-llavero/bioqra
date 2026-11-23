@@ -280,6 +280,7 @@ public final class UiLanguage {
         add("Light My Cells 2 : Transmitted Light to Fluorescence Challenge","Il·lumina les meves cèl·lules 2: repte de llum transmesa a fluorescència","Ilumina mis células 2: reto de luz transmitida a fluorescencia");
         add("Cone-beam CT reconstruction for radiation therapy challenge","Repte de reconstrucció TC de feix cònic per a radioteràpia","Reto de reconstrucción TC de haz cónico para radioterapia");
         add("Grand Challenge","Grand Challenge","Grand Challenge");
+
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
@@ -314,12 +315,45 @@ public final class UiLanguage {
             default:return "English";
         }
     }
+    /** Format organizer availability using stable fields rather than translating an English sentence. */
+    public static String researchStatus(Context context,ResearchCatalog.Item item){
+        String state=item.availability();
+        if("OPEN".equals(state)){
+            if("funding".equals(item.kind))
+                return format(context,
+                    "Funding applications · deadline %s · eligibility and pre-screening required · checked %s",
+                    item.deadline,item.verifiedOn);
+            return format(context,"Accepting submissions (checked %s) · confirm on organizer site",
+                    item.verifiedOn);
+        }
+        if("UPCOMING".equals(state)){
+            return "preregister".equals(item.kind)
+                ? tr(context,"UPCOMING · pre-register with organizer")
+                : format(context,"UPCOMING · next submission phase opens %s",item.deadline);
+        }
+        if("BENCHMARK".equals(state))return tr(context,"Research benchmark · not a timed contest");
+        if("EDUCATIONAL".equals(state))return tr(context,"Educational exercise");
+        if("RESEARCH".equals(state))return tr(context,"Funded project · applications closed");
+        if("CLOSED".equals(state))return tr(context,"Closed · no longer accepting applications");
+        if("RESTRICTED".equals(state))return tr(context,"Restricted eligibility · check organizer conditions");
+        return format(context,"Status unverified or stale · check organizer (last review %s)",item.verifiedOn);
+    }
+
     /** Stable catalog identifiers and scientific accession codes are never translated. */
     public static String challengeTitle(Context context,String sourceTitle){
         return tr(context,sourceTitle);
     }
     public static String translateNote(Context context,String original){
-        return tr(context,original);
+        if(original==null)return "";
+        String known=tr(context,original);
+        if(!known.equals(original))return known;
+        if("en".equals(language(context)))return original;
+        String result=original;
+        // Replace descriptive catalog boilerplate only; preserve data, dates, URLs and quotations.
+        String[] clauses={"Official index: ","Verify registration and eligibility.",
+            "Accepting submissions","Open / Upcoming","Educational exercise"};
+        for(String clause:clauses)result=result.replace(clause,tr(context,clause));
+        return result;
     }
     /** Localizes parameterized status messages without modifying technical values. */
     public static String format(Context context,String english,Object... arguments){
