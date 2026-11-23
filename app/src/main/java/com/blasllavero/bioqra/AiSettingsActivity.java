@@ -102,6 +102,28 @@ public final class AiSettingsActivity extends Activity {
             @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
         });
         root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(52)));
+        android.widget.CheckBox automaticTranslation=new android.widget.CheckBox(this);
+        automaticTranslation.setText(UiLanguage.tr(this,
+            "Automatically translate public challenge sections (uses ChatGPT requests)"));
+        automaticTranslation.setChecked(settings.autoTranslatePublicSections());
+        automaticTranslation.setOnCheckedChangeListener((buttonView,checked)->{
+            if(!checked){
+                settings.setAutoTranslatePublicSections(false);
+                return;
+            }
+            new AlertDialog.Builder(this)
+                .setTitle(UiLanguage.tr(this,"Authorize automatic public translations?"))
+                .setMessage(UiLanguage.tr(this,
+                    "BIOQRA will send approved PUBLIC source sections to your connected ChatGPT account when viewed. Each uncached section can use one of your daily AI requests. Source originals stay unchanged. No patient data is transmitted."))
+                .setNegativeButton(UiLanguage.tr(this,"Cancel"),(dialog,which)->
+                    automaticTranslation.setChecked(false))
+                .setOnCancelListener(dialog->automaticTranslation.setChecked(false))
+                .setPositiveButton(UiLanguage.tr(this,"Enable"),(dialog,which)->
+                    settings.setAutoTranslatePublicSections(true))
+                .show();
+        });
+        root.addView(automaticTranslation);
+
         Button back=button("← Back to BIOQRA");
         back.setOnClickListener(v->finish());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(55)));
