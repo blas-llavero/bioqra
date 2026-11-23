@@ -1198,6 +1198,7 @@ public final class ChallengeActivity extends Activity {
                                     loadingOfficialSections.clear();
                                     if(!ChallengeSectionNavigator.FULL.equals(activeSection))
                                         showSection(activeSection);
+                                    else maybeAutoTranslateSection();
                                 }
                             });
                         }catch(Exception ignored){}
@@ -1210,6 +1211,7 @@ public final class ChallengeActivity extends Activity {
                     deadlinesView.setText(sources.toString());
                     status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
                     busy=false;updateButtons();
+                    maybeAutoTranslateSection();
                     if("automatic".equals(mode) && specificPage && !ProcessingControl.stopped() && !ProcessingControl.paused()){
                         // Search public metadata independently of AI consent.
                         boolean authorized=connection.canUsePlan() && aiPreferences.autoConsent()
