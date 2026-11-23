@@ -69,6 +69,7 @@ public final class ChallengeActivity extends Activity {
     private Button translateButton;
     private boolean translating=false;
     private final Map<String,String> translatedSections=new HashMap<>();
+    private final Set<String> attemptedAutomaticTranslations=new HashSet<>();
     private Button originalDocumentButton;
     private String activeDocumentUrl="";
     private PublicDatasetDiscovery.Report discoveredDatasets;
@@ -532,6 +533,22 @@ public final class ChallengeActivity extends Activity {
             "Official source (original language). Translation is optional and requires permission."));
     }
 
+    private void maybeAutoTranslateSection(){
+        if(!aiPreferences.autoTranslatePublicSections() || translating || busy
+                || navigation==null || !connection.canUsePlan() || aiPreferences.remaining()<=0)return;
+        String language=UiLanguage.language(this);
+        if(!"ca".equals(language) && !"es".equals(language))return;
+        ChallengeSectionNavigator.Section selected=navigation.get(activeSection);
+        if(selected==null || selected.body.length()<20 || selected.body.length()>10000
+                || !TrustedChallengeReader.approved(selected.url))return;
+        if(navigation.link(activeSection)!=null
+                && !loadedOfficialSections.contains(activeSection))return;
+        String key=translationKey(selected);
+        if(translatedSections.containsKey(key) || !attemptedAutomaticTranslations.add(key))return;
+        runSectionTranslation(navigation,activeSection,selected,
+            "ca".equals(language)?"Catalan":"Spanish",language);
+    }
+
     private void confirmSectionTranslation(){
         if(translating || busy || navigation==null)return;
         final ChallengeSectionNavigator.Snapshot originalSnapshot=navigation;
@@ -631,6 +648,7 @@ public final class ChallengeActivity extends Activity {
             resolvedLink.setText("Official source to check: "+link);
         }
         highlightSearch(false);
+        maybeAutoTranslateSection();
         pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
         if(link!=null && !loadedOfficialSections.contains(key)
                 && !loadingOfficialSections.contains(key)){
@@ -651,6 +669,7 @@ public final class ChallengeActivity extends Activity {
                                 resolvedLink.setText("Official source: "+loaded.url);
                             }else renderStatement("This linked section is not accessible.");
                             highlightSearch(false);
+                            maybeAutoTranslateSection();
                             pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
                         }
                     });
@@ -1159,6 +1178,7 @@ public final class ChallengeActivity extends Activity {
                     loadedOfficialSections.clear();
                     loadingOfficialSections.clear();
                     translatedSections.clear();
+                    attemptedAutomaticTranslations.clear();
                     navigation=ChallengeSectionNavigator.fromText(result.resolvedUrl,
                             result.text,result.deadlineSummary,result.documentLinks);
                     selectSection(ChallengeSectionNavigator.FULL,true);
