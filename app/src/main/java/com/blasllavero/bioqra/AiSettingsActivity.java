@@ -195,22 +195,17 @@ public final class AiSettingsActivity extends Activity {
         TextView backupHeading=label("Backup, Restore & PDF",20);
         backupHeading.setTypeface(null,Typeface.BOLD);
         root.addView(backupHeading);
-        root.addView(label("Create a single ZIP containing settings, saved AI results "
-                +"and PDFs, or use the individual JSON buttons below. "
-                +"ChatGPT tokens/passwords and unattended consent are never exported.",14));
+        root.addView(label("Create a single ZIP containing settings, saved AI results and PDFs, or use the individual JSON buttons below. ChatGPT tokens/passwords and unattended consent are never exported.",14));
         Button exportAll=button("Export all · settings + results + PDFs (.zip)");
         root.addView(exportAll,new LinearLayout.LayoutParams(-1,dp(56)));
         exportAll.setOnClickListener(v->createZipFile());
         Button importAll=button("Import all · restore ZIP backup");
         root.addView(importAll,new LinearLayout.LayoutParams(-1,dp(56)));
         importAll.setOnClickListener(v->new AlertDialog.Builder(this)
-            .setTitle("Restore complete BIOQRA backup?")
-            .setMessage("Settings will be replaced and saved AI results merged. "
-                +"Existing PDF files will not be overwritten. "
-                +"Configure the PDF folder first. "
-                +"ChatGPT login and permission for unattended AI use are NOT imported.")
+            .setTitle(UiLanguage.tr(this,"Restore complete BIOQRA backup?"))
+            .setMessage(UiLanguage.tr(this,"Settings will be replaced and saved AI results merged. Existing PDF files will not be overwritten. Configure the PDF folder first. ChatGPT login and permission for unattended AI use are NOT imported."))
             .setNegativeButton(UiLanguage.tr(this,"Cancel"),null)
-            .setPositiveButton("Choose ZIP",(d,w)->openZipFile()).show());
+            .setPositiveButton(UiLanguage.tr(this,"Choose ZIP"),(d,w)->openZipFile()).show());
         Button exportSettings=button("Export settings (.json)");
         root.addView(exportSettings,new LinearLayout.LayoutParams(-1,dp(50)));
         exportSettings.setOnClickListener(v->createJsonFile(SAVE_SETTINGS,"bioqra-settings.json"));
@@ -239,10 +234,7 @@ public final class AiSettingsActivity extends Activity {
         Button exportPdf=button("Export all saved results as PDFs");
         root.addView(exportPdf,new LinearLayout.LayoutParams(-1,dp(53)));
         exportPdf.setOnClickListener(v->exportAllPdfs());
-        root.addView(label("Default PDF location: Downloads/Bioqra/YYMMDD-Project/Project.pdf. "
-                +"You can optionally choose another parent folder. New dates create separate project folders; "
-                +"exporting twice on the same day updates that file. "
-                +"No folder configuration is needed for the default location.",13));
+        root.addView(label("Default PDF location: Downloads/Bioqra/YYMMDD-Project/Project.pdf. You can optionally choose another parent folder. New dates create separate project folders; exporting twice on the same day updates that file. No folder configuration is needed for the default location.",13));
         backupStatus=label("Backups and PDFs stay on your device until you share them.",13);
         root.addView(backupStatus);
         loadModels();
