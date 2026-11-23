@@ -197,7 +197,7 @@ public final class AiSettingsActivity extends Activity {
                 +"Existing PDF files will not be overwritten. "
                 +"Configure the PDF folder first. "
                 +"ChatGPT login and permission for unattended AI use are NOT imported.")
-            .setNegativeButton("Cancel",null)
+            .setNegativeButton(UiLanguage.tr(this,"Cancel"),null)
             .setPositiveButton("Choose ZIP",(d,w)->openZipFile()).show());
         Button exportSettings=button("Export settings (.json)");
         root.addView(exportSettings,new LinearLayout.LayoutParams(-1,dp(50)));
@@ -267,15 +267,15 @@ public final class AiSettingsActivity extends Activity {
         if(pdfFolderStatus==null)return;
         String folder=settings.pdfTreeUri();
         pdfFolderStatus.setText(folder==null
-                ? "Default PDF folder: Downloads/Bioqra/YYMMDD-Project/ (no setup needed)."
-                : "Custom PDF folder: "+Uri.parse(folder).getLastPathSegment()+"/Bioqra/YYMMDD-Project/");
+                ? UiLanguage.tr(this,"Default PDF folder: Downloads/Bioqra/YYMMDD-Project/ (no setup needed).")
+                : UiLanguage.format(this,"Custom PDF folder: %s/Bioqra/YYMMDD-Project/",Uri.parse(folder).getLastPathSegment()));
     }
     private void exportAllPdfs(){
         String folder=settings.pdfTreeUri();
 
         List<AiPreferences.SavedResult> saved=settings.savedResults();
-        if(saved.isEmpty()){backupStatus.setText("No saved AI results to export.");return;}
-        backupStatus.setText("Exporting "+saved.size()+" research PDFs...");
+        if(saved.isEmpty()){backupStatus.setText(UiLanguage.tr(this,"No saved AI results to export."));return;}
+        backupStatus.setText(UiLanguage.format(this,"Exporting %d research PDFs...",saved.size()));
         WORKER.execute(()->{
             int count=0;String failure="";
             for(AiPreferences.SavedResult item:saved){
@@ -286,7 +286,7 @@ public final class AiSettingsActivity extends Activity {
             final String error=failure;
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
-                backupStatus.setText("Exported "+done+"/"+saved.size()+" PDFs."
+                backupStatus.setText(UiLanguage.format(this,"Exported %d/%d PDFs.",done,saved.size())
                         +(error.isEmpty()?"":" Error: "+error));
             });
         });
@@ -361,12 +361,12 @@ public final class AiSettingsActivity extends Activity {
     private void updateAccountStatus(){
         if(accountStatus==null || accountButton==null)return;
         boolean connected=!"Not connected".equals(account.accountLabel());
-        String scope=account.canUsePlan() ? "AI plan usage authorized"
-                : "AI plan usage not authorized";
+        String scope=UiLanguage.tr(this,account.canUsePlan() ? "AI plan usage authorized"
+                : "AI plan usage not authorized");
         accountStatus.setText("ChatGPT: "+account.accountLabel()
                 +"\n"+(connected?scope+" · Session saved securely on this device. Automatic token renewal is used where supported.":"Log in once to connect this device."));
-        accountButton.setText(signingIn?"Connecting..."
-                : connected?"ChatGPT ✓ · Account & sign out":"ChatGPT login");
+        accountButton.setText(UiLanguage.tr(this,signingIn?"Connecting..."
+                : connected?"ChatGPT ✓ · Account & sign out":"ChatGPT login"));
         accountButton.setEnabled(!signingIn);
     }
 
@@ -378,25 +378,25 @@ public final class AiSettingsActivity extends Activity {
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("ChatGPT account")
+                .setTitle(UiLanguage.tr(this,"ChatGPT account"))
                 .setMessage("Connected: "+account.accountLabel()
                     +"\nPlan use: "+(account.canUsePlan()?"authorized":"not authorized")
                     +"\n\nYou can reconnect or sign out locally.")
-                .setPositiveButton("Close",null)
-                .setNeutralButton("Reconnect",(d,w)->startChatGptLogin())
-                .setNegativeButton("Sign out",(d,w)->
+                .setPositiveButton(UiLanguage.tr(this,"Close"),null)
+                .setNeutralButton(UiLanguage.tr(this,"Reconnect"),(d,w)->startChatGptLogin())
+                .setNegativeButton(UiLanguage.tr(this,"Sign out"),(d,w)->
                     new AlertDialog.Builder(this)
-                        .setTitle("Sign out of BIOQRA?")
+                        .setTitle(UiLanguage.tr(this,"Sign out of BIOQRA?"))
                         .setMessage("This removes the stored local connection and disables "
                             +"automatic ChatGPT analysis. To revoke app access completely, "
                             +"use ChatGPT account settings.")
                         .setNegativeButton("Cancel",null)
-                        .setPositiveButton("Sign out",(confirm,which)->{
+                        .setPositiveButton(UiLanguage.tr(this,"Sign out"),(confirm,which)->{
                             account.signOut();
                             settings.setAutoConsent(false);
                             populateModels(new ArrayList<>());
                             updateAccountStatus();
-                            info.setText("Connect a ChatGPT account to load available models.");
+                            info.setText(UiLanguage.tr(this,"Connect a ChatGPT account to load available models."));
                         }).show())
                 .show();
     }
@@ -427,20 +427,20 @@ public final class AiSettingsActivity extends Activity {
 
     private void updateRemaining(){
         if(remaining!=null)
-            remaining.setText("Local AI attempts remaining today: "+settings.remaining());
+            remaining.setText(UiLanguage.format(this,"Local AI attempts remaining today: %d",settings.remaining()));
     }
     private void populateModels(List<ChatGptConnection.Model> source){
         available=new ArrayList<>(source);
         modelKeys.clear();
         List<String> titles=new ArrayList<>();
-        titles.add("Auto · highest-tier model available");
+        titles.add(UiLanguage.tr(this,"Auto · highest-tier model available"));
         modelKeys.add(AiPreferences.AUTO);
         for(ChatGptConnection.Model m:available){
             titles.add(m.title);modelKeys.add(m.slug);
         }
         String chosen=settings.globalModel();
         if(!modelKeys.contains(chosen)){
-            titles.add("Unavailable saved global model: "+chosen);
+            titles.add(UiLanguage.format(this,"Unavailable saved global model: %s",chosen));
             modelKeys.add(chosen);
         }
         ArrayAdapter<String> adapter=new ArrayAdapter<>(this,
@@ -459,20 +459,20 @@ public final class AiSettingsActivity extends Activity {
         });
     }
     private void loadModels(){
-        info.setText("Refreshing available ChatGPT models...");
+        info.setText(UiLanguage.tr(this,"Refreshing available ChatGPT models..."));
         WORKER.execute(()->{
             try{
                 List<ChatGptConnection.Model> got=account.models();
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     populateModels(got);
-                    info.setText(got.size()+" models offered by the connected account. Auto prefers the highest-tier available model by name and reasoning mode; not an official capability ranking.");
+                    info.setText(UiLanguage.format(this,"%d models offered by the connected account. Auto prefers the highest-tier available model by name and reasoning mode; not an official capability ranking.",got.size()));
                 });
             }catch(Exception ex){
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     populateModels(new ArrayList<>());
-                    info.setText("Model list unavailable: "+ex.getMessage());
+                    info.setText(UiLanguage.format(this,"Model list unavailable: %s",ex.getMessage()));
                 });
             }
         });
