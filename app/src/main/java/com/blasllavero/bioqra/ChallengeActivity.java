@@ -195,13 +195,13 @@ public final class ChallengeActivity extends Activity {
             });
         }
         root.addView(processingControls);
-        root.addView(text("Mode: "+("automatic".equals(mode)?"Automatic (ChatGPT)":"Manual (no AI)")
-                +" · Read-only · No contest submissions",14,false));
+        root.addView(text(UiLanguage.tr(this,"Mode: ")
+                +UiLanguage.tr(this,"automatic".equals(mode)?"Automatic (ChatGPT)":"Manual (no AI)")
+                +UiLanguage.tr(this," · Read-only · No contest submissions"),14,false));
         root.addView(text(url,12,false));
-        root.addView(text("AI model: configured for this challenge on the main list; "
-                +"otherwise inherits the global AI Settings model. "
-                +"Automatic use is limited to "+aiPreferences.dailyLimit()
-                +" requests per day on this device.",13,false));
+        root.addView(text(UiLanguage.format(this,
+                "AI model: configured for this challenge on the main list; otherwise inherits the global AI Settings model. Automatic use is limited to %d requests per day on this device.",
+                aiPreferences.dailyLimit()),13,false));
         if(isFunding()) {
             root.addView(text("Research funding opportunity · Not a programming contest",17,true));
             root.addView(text("ChatGPT can prepare a research proposal and an unexecuted methodology, but it cannot establish that this cancer research challenge is solved. The organizer may require an eligible research team, experimental data and scientific validation.",14,false));
@@ -534,7 +534,8 @@ public final class ChallengeActivity extends Activity {
     }
 
     private void maybeAutoTranslateSection(){
-        if(!aiPreferences.autoTranslatePublicSections() || translating || busy
+        if(!aiPreferences.autoTranslatePublicSections()
+                || !aiPreferences.automaticTranslationAuthorized() || translating || busy
                 || navigation==null || !connection.canUsePlan() || aiPreferences.remaining()<=0)return;
         String language=UiLanguage.language(this);
         if(!"ca".equals(language) && !"es".equals(language))return;
