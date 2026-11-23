@@ -87,13 +87,88 @@ public final class UiLanguage {
         add("Export all saved results as PDFs","Exporta tots els resultats en PDF","Exportar todos los resultados en PDF");
         add("Search text in the current section","Cerca text a la secció actual","Buscar texto en la sección actual");
         add("No statement retrieved yet.","Encara no s'ha recuperat cap enunciat.","Todavía no se ha recuperado ningún enunciado.");
+        add("⚙ AI Settings · models & automation","⚙ Configuració d'IA · models i automatització","⚙ Configuración de IA · modelos y automatización");
+        add("Search challenges...","Cerca reptes...","Buscar retos...");
+        add("Manual Mode","Mode manual","Modo manual");
+        add("Automatic Mode","Mode automàtic","Modo automático");
+        add("Cancer Research","Recerca sobre el càncer","Investigación sobre el cáncer");
+        add("Refresh","Actualitza","Actualizar");
+        add("Hackathons","Hackatons","Hackatones");
+        add("App Description","Descripció de l'aplicació","Descripción de la aplicación");
+        add("How to Use","Com s'utilitza","Cómo se utiliza");
+        add("Home","Inici","Inicio");
+        add("Help","Ajuda","Ayuda");
+        add("All sources","Totes les fonts","Todas las fuentes");
+        add("Open / Upcoming","Oberts / Properament","Abiertos / Próximamente");
+        add("Research benchmarks","Reptes de referència científics","Retos de referencia científicos");
+        add("Educational exercises","Exercicis educatius","Ejercicios educativos");
+        add("Needs verification","Pendent de verificació","Pendiente de verificación");
+        add("All records","Tots els registres","Todos los registros");
+        add("No matching challenges. Change the filters or refresh.","No hi ha reptes coincidents. Canvia els filtres o actualitza.","No hay retos coincidentes. Cambia los filtros o actualiza.");
+        add("← Back to BIOQRA","← Torna a BIOQRA","← Volver a BIOQRA");
+        add("Language","Idioma","Idioma");
+        add("Device language (automatic)","Idioma del dispositiu (automàtic)","Idioma del dispositivo (automático)");
+        add("Language preference saved","Preferència d'idioma desada","Preferencia de idioma guardada");
+        add("AI model:","Model d'IA:","Modelo de IA:");
+        add("Loading verified public challenges...","S'estan carregant els reptes públics verificats...","Cargando retos públicos verificados...");
+        add("Open Bioinformatics Research & Patient Assistance","Recerca bioinformàtica oberta i assistència al pacient","Investigación bioinformática abierta y asistencia al paciente");
+        add("Challenge title","Títol del repte","Título del reto");
+        add("Challenge number","Número de repte","Número de reto");
+        add("Official source (original language)","Font oficial (idioma original)","Fuente oficial (idioma original)");
+        add("AI-generated translation — unverified","Traducció generada per IA — no verificada","Traducción generada por IA — no verificada");
+        add("English","Anglès","Inglés");
+        add("Catalan","Català","Catalán");
+        add("Spanish","Castellà","Español");
+        add("Counting DNA Nucleotides","Comptar nucleòtids d'ADN","Contar nucleótidos de ADN");
+        add("Transcribing DNA into RNA","Transcriure ADN a ARN","Transcribir ADN a ARN");
+        add("Complementing a Strand of DNA","Complementar una cadena d'ADN","Complementar una cadena de ADN");
+        add("Computing GC Content","Calcular el contingut GC","Calcular el contenido GC");
+        add("Counting Point Mutations","Comptar mutacions puntuals","Contar mutaciones puntuales");
+        add("Finding a Motif in DNA","Trobar un motiu en l'ADN","Encontrar un motivo en el ADN");
+        add("Batch Integration","Integració de lots","Integración de lotes");
+        add("Cell-Cell Communication","Comunicació entre cèl·lules","Comunicación entre células");
+        add("Denoising","Eliminació de soroll","Eliminación de ruido");
+        add("Foundation Models","Models fundacionals","Modelos fundacionales");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
-    public static String language(Context context){
+    public static final String SYSTEM="system";
+    private static final String SETTINGS="bioqra_language";
+    private static final String KEY="preferred_language";
+
+    public static String preference(Context context){
+        return context.getApplicationContext()
+            .getSharedPreferences(SETTINGS,Context.MODE_PRIVATE).getString(KEY,SYSTEM);
+    }
+    public static void setPreference(Context context,String code){
+        if(!SYSTEM.equals(code) && !"ca".equals(code)
+                && !"es".equals(code) && !"en".equals(code))
+            throw new IllegalArgumentException("Unsupported interface language");
+        context.getApplicationContext().getSharedPreferences(SETTINGS,Context.MODE_PRIVATE)
+            .edit().putString(KEY,code).apply();
+    }
+    public static String deviceLanguage(Context context){
         Configuration config=context.getResources().getConfiguration();
-        Locale locale=config.getLocales().get(0);
+        Locale locale=config.getLocales().isEmpty()?Locale.ENGLISH:config.getLocales().get(0);
         String code=locale.getLanguage();
         return "ca".equals(code)||"es".equals(code)?code:"en";
+    }
+    public static String language(Context context){
+        String preferred=preference(context);
+        return SYSTEM.equals(preferred)?deviceLanguage(context):preferred;
+    }
+    public static String languageName(Context context){
+        switch(language(context)){
+            case "ca":return "Català";
+            case "es":return "Español";
+            default:return "English";
+        }
+    }
+    /** Stable catalog identifiers and scientific accession codes are never translated. */
+    public static String challengeTitle(Context context,String sourceTitle){
+        return tr(context,sourceTitle);
+    }
+    public static String translateNote(Context context,String original){
+        return tr(context,original);
     }
     public static String tr(Context context,String english){
         if(english==null)return "";
