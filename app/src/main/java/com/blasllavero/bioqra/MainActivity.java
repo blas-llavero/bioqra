@@ -58,7 +58,7 @@ public class MainActivity extends Activity {
     private AiPreferences aiPreferences;
     private final List<ChatGptConnection.Model> aiModels=new ArrayList<>();
     private boolean loadingModels=false;
-    private String challengeMode = "manual";
+    private String challengeMode = "automatic";
     private Button manualModeButton, automaticModeButton;
     private EditText search;
     private Spinner sourcePicker, availabilityPicker;
@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
         chatGptConnection = new ChatGptConnection(this);
         aiPreferences = new AiPreferences(this);
         challengeMode = getSharedPreferences("bioqra_mode", MODE_PRIVATE)
-                .getString("mode","manual");
+                .getString("mode","automatic");
         if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()
                 && !"manual".equals(challengeMode))
             challengeMode="automatic";
@@ -313,7 +313,7 @@ public class MainActivity extends Activity {
             if(chatGptConnection!=null && chatGptConnection.canUsePlan()
                     && aiPreferences.autoConsent()
                     && "automatic".equals(getSharedPreferences("bioqra_mode",MODE_PRIVATE)
-                        .getString("mode","manual"))){
+                        .getString("mode","automatic"))){
                 challengeMode="automatic";
                 updateModeControls();
             }
@@ -322,22 +322,22 @@ public class MainActivity extends Activity {
             }
             showItems();
             refreshAiModels();
+            if(initialCatalogDiscoveryFinished)startDefaultAutomaticQueueOnce();
         }
     }
 
     private void setChallengeMode(String next) {
-        if("automatic".equals(next) && !chatGptConnection.canUsePlan()){
-            // An account grant is needed before automatic AI requests.
-            startActivity(new Intent(this,AiSettingsActivity.class));
-            return;
-        }
         challengeMode = "automatic".equals(next) ? "automatic" : "manual";
         getSharedPreferences("bioqra_mode",MODE_PRIVATE).edit()
                 .putString("mode",challengeMode).apply();
         updateModeControls();
         if("automatic".equals(challengeMode)){
             showItems();
-            startAutomaticQueue();
+            if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()){
+                initialAutomaticQueueStarted=true;
+                startAutomaticQueue();
+            }else status.setText(UiLanguage.tr(this,
+                "Automatic mode selected. Connect ChatGPT in Settings to start research."));
         }else{
             automaticRows.clear();
             automaticIndex=-1;
@@ -418,6 +418,8 @@ public class MainActivity extends Activity {
     private final List<ResultRow> automaticRows=new ArrayList<>();
     private final List<ResultRow> displayedRows=new ArrayList<>();
     private int automaticIndex=-1;
+    private boolean initialAutomaticQueueStarted=false;
+    private boolean initialCatalogDiscoveryFinished=false;
     private static final int AUTOMATIC_CHALLENGE=8124;
 
     @Override protected void onActivityResult(int request,int result,Intent data){
@@ -748,15 +750,27 @@ public class MainActivity extends Activity {
                     mergeGrand(updated);
                     status.setText(UiLanguage.format(this,"Official Grand Challenge index refreshed: %d accepting/upcoming entries · Rosalind and Open Problems available",updated.size()));
                     showItems();
+                    startDefaultAutomaticQueueOnce();
                 });
             } catch(Exception e) {
                 runOnUiThread(() -> {
-                    status.setText("Grand Challenge live search unavailable; saved list kept. "
-                            + "Use Refresh to retry.");
+                    status.setText(UiLanguage.tr(this,
+                        "Grand Challenge live search unavailable; saved list kept. Use Refresh to retry."));
                     showItems();
+                    startDefaultAutomaticQueueOnce();
                 });
             }
         });
+    }
+
+    /** Starts only after catalog refresh, with prior user authorization, once per screen launch. */
+    private void startDefaultAutomaticQueueOnce(){
+        initialCatalogDiscoveryFinished=true;
+        if(initialAutomaticQueueStarted || !"automatic".equals(challengeMode)
+                || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()
+                || ProcessingControl.paused() || ProcessingControl.stopped())return;
+        initialAutomaticQueueStarted=true;
+        startAutomaticQueue();
     }
 
     private void refresh() {
