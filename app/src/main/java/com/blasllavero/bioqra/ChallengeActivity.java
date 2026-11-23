@@ -22,6 +22,8 @@ import android.widget.HorizontalScrollView;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import android.net.Uri;
 import android.os.Bundle;
@@ -63,7 +65,10 @@ public final class ChallengeActivity extends Activity {
     private Uri lastSavedPdf;
     private Uri lastSavedPdfTree;
     private AiPreferences.SavedResult lastSavedPdfResult;
-    private TextView sectionHeading, searchCounter;
+    private TextView sectionHeading, searchCounter, translationView;
+    private Button translateButton;
+    private boolean translating=false;
+    private final Map<String,String> translatedSections=new HashMap<>();
     private Button originalDocumentButton;
     private String activeDocumentUrl="";
     private PublicDatasetDiscovery.Report discoveredDatasets;
@@ -242,6 +247,13 @@ public final class ChallengeActivity extends Activity {
         statement.setLinksClickable(true);
         statement.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(statement);
+        translateButton=button("Translate official section with ChatGPT");
+        translateButton.setOnClickListener(v->confirmSectionTranslation());
+        root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(52)));
+        translationView=text("Official source (original language). Translation is optional and requires permission.",13,false);
+        translationView.setTextIsSelectable(true);
+        translationView.setLineSpacing(dp(4),1.08f);
+        root.addView(translationView);
         root.addView(text("Participation dates and supporting documents",18,true));
         deadlinesView=text("Not checked. Dates must be verified on the official organizer website.",13,false);
         deadlinesView.setTextIsSelectable(true);
@@ -501,12 +513,106 @@ public final class ChallengeActivity extends Activity {
             ?"📄 Open original PDF with its layout":"🌐 Open original source in browser"));
     }
 
+
+    private String translationKey(ChallengeSectionNavigator.Section section){
+        return UiLanguage.language(this)+"|"+section.url+"|"
+            +section.body.hashCode()+"|"+section.body.length();
+    }
+
+    private void updateTranslationView(){
+        if(translationView==null || navigation==null)return;
+        ChallengeSectionNavigator.Section current=navigation.get(activeSection);
+        if(current==null){
+            translationView.setText(UiLanguage.tr(this,
+                "Official source (original language). Translation is optional and requires permission."));
+            return;
+        }
+        String localized=translatedSections.get(translationKey(current));
+        translationView.setText(localized!=null?localized:UiLanguage.tr(this,
+            "Official source (original language). Translation is optional and requires permission."));
+    }
+
+    private void confirmSectionTranslation(){
+        if(translating || busy || navigation==null)return;
+        final ChallengeSectionNavigator.Snapshot originalSnapshot=navigation;
+        final String sectionKey=activeSection;
+        final ChallengeSectionNavigator.Section source=navigation.get(sectionKey);
+        if(source==null || source.body.trim().length()<20){
+            status.setText(UiLanguage.tr(this,"No official text is available for translation."));
+            return;
+        }
+        if(!TrustedChallengeReader.approved(source.url)){
+            status.setText(UiLanguage.tr(this,"This source is not approved for translation."));
+            return;
+        }
+        if(source.body.length()>10000){
+            status.setText(UiLanguage.tr(this,
+                "This section is too long for the current translation preview."));
+            return;
+        }
+        if(!connection.canUsePlan() || aiPreferences.remaining()<=0){
+            status.setText(UiLanguage.tr(this,
+                "Connect ChatGPT and check your daily request allowance."));
+            return;
+        }
+        final String code=UiLanguage.language(this);
+        final String language="ca".equals(code)?"Catalan":"es".equals(code)?"Spanish":"English";
+        new AlertDialog.Builder(this)
+            .setTitle(UiLanguage.tr(this,"Translate official section with ChatGPT"))
+            .setMessage(UiLanguage.tr(this,"Send the PUBLIC official section to ChatGPT?")
+                +"\\n"+source.url+"\\n"+source.body.length()+" characters"
+                +"\\n"+language+" · "+aiPreferences.remaining()+" requests remaining"
+                +"\\n"+UiLanguage.tr(this,"The original source stays unchanged."))
+            .setNegativeButton(UiLanguage.tr(this,"Cancel"),null)
+            .setPositiveButton(UiLanguage.tr(this,"Translate once"),
+                (dialog,which)->runSectionTranslation(originalSnapshot,sectionKey,source,language,code))
+            .show();
+    }
+
+    private void runSectionTranslation(ChallengeSectionNavigator.Snapshot snapshot,
+                                        String key,ChallengeSectionNavigator.Section source,
+                                        String language,String code){
+        if(translating || busy)return;
+        translating=true;
+        if(translateButton!=null)translateButton.setEnabled(false);
+        status.setText(UiLanguage.tr(this,"Translating official public text..."));
+        EXEC.execute(()->{
+            try{
+                List<ChatGptConnection.Model> available=connection.models();
+                AiPreferences.Selection selection=AiPreferences.choose(
+                    available,aiPreferences.selected(challengeKey));
+                if(!aiPreferences.reserve(false))
+                    throw new Exception("Daily AI request limit reached");
+                String translated=connection.translatePublicDocument(
+                    selection.slug,source.url,source.body,language);
+                final String originalUrl=source.url;
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    translating=false;translateButton.setEnabled(true);
+                    if(navigation!=snapshot || !UiLanguage.language(this).equals(code))return;
+                    translatedSections.put(translationKey(source),
+                        UiLanguage.tr(this,"AI-generated translation — unverified")
+                        +"\\n"+originalUrl+"\\n\\n"+translated);
+                    if(key.equals(activeSection))updateTranslationView();
+                    status.setText(UiLanguage.tr(this,"Translation ready; verify against official source."));
+                });
+            }catch(Exception e){
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    translating=false;translateButton.setEnabled(true);
+                    status.setText(UiLanguage.tr(this,"Translation unavailable: ")+e.getMessage());
+                });
+            }
+        });
+    }
+
     private void showSection(String key){
         if(navigation==null){
             status.setText("First retrieve the official challenge statement.");
             return;
         }
         ChallengeSectionNavigator.Section selected=navigation.get(key);
+        updateTranslationView();
         sectionHeading.setText(UiLanguage.tr(this,ChallengeSectionNavigator.label(key)));
         String link=navigation.link(key);
         if(selected!=null){
@@ -1052,6 +1158,7 @@ public final class ChallengeActivity extends Activity {
                     resolvedLink.setText("Selected public page: "+result.resolvedUrl);
                     loadedOfficialSections.clear();
                     loadingOfficialSections.clear();
+                    translatedSections.clear();
                     navigation=ChallengeSectionNavigator.fromText(result.resolvedUrl,
                             result.text,result.deadlineSummary,result.documentLinks);
                     selectSection(ChallengeSectionNavigator.FULL,true);
