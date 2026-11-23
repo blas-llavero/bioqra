@@ -650,6 +650,11 @@ public final class ChallengeActivity extends Activity {
         if(pdfProgress==null)return;
         boolean active=pdfOperations>0 || ("automatic".equals(mode)
                 && (busy || datasetSearchInProgress));
+        if(active){
+            boolean exporting=pdfOperations>0 || aiPreferences.processingStage(challengeKey)>=4;
+            pdfProgressLabel.setText(UiLanguage.tr(this,exporting
+                    ?"Preparing PDF and ZIP...":"Processing challenge..."));
+        }
         pdfProgressLabel.setVisibility(active?View.VISIBLE:View.GONE);
         pdfProgress.setVisibility(active?View.VISIBLE:View.GONE);
         viewSavedPdf.setEnabled(!active);
