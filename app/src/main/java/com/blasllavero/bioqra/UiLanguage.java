@@ -164,6 +164,40 @@ public final class UiLanguage {
         add("ChatGPT account","Compte de ChatGPT","Cuenta de ChatGPT");
         add("ChatGPT login","Inicia sessió a ChatGPT","Iniciar sesión en ChatGPT");
         add("Default model (new challenges / inherited selections)","Model predeterminat (reptes nous i seleccions heretades)","Modelo predeterminado (retos nuevos y selecciones heredadas)");
+        add("Local AI attempts remaining today: %d","Consultes d'IA disponibles avui: %d","Consultas de IA disponibles hoy: %d");
+        add("Exporting %d research PDFs...","S'estan exportant %d PDF de recerca...","Exportando %d PDF de investigación...");
+        add("Exported %d/%d PDFs.","S'han exportat %d/%d PDF.","Se han exportado %d/%d PDF.");
+        add("%d models offered by the connected account. Auto prefers the highest-tier available model by name and reasoning mode; not an official capability ranking.","El compte connectat ofereix %d models. Auto prefereix el model de nivell més alt disponible segons el nom i el mode de raonament; no és una classificació oficial.","La cuenta conectada ofrece %d modelos. Auto prefiere el modelo de nivel más alto disponible según el nombre y el modo de razonamiento; no es una clasificación oficial.");
+        add("Refreshing available ChatGPT models...","S'estan actualitzant els models de ChatGPT disponibles...","Actualizando los modelos de ChatGPT disponibles...");
+        add("Model list unavailable: %s","Llista de models no disponible: %s","Lista de modelos no disponible: %s");
+        add("Custom PDF folder: %s/Bioqra/YYMMDD-Project/","Carpeta PDF personalitzada: %s/Bioqra/YYMMDD-Project/","Carpeta PDF personalizada: %s/Bioqra/YYMMDD-Project/");
+        add("Default PDF folder: Downloads/Bioqra/YYMMDD-Project/ (no setup needed).","Carpeta PDF predeterminada: Downloads/Bioqra/YYMMDD-Project/ (sense configuració).","Carpeta PDF predeterminada: Downloads/Bioqra/YYMMDD-Project/ (sin configuración).");
+        add("No saved AI results to export.","No hi ha resultats d'IA desats per exportar.","No hay resultados de IA guardados para exportar.");
+        add("Auto · highest-tier model available","Auto · model de nivell més alt disponible","Auto · modelo de nivel más alto disponible");
+        add("Unavailable saved global model: %s","Model global desat no disponible: %s","Modelo global guardado no disponible: %s");
+        add("AI plan usage authorized","Ús del pla d'IA autoritzat","Uso del plan de IA autorizado");
+        add("AI plan usage not authorized","Ús del pla d'IA no autoritzat","Uso del plan de IA no autorizado");
+        add("Not connected","No connectat","No conectado");
+        add("Connecting...","Connectant...","Conectando...");
+        add("ChatGPT ✓ · Account & sign out","ChatGPT ✓ · Compte i tanca la sessió","ChatGPT ✓ · Cuenta y cerrar sesión");
+        add("Log in once to connect this device.","Inicia sessió una vegada per connectar aquest dispositiu.","Inicia sesión una vez para conectar este dispositivo.");
+        add("Session saved securely on this device. Automatic token renewal is used where supported.","Sessió desada de manera segura al dispositiu. Renovació automàtica de credencials quan estigui disponible.","Sesión guardada de forma segura en el dispositivo. Renovación automática de credenciales cuando esté disponible.");
+        add("Connected: %s","Connectat: %s","Conectado: %s");
+        add("Plan use: %s","Ús del pla: %s","Uso del plan: %s");
+        add("authorized","autoritzat","autorizado");
+        add("not authorized","no autoritzat","no autorizado");
+        add("You can reconnect or sign out locally.","Pots tornar a connectar-te o tancar la sessió localment.","Puedes volver a conectarte o cerrar la sesión localmente.");
+        add("Reconnect","Torna a connectar","Volver a conectar");
+        add("Sign out","Tanca la sessió","Cerrar sesión");
+        add("Sign out of BIOQRA?","Vols tancar la sessió de BIOQRA?","¿Quieres cerrar la sesión de BIOQRA?");
+        add("Connect a ChatGPT account to load available models.","Connecta un compte de ChatGPT per carregar els models disponibles.","Conecta una cuenta de ChatGPT para cargar los modelos disponibles.");
+        add("Original saved result (language may differ from your selected language).","Resultat original desat (pot estar en un idioma diferent del seleccionat).","Resultado original guardado (puede estar en un idioma diferente del seleccionado).");
+        add("Automatic processing: %s","Processament automàtic: %s","Procesamiento automático: %s");
+        add("Automatic processing paused: previous attempt has no saved result for %s","Processament automàtic en pausa: l'intent anterior no té cap resultat desat per a %s","Procesamiento automático en pausa: el intento anterior no tiene ningún resultado guardado para %s");
+        add("Official Grand Challenge index refreshed: %d accepting/upcoming entries · Rosalind and Open Problems available","Índex oficial de Grand Challenge actualitzat: %d entrades obertes o properes · Rosalind i Open Problems disponibles","Índice oficial de Grand Challenge actualizado: %d entradas abiertas o próximas · Rosalind y Open Problems disponibles");
+        add("Mode: %s","Mode: %s","Modo: %s");
+        add("Automatic — public research starts when a challenge opens","Automàtic — la recerca pública comença en obrir un repte","Automático — la investigación pública comienza al abrir un reto");
+        add("Manual — offline tools and no AI usage","Manual — eines fora de línia sense ús d'IA","Manual — herramientas sin conexión ni uso de IA");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
@@ -205,6 +239,12 @@ public final class UiLanguage {
     public static String translateNote(Context context,String original){
         return tr(context,original);
     }
+    /** Localizes parameterized status messages without modifying technical values. */
+    public static String format(Context context,String english,Object... arguments){
+        String template=tr(context,english);
+        return String.format(Locale.forLanguageTag(language(context)),template,arguments);
+    }
+
     public static String tr(Context context,String english){
         if(english==null)return "";
         String[] translation=LABELS.get(english);
