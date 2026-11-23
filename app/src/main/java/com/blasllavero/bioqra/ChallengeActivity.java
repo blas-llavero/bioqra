@@ -560,9 +560,9 @@ public final class ChallengeActivity extends Activity {
         new AlertDialog.Builder(this)
             .setTitle(UiLanguage.tr(this,"Translate official section with ChatGPT"))
             .setMessage(UiLanguage.tr(this,"Send the PUBLIC official section to ChatGPT?")
-                +"\\n"+source.url+"\\n"+source.body.length()+" characters"
-                +"\\n"+language+" · "+aiPreferences.remaining()+" requests remaining"
-                +"\\n"+UiLanguage.tr(this,"The original source stays unchanged."))
+                +"\n"+source.url+"\n"+source.body.length()+" characters"
+                +"\n"+language+" · "+aiPreferences.remaining()+" requests remaining"
+                +"\n"+UiLanguage.tr(this,"The original source stays unchanged."))
             .setNegativeButton(UiLanguage.tr(this,"Cancel"),null)
             .setPositiveButton(UiLanguage.tr(this,"Translate once"),
                 (dialog,which)->runSectionTranslation(originalSnapshot,sectionKey,source,language,code))
@@ -592,7 +592,7 @@ public final class ChallengeActivity extends Activity {
                     if(navigation!=snapshot || !UiLanguage.language(this).equals(code))return;
                     translatedSections.put(translationKey(source),
                         UiLanguage.tr(this,"AI-generated translation — unverified")
-                        +"\\n"+originalUrl+"\\n\\n"+translated);
+                        +"\n"+originalUrl+"\n\n"+translated);
                     if(key.equals(activeSection))updateTranslationView();
                     status.setText(UiLanguage.tr(this,"Translation ready; verify against official source."));
                 });
