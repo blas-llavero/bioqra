@@ -157,6 +157,13 @@ public final class UiLanguage {
         add("Source: ","Font: ","Fuente: ");
         add("Official source to check: ","Font oficial per comprovar: ","Fuente oficial para comprobar: ");
         add("Search open data for this challenge","Cerca dades obertes per a aquest repte","Buscar datos abiertos para este reto");
+        add("Automatically translate public challenge sections (uses ChatGPT requests)","Tradueix automàticament les seccions públiques dels reptes (utilitza consultes de ChatGPT)","Traducir automáticamente las secciones públicas de los retos (utiliza consultas de ChatGPT)");
+        add("Authorize automatic public translations?","Vols autoritzar les traduccions automàtiques de continguts públics?","¿Quieres autorizar las traducciones automáticas de contenidos públicos?");
+        add("BIOQRA will send approved PUBLIC source sections to your connected ChatGPT account when viewed. Each uncached section can use one of your daily AI requests. Source originals stay unchanged. No patient data is transmitted.","BIOQRA enviarà les seccions PÚBLIQUES aprovades al teu compte de ChatGPT quan les visualitzis. Cada secció sense traducció desada pot consumir una consulta diària d'IA. Els originals no es modificaran i no s'enviaran dades de pacients.","BIOQRA enviará las secciones PÚBLICAS autorizadas a tu cuenta de ChatGPT cuando las visualices. Cada sección sin traducción guardada puede consumir una consulta diaria de IA. Los originales no se modificarán y no se enviarán datos de pacientes.");
+        add("Enable","Activa","Activar");
+        add("ChatGPT account","Compte de ChatGPT","Cuenta de ChatGPT");
+        add("ChatGPT login","Inicia sessió a ChatGPT","Iniciar sesión en ChatGPT");
+        add("Default model (new challenges / inherited selections)","Model predeterminat (reptes nous i seleccions heretades)","Modelo predeterminado (retos nuevos y selecciones heredadas)");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
