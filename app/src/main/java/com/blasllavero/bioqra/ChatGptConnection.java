@@ -546,6 +546,14 @@ public final class ChatGptConnection {
                     +" If it is a directory or a vague landing page, explain that a precise"
                     +" problem statement must be retrieved before claiming a solution.";
         }
+        String responseLanguage=UiLanguage.language(app);
+        instructions += " Write all human-readable headings, explanations, methodological notes,"
+                +" caveats, tables and conclusions in the requested language: "
+                +("ca".equals(responseLanguage)?"Catalan"
+                    :"es".equals(responseLanguage)?"Spanish":"English")
+                +". Retain original URLs, gene names, biological identifiers, accession numbers,"
+                +" executable code syntax and source quotations unchanged. Do not translate"
+                +" original citations or introduce fabricated translations of official claims.";
         JSONObject request=new JSONObject();
         request.put("model",model);
         request.put("instructions",instructions);
