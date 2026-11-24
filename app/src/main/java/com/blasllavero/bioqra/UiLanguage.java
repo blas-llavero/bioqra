@@ -281,6 +281,19 @@ public final class UiLanguage {
         add("Cone-beam CT reconstruction for radiation therapy challenge","Repte de reconstrucció TC de feix cònic per a radioteràpia","Reto de reconstrucción TC de haz cónico para radioterapia");
         add("Grand Challenge","Grand Challenge","Grand Challenge");
 
+        add("Research draft","Esborrany de recerca","Borrador de investigación");
+        add("Open project files / research evidence ZIP","Obre els fitxers del projecte / ZIP d'evidències científiques","Abrir archivos del proyecto / ZIP de evidencias científicas");
+        add("Research evidence directory: ","Carpeta d'evidències de recerca: ","Carpeta de evidencias de investigación: ");
+        add("Archive: ","Arxiu: ","Archivo: ");
+        add("Availability is checked when opened in BIOQRA.","La disponibilitat es comprova en obrir-ho a BIOQRA.","La disponibilidad se comprueba al abrirlo en BIOQRA.");
+        add("BIOQRA — Unverified AI research draft","BIOQRA — Esborrany de recerca amb IA no verificat","BIOQRA — Borrador de investigación con IA no verificado");
+        add("Date: ","Data: ","Fecha: ");
+        add("AI model: ","Model d'IA: ","Modelo de IA: ");
+        add("Public source: ","Font pública: ","Fuente pública: ");
+        add("BIOQRA does not establish clinical efficacy or independently verify the AI proposal.","BIOQRA no demostra l'eficàcia clínica ni verifica de manera independent la proposta generada per IA.","BIOQRA no demuestra la eficacia clínica ni verifica de forma independiente la propuesta generada por IA.");
+        add("PDF report language","Idioma dels informes PDF","Idioma de los informes PDF");
+        add("Same as app language (automatic)","El mateix idioma que l'aplicació (automàtic)","El mismo idioma que la aplicación (automático)");
+        add("Report language changes only new PDFs; existing reports are not silently overwritten.","L'idioma s'aplicarà als PDF nous; els documents existents no se sobreescriuen automàticament.","El idioma se aplicará a los PDF nuevos; los documentos existentes no se sobrescriben automáticamente.");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
@@ -308,6 +321,37 @@ public final class UiLanguage {
         String preferred=preference(context);
         return SYSTEM.equals(preferred)?deviceLanguage(context):preferred;
     }
+    /** Report language defaults to the app/device language, but can be overridden. */
+    public static String pdfLanguage(Context context){
+        String code=context.getApplicationContext()
+            .getSharedPreferences(SETTINGS,Context.MODE_PRIVATE)
+            .getString("pdf_language",SYSTEM);
+        return SYSTEM.equals(code)?language(context):code;
+    }
+    public static void setPdfLanguage(Context context,String code){
+        if(!SYSTEM.equals(code)&&!"ca".equals(code)&&!"es".equals(code)&&!"en".equals(code))
+            throw new IllegalArgumentException("Unsupported PDF language");
+        context.getApplicationContext().getSharedPreferences(SETTINGS,Context.MODE_PRIVATE)
+            .edit().putString("pdf_language",code).apply();
+    }
+    public static String pdfLanguagePreference(Context context){
+        return context.getApplicationContext()
+            .getSharedPreferences(SETTINGS,Context.MODE_PRIVATE)
+            .getString("pdf_language",SYSTEM);
+    }
+    public static String pdfTr(Context context,String english){
+        return trLanguage(pdfLanguage(context),english);
+    }
+    public static String pdfTitle(Context context,String title){
+        return pdfTr(context,title);
+    }
+    private static String trLanguage(String code,String english){
+        if(english==null)return "";
+        String[] translated=LABELS.get(english);
+        if(translated==null)return english;
+        return "ca".equals(code)?translated[0]:"es".equals(code)?translated[1]:english;
+    }
+
     public static String languageName(Context context){
         switch(language(context)){
             case "ca":return "Català";
@@ -362,10 +406,6 @@ public final class UiLanguage {
     }
 
     public static String tr(Context context,String english){
-        if(english==null)return "";
-        String[] translation=LABELS.get(english);
-        if(translation==null)return english;
-        String code=language(context);
-        return "ca".equals(code)?translation[0]:"es".equals(code)?translation[1]:english;
+        return trLanguage(language(context),english);
     }
 }
