@@ -163,9 +163,6 @@ public final class AiSettingsActivity extends Activity {
         automaticTranslation.setText(UiLanguage.tr(this,
             "Automatically translate public challenge sections (uses ChatGPT requests)"));
         automaticTranslation.setChecked(settings.autoTranslatePublicSections());
-        automaticTranslation.setOnCheckedChangeListener((buttonView,checked)->{
-            settings.setAutoTranslatePublicSections(checked);
-        });
         root.addView(automaticTranslation);
         android.widget.CheckBox authorizeTranslations=new android.widget.CheckBox(this);
         authorizeTranslations.setText(UiLanguage.tr(this,"Authorize ChatGPT translations"));
@@ -188,6 +185,11 @@ public final class AiSettingsActivity extends Activity {
                 }).show();
         });
         root.addView(authorizeTranslations,new LinearLayout.LayoutParams(-1,-2));
+        automaticTranslation.setOnCheckedChangeListener((buttonView,checked)->{
+            settings.setAutoTranslatePublicSections(checked);
+            // Turning translation off also revokes the separate transmission grant.
+            if(!checked)authorizeTranslations.setChecked(false);
+        });
 
 
         TextView backupHeading=label("Backup, Restore & PDF",20);
