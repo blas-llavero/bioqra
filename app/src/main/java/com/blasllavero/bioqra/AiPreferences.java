@@ -196,6 +196,34 @@ public final class AiPreferences {
         return prefs.getString("latest_"+key,null);
     }
 
+    /** Only public, approved challenge navigation metadata; never secrets or research data. */
+    public static final class VisitedChallenge {
+        public final String title,url,kind;
+        public final int number;
+        VisitedChallenge(String title,String url,String kind,int number){
+            this.title=title;this.url=url;this.kind=kind;this.number=number;
+        }
+    }
+
+    public void rememberVisitedChallenge(String title,String url,String kind,int number){
+        if(title==null || title.isEmpty() || title.length()>250
+                || url==null || !TrustedChallengeReader.approved(url))return;
+        prefs.edit().putString("last_visited_title",title)
+            .putString("last_visited_url",url)
+            .putString("last_visited_kind",kind==null?"directory":kind)
+            .putInt("last_visited_number",Math.max(0,number)).apply();
+    }
+
+    public VisitedChallenge lastVisitedChallenge(){
+        String title=prefs.getString("last_visited_title",null);
+        String url=prefs.getString("last_visited_url",null);
+        if(title==null || title.isEmpty() || url==null
+                || !TrustedChallengeReader.approved(url))return null;
+        return new VisitedChallenge(title,url,
+            prefs.getString("last_visited_kind","directory"),
+            prefs.getInt("last_visited_number",0));
+    }
+
     public String pdfTreeUri(){ return prefs.getString("pdf_tree_uri",null); }
     public void setPdfTreeUri(String uri){
         prefs.edit().putString("pdf_tree_uri",uri).apply();
