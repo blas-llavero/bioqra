@@ -391,8 +391,11 @@ public final class AiSettingsActivity extends Activity {
         boolean connected=!"Not connected".equals(account.accountLabel());
         String scope=UiLanguage.tr(this,account.canUsePlan() ? "AI plan usage authorized"
                 : "AI plan usage not authorized");
-        accountStatus.setText("ChatGPT: "+account.accountLabel()
-                +"\n"+(connected?scope+" · Session saved securely on this device. Automatic token renewal is used where supported.":"Log in once to connect this device."));
+        accountStatus.setText("ChatGPT: "
+                +(connected?account.accountLabel():UiLanguage.tr(this,"Not connected"))
+                +"\n"+(connected?scope+" · "
+                        +UiLanguage.tr(this,"Session saved securely on this device. Automatic token renewal is used where supported.")
+                        :UiLanguage.tr(this,"Log in once to connect this device.")));
         accountButton.setText(UiLanguage.tr(this,signingIn?"Connecting..."
                 : connected?"ChatGPT ✓ · Account & sign out":"ChatGPT login"));
         accountButton.setEnabled(!signingIn);
@@ -500,7 +503,9 @@ public final class AiSettingsActivity extends Activity {
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     populateModels(new ArrayList<>());
-                    info.setText(UiLanguage.format(this,"Model list unavailable: %s",ex.getMessage()));
+                    info.setText(UiLanguage.format(this,"Model list unavailable: %s",
+                    "Connect a ChatGPT account first".equals(ex.getMessage())
+                        ?UiLanguage.tr(this,"Connect a ChatGPT account first"):ex.getMessage()));
                 });
             }
         });
