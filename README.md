@@ -15,6 +15,14 @@ The workbench retains the original official text as the primary, unmodified evid
 
 This is not automatic, universal or offline translation. Full-document translation across every source, saved result and export remains a separate milestone. A translation is never an authoritative official version; verify claims against the original organizer document.
 
+## PDF report-language selection and automatic queue reliability (24 November)
+
+**PDF report language:** The AI Settings page now has a separate **PDF report language** selector under the general application language. It defaults to the selected app language (which itself follows Android device locale by default). Users can explicitly choose Catalan, Spanish or English for **newly generated** reports. The visible PDF layout headings, source/provenance labels and disclaimers are localized; archived report bodies and historical AI proposals are **not automatically translated**. Previously created PDFs remain unchanged unless explicitly regenerated. The same language preference is applied whether a report is created for normal storage or included inside ZIP backups/evidence exports.
+
+**Completed PDF access from the list:** Completed challenge cards now expose **View PDF** without opening the challenge workbench. BIOQRA looks up the actually saved PDF and validates its readability; if the file is missing or inaccessible, it reports the error and invalidates the stale completed marker rather than claiming success.
+
+**Sequential queue:** The existing automatic mode starts the next challenge only on a verified PDF/ZIP completion callback; a cancelled Android Activity return can still count as success **only if the persisted export-complete checkpoint is present**. Incomplete work is never skipped or automatically marked completed. This is currently an Android Activity-driven foreground queue, **not an independent background WorkManager/service**: the detail screen may open automatically as each challenge is processed, and processing is not guaranteed if the OS terminates the activity/process. A service/work scheduling refactor is needed for truly background operation while the user stays on the list.
+
 ## Settings layout and synchronized research progress (24 November)
 
 Settings displays **← Back to BIOQRA** as its first control, followed by the **AI Settings** account/model/automatic processing controls. The **Language** panel (device language selector and translation preferences) follows AI Settings and precedes Backup/Restore/PDF.
