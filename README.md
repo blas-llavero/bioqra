@@ -15,6 +15,12 @@ The workbench retains the original official text as the primary, unmodified evid
 
 This is not automatic, universal or offline translation. Full-document translation across every source, saved result and export remains a separate milestone. A translation is never an authoritative official version; verify claims against the original organizer document.
 
+## Automatic mode usability (24 November)
+
+- In **Automatic mode**, the manual **Translate official section with ChatGPT** button is hidden. Consented, eligible section translation uses the existing automatic preference and separate ChatGPT authorization; Manual mode retains its explicit one-time translation button. Original official source text remains accessible.
+- Tapping **Automatic mode** while a ChatGPT account is not connected/authorized presents a localized dialog explaining that the user must configure ChatGPT in AI Settings. The user can choose **Open AI Settings** or **Not now**. A separate status message is shown when the account is connected but automatic research consent is still missing. No ChatGPT request occurs without the necessary grant.
+- The detail's bottom progress bar is determinate and visible throughout an automatic challenge, including between operations. Its message comes from the shared stage of the challenge: **Processing pending → Preparing the challenge statement → Searching and analyzing research data → Generating research proposal with AI → Generating PDF and ZIP → Processing completed**. These stages map to the same saved percent as the challenge list (0/20/40/60/80/100); they are not time-based estimates.
+
 ## BIOQRA header, visible queue interruption and navigation fix (24 November)
 
 The home screen now displays the requested Catalan mission sentence **directly under the BIOQRA title**, with equivalent English/Spanish copy when those are the selected UI language. The prior English queue status now has Catalan and Spanish translations, and account-connection labels in AI Settings also use the selected language.
