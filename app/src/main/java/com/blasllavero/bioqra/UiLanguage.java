@@ -317,6 +317,7 @@ public final class UiLanguage {
         add("You can still open the original site in your browser.","Pots obrir igualment el lloc web original al navegador.","Puedes abrir igualmente el sitio web original en el navegador.");
         add("Main menu","Menú principal","Menú principal");
         add("Back to challenge","Torna al repte","Volver al reto");
+        add("Back to main menu","Torna al menú principal","Volver al menú principal");
         add("No authorized research proposal was generated. Review this challenge manually.","No s'ha pogut generar cap proposta de recerca autoritzada. Revisa aquest repte manualment.","No se ha podido generar ninguna propuesta de investigación autorizada. Revisa este reto manualmente.");
         add("Research cannot continue automatically; manual review required. The queue will continue.","La recerca no pot continuar automàticament; cal revisió manual. La cua continuarà.","La investigación no puede continuar automáticamente; se requiere revisión manual. La cola continuará.");
         add("Manual review required — research could not continue","Cal revisió manual — la recerca no ha pogut continuar","Revisión manual necesaria — la investigación no ha podido continuar");
