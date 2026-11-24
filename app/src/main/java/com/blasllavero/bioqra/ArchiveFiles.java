@@ -111,7 +111,7 @@ public final class ArchiveFiles {
         boolean ok=false;
         try(OutputStream out=context.getContentResolver().openOutputStream(target,"rwt")){
             if(out==null)throw new Exception("Cannot open PDF");
-            writePdf(out,result);ok=true;
+            writePdf(context,out,result);ok=true;
         }finally{
             if(!ok&&created)try{DocumentsContract.deleteDocument(context.getContentResolver(),target);}
                 catch(Exception ignored){}
@@ -125,9 +125,9 @@ public final class ArchiveFiles {
         return SecurePdfAccess.findSaved(context,tree,result);
     }
 
-    public static byte[] generatedPdf(AiPreferences.SavedResult result) throws Exception{
+    public static byte[] generatedPdf(Context context,AiPreferences.SavedResult result) throws Exception{
         ByteArrayOutputStream out=new ByteArrayOutputStream();
-        writePdf(out,result);
+        writePdf(context,out,result);
         return out.toByteArray();
     }
 
@@ -167,7 +167,7 @@ public final class ArchiveFiles {
         return target;
     }
 
-    private static void writePdf(OutputStream output,AiPreferences.SavedResult result) throws Exception{
-        ResearchPdfLayout.write(output,result);
+    private static void writePdf(Context context,OutputStream output,AiPreferences.SavedResult result) throws Exception{
+        ResearchPdfLayout.write(context,output,result);
     }
 }
