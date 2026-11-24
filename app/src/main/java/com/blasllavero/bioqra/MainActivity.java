@@ -588,6 +588,50 @@ public class MainActivity extends Activity {
         Button open=button("Open challenge");
         card.addView(open,new LinearLayout.LayoutParams(-1,dp(42)));
         open.setOnClickListener(v->openChallenge(title,url,kind));
+        if(aiPreferences.automaticExportCompleted(key)){
+            Button viewPdf=button("View PDF");
+            card.addView(viewPdf,new LinearLayout.LayoutParams(-1,dp(42)));
+            viewPdf.setOnClickListener(v->showCompletedPdf(key));
+        }
+    }
+
+    /** Open the completed research PDF directly from the catalog; no need
+     * to visit the challenge screen to finish a previously exported item. */
+    private void showCompletedPdf(String key){
+        AiPreferences.SavedResult found=null;
+        for(AiPreferences.SavedResult item:aiPreferences.savedResults()){
+            if(key.equals(item.key)){found=item;break;}
+        }
+        if(found==null){
+            status.setText(UiLanguage.tr(this,"Saved PDF unavailable"));
+            return;
+        }
+        final AiPreferences.SavedResult saved=found;
+        final String destination=aiPreferences.pdfTreeUri();
+        status.setText(UiLanguage.tr(this,"Checking saved PDF..."));
+        WORKER.execute(()->{
+            Uri tree=destination==null?null:Uri.parse(destination);
+            Uri pdf=null;
+            String error=null;
+            try{
+                pdf=ArchiveFiles.findSavedPdf(this,tree,saved);
+                if(pdf==null)throw new Exception("PDF file is missing");
+                try(android.os.ParcelFileDescriptor descriptor=
+                    SecurePdfAccess.open(this,pdf,tree,saved)){
+                    if(descriptor==null)throw new Exception("PDF is not readable");
+                }
+            }catch(Exception e){error=e.getMessage();}
+            final Uri verified=pdf, selectedTree=tree;
+            final String failure=error;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                if(failure!=null){
+                    aiPreferences.invalidateAutomaticExport(key);
+                    status.setText(UiLanguage.tr(this,"Saved PDF unavailable")+": "+failure);
+                    showItems();
+                }else ChallengePdfViewer.show(this,verified,selectedTree,saved);
+            });
+        });
     }
 
     private static class ResultRow {
