@@ -336,8 +336,19 @@ public class MainActivity extends Activity {
             if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()){
                 initialAutomaticQueueStarted=true;
                 startAutomaticQueue();
+            }else if(!chatGptConnection.canUsePlan()){
+                status.setText(UiLanguage.tr(this,
+                    "Automatic mode selected. Connect ChatGPT in Settings to start research."));
+                new AlertDialog.Builder(this)
+                    .setTitle(UiLanguage.tr(this,"ChatGPT setup required"))
+                    .setMessage(UiLanguage.tr(this,
+                        "Automatic mode needs a connected and authorized ChatGPT account. Configure ChatGPT in AI Settings to start processing challenges."))
+                    .setNegativeButton(UiLanguage.tr(this,"Not now"),null)
+                    .setPositiveButton(UiLanguage.tr(this,"Open AI Settings"),(dialog,which)->
+                        startActivity(new Intent(this,AiSettingsActivity.class)))
+                    .show();
             }else status.setText(UiLanguage.tr(this,
-                "Automatic mode selected. Connect ChatGPT in Settings to start research."));
+                "Automatic mode selected. Authorize automatic AI processing in Settings to begin."));
         }else{
             automaticRows.clear();
             automaticIndex=-1;
