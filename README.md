@@ -15,6 +15,14 @@ The workbench retains the original official text as the primary, unmodified evid
 
 This is not automatic, universal or offline translation. Full-document translation across every source, saved result and export remains a separate milestone. A translation is never an authoritative official version; verify claims against the original organizer document.
 
+## BIOQRA header, visible queue interruption and navigation fix (24 November)
+
+The home screen now displays the requested Catalan mission sentence **directly under the BIOQRA title**, with equivalent English/Spanish copy when those are the selected UI language. The prior English queue status now has Catalan and Spanish translations, and account-connection labels in AI Settings also use the selected language.
+
+The observed automatic queue interruption was traced to the detail screen's **Back to challenges** button directly calling `finish()` while the research/ZIP/PDF job was still owned by that Activity. This caused an Android `RESULT_CANCELED` before the export checkpoint and left the queue halted. When this detail screen is an active automatic-queue entry, the toolbar Back action **and system Back navigation** now bring the existing MainActivity to the foreground via `FLAG_ACTIVITY_REORDER_TO_FRONT` without calling `finish()`. The detail Activity may finish itself after a verified export, at which point MainActivity proceeds to the next challenge. Returning from a manually opened/completed challenge still exits normally.
+
+**Limitation:** This fix protects the active Activity across navigation while Android keeps the process alive. It does not turn the queue into an independent background service and does not guarantee survival of OS process termination. Full lifecycle-safe worker extraction remains tracked in issue #6. The queue does not invent completion of unsupported/failed challenges.
+
 ## PDF report-language selection and automatic queue reliability (24 November)
 
 **PDF report language:** The AI Settings page now has a separate **PDF report language** selector under the general application language. It defaults to the selected app language (which itself follows Android device locale by default). Users can explicitly choose Catalan, Spanish or English for **newly generated** reports. The visible PDF layout headings, source/provenance labels and disclaimers are localized; archived report bodies and historical AI proposals are **not automatically translated**. Previously created PDFs remain unchanged unless explicitly regenerated. The same language preference is applied whether a report is created for normal storage or included inside ZIP backups/evidence exports.
