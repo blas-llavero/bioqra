@@ -558,9 +558,13 @@ public class MainActivity extends Activity {
         }
         android.widget.ProgressBar progress=new android.widget.ProgressBar(
                 this,null,android.R.attr.progressBarStyleHorizontal);
-        progress.setMax(5);
-        progress.setProgress(stage);
+        progress.setIndeterminate(false);
+        progress.setMax(100);
+        progress.setProgress(aiPreferences.processingPercent(key));
         card.addView(progress,new LinearLayout.LayoutParams(-1,dp(12)));
+        TextView percent=text(aiPreferences.processingPercent(key)+"%",12,true);
+        percent.setGravity(Gravity.END);
+        card.addView(percent);
         String override=aiPreferences.override(key);
         if(override!=null && !keys.contains(override)){
             names.add("Unavailable saved model: "+override);
