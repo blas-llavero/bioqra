@@ -300,6 +300,10 @@ public final class UiLanguage {
         add("Connect a ChatGPT account first","Connecta primer un compte de ChatGPT","Conecta primero una cuenta de ChatGPT");
         add("Checking saved PDF...","Comprovant el PDF desat...","Comprobando el PDF guardado...");
         add("Saved PDF unavailable","PDF desat no disponible","PDF guardado no disponible");
+        add("Preparing the challenge statement","Preparació de l'enunciat del repte","Preparación del enunciado del reto");
+        add("Searching and analyzing research data","Cerca i anàlisi de dades de recerca","Búsqueda y análisis de datos de investigación");
+        add("Generating research proposal with AI","Generant la proposta de recerca amb IA","Generando la propuesta de investigación con IA");
+        add("Generating PDF and ZIP","Generant PDF i ZIP","Generando PDF y ZIP");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
@@ -356,6 +360,18 @@ public final class UiLanguage {
         String[] translated=LABELS.get(english);
         if(translated==null)return english;
         return "ca".equals(code)?translated[0]:"es".equals(code)?translated[1]:english;
+    }
+
+    /** Localized processing stage shared by the detail view and challenge list. */
+    public static String progressStage(Context context,int stage){
+        switch(Math.max(0,Math.min(5,stage))){
+            case 1:return tr(context,"Preparing the challenge statement");
+            case 2:return tr(context,"Searching and analyzing research data");
+            case 3:return tr(context,"Generating research proposal with AI");
+            case 4:return tr(context,"Generating PDF and ZIP");
+            case 5:return tr(context,"Processing completed");
+            default:return tr(context,"Processing pending");
+        }
     }
 
     public static String languageName(Context context){
