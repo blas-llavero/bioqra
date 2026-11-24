@@ -182,7 +182,7 @@ public class MainActivity extends Activity {
         TextView title = text("BIOQRA", 30, true);
         title.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(58)));
-        TextView subtitle = text("Resolució de reptes bioinformàtics amb IA per minimitzar l’impacte dels tractaments en els pacient", 13, false);
+        TextView subtitle = text("Resolving bioinformatics challenges with AI to minimize the impact of treatments on patients", 13, false);
         subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(subtitle);
         Button aiSettingsButton=button("⚙ AI Settings · models & automation");
