@@ -1298,12 +1298,17 @@ public final class ChallengeActivity extends Activity {
                         && aiPreferences.remaining()>1
                         && !aiPreferences.sourceSuggestionAttemptedToday(challengeKey)
                         && !ProcessingControl.stopped() && !ProcessingControl.paused()){
-                    if(aiPreferences.reserve(true)){
-                        aiPreferences.markSourceSuggestionAttempted(challengeKey);
-                        try{
-                            List<ChatGptConnection.Model> models=connection.models();
-                            AiPreferences.Selection choice=AiPreferences.choose(
-                                models,aiPreferences.selected(challengeKey));
+                    try{
+                        List<ChatGptConnection.Model> models=connection.models();
+                        AiPreferences.Selection choice=AiPreferences.choose(
+                            models,aiPreferences.selected(challengeKey));
+                        if(aiPreferences.reserve(true)){
+                            aiPreferences.markSourceSuggestionAttempted(challengeKey);
+                            runOnUiThread(()->{
+                                if(!isFinishing()&&!isDestroyed())
+                                    status.setText(UiLanguage.tr(this,
+                                        "Looking for another official public challenge page..."));
+                            });
                             java.util.List<String> suggested=
                                 connection.suggestOfficialChallengePages(
                                     choice.slug,title,candidates.get(0));
@@ -1319,10 +1324,10 @@ public final class ChallengeActivity extends Activity {
                                     if(tested.specific)break;
                                 }catch(Exception ignored){}
                             }
-                        }catch(Exception modelUnavailable){
-                            // The original public-source search remains usable;
-                            // no additional request or bypass is attempted.
                         }
+                    }catch(Exception modelUnavailable){
+                        // The original public-source search remains usable;
+                        // no additional request or bypass is attempted.
                     }
                 }
                 if(result==null){
