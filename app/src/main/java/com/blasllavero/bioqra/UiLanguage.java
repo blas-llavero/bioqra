@@ -294,6 +294,12 @@ public final class UiLanguage {
         add("PDF report language","Idioma dels informes PDF","Idioma de los informes PDF");
         add("Same as app language (automatic)","El mateix idioma que l'aplicació (automàtic)","El mismo idioma que la aplicación (automático)");
         add("Report language changes only new PDFs; existing reports are not silently overwritten.","L'idioma s'aplicarà als PDF nous; els documents existents no se sobreescriuen automàticament.","El idioma se aplicará a los PDF nuevos; los documentos existentes no se sobrescriben automáticamente.");
+        add("Resolving bioinformatics challenges with AI to minimize the impact of treatments on patients","Resolució de reptes bioinformàtics amb IA per minimitzar l’impacte dels tractaments en els pacient","Resolución de retos bioinformáticos con IA para minimizar el impacto de los tratamientos en los pacientes");
+        add("Automatic queue interrupted: the current challenge did not complete. Reopen it only after checking its saved state.","La cua automàtica s'ha interromput: el repte actual no s'ha completat. Comprova'n l'estat desat abans de tornar-lo a obrir.","La cola automática se ha interrumpido: el reto actual no ha terminado. Comprueba su estado guardado antes de volver a abrirlo.");
+        add("Automatic queue paused: challenge not yet verified complete.","Cua automàtica en pausa: el repte encara no s'ha verificat com a completat.","Cola automática en pausa: el reto aún no se ha verificado como completado.");
+        add("Connect a ChatGPT account first","Connecta primer un compte de ChatGPT","Conecta primero una cuenta de ChatGPT");
+        add("Checking saved PDF...","Comprovant el PDF desat...","Comprobando el PDF guardado...");
+        add("Saved PDF unavailable","PDF desat no disponible","PDF guardado no disponible");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
