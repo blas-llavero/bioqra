@@ -337,7 +337,9 @@ public final class ChallengeActivity extends Activity {
         pdfProgressLabel=text("Preparing PDF and ZIP...",13,false);
         pdfProgressLabel.setVisibility(View.GONE);
         pdfProgress=new android.widget.ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);
-        pdfProgress.setIndeterminate(true);
+        pdfProgress.setIndeterminate(false);
+        pdfProgress.setMax(100);
+        pdfProgress.setProgress(aiPreferences.processingPercent(challengeKey));
         pdfProgress.setVisibility(View.GONE);
         pdfActions.addView(viewSavedPdf,new LinearLayout.LayoutParams(-1,dp(52)));
         // The processing indicator belongs at the very bottom of the result
@@ -780,10 +782,16 @@ public final class ChallengeActivity extends Activity {
         if(pdfProgress==null)return;
         boolean active=pdfOperations>0 || ("automatic".equals(mode)
                 && (busy || datasetSearchInProgress));
+        // Same persisted stage and percentage as the main challenge list.
+        int percent=aiPreferences.processingPercent(challengeKey);
+        pdfProgress.setIndeterminate(false);
+        pdfProgress.setMax(100);
+        pdfProgress.setProgress(percent);
         if(active){
             boolean exporting=pdfOperations>0 || aiPreferences.processingStage(challengeKey)>=4;
-            pdfProgressLabel.setText(UiLanguage.tr(this,exporting
-                    ?"Preparing PDF and ZIP...":"Processing challenge..."));
+            String message=UiLanguage.tr(this,exporting
+                    ?"Preparing PDF and ZIP...":"Processing challenge...");
+            pdfProgressLabel.setText(message+" · "+percent+"%");
         }
         pdfProgressLabel.setVisibility(active?View.VISIBLE:View.GONE);
         pdfProgress.setVisibility(active?View.VISIBLE:View.GONE);
@@ -1164,6 +1172,7 @@ public final class ChallengeActivity extends Activity {
         }
         busy=true;
         aiPreferences.setProcessingStage(challengeKey,1);
+        refreshPdfProgress();
         status.setText("Checking official organizer links for the detailed challenge statement...");
         updateButtons();
         EXEC.execute(()->{
@@ -1267,6 +1276,7 @@ public final class ChallengeActivity extends Activity {
         }
         busy=true;
         aiPreferences.setProcessingStage(challengeKey,3);
+        refreshPdfProgress();
         status.setText("Checking your saved model selection...");
         updateButtons();
         final String publicStatement=fetchedText;
