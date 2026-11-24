@@ -74,33 +74,15 @@ public class MainActivity extends Activity {
         }
     }
 
-    public static final String OPEN_FIRST_CHALLENGE="open_first_challenge_from_settings";
+    public static final String SHOW_MAIN_MENU="show_main_menu_from_settings";
 
     @Override protected void onNewIntent(Intent intent){
         super.onNewIntent(intent);
         setIntent(intent);
-        if(intent.getBooleanExtra(OPEN_FIRST_CHALLENGE,false)){
-            intent.removeExtra(OPEN_FIRST_CHALLENGE);
-            openFirstDisplayedChallenge();
+        if(intent.getBooleanExtra(SHOW_MAIN_MENU,false)){
+            intent.removeExtra(SHOW_MAIN_MENU);
+            if(list!=null)showSection("Challenges");
         }
-    }
-
-    private void openFirstDisplayedChallenge(){
-        if(displayedRows.isEmpty())showItems();
-        if(displayedRows.isEmpty()){
-            status.setText(UiLanguage.tr(this,"No matching challenges. Change the filters or refresh."));
-            return;
-        }
-        ResultRow first=displayedRows.get(0);
-        // This is an explicit navigation request, not a request to restart the
-        // entire automatic queue or consume another ChatGPT attempt.
-        Intent detail=new Intent(this,ChallengeActivity.class);
-        detail.putExtra(ChallengeActivity.TITLE,first.title);
-        detail.putExtra(ChallengeActivity.NUMBER,1);
-        detail.putExtra(ChallengeActivity.URL,first.url);
-        detail.putExtra(ChallengeActivity.KIND,first.kind);
-        detail.putExtra(ChallengeActivity.MODE,"manual");
-        startActivity(detail);
     }
 
     @Override public void onCreate(Bundle state) {
@@ -120,9 +102,9 @@ public class MainActivity extends Activity {
         mergeGrand(GrandChallengeDiscovery.load(this));
         loadCached();
         buildUi();
-        if(getIntent().getBooleanExtra(OPEN_FIRST_CHALLENGE,false)){
-            getIntent().removeExtra(OPEN_FIRST_CHALLENGE);
-            openFirstDisplayedChallenge();
+        if(getIntent().getBooleanExtra(SHOW_MAIN_MENU,false)){
+            getIntent().removeExtra(SHOW_MAIN_MENU);
+            showSection("Challenges");
         }
         refresh();
         refreshGrand();
