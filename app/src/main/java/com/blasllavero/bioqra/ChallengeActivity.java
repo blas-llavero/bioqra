@@ -1289,6 +1289,42 @@ public final class ChallengeActivity extends Activity {
                         retrievalFailure=failure;
                     }
                 }
+                // The deterministic, public same-organizer crawl remains the
+                // first choice. The model may SUGGEST URLs only after that fails.
+                // It does not have a live browser, and its guesses are not evidence.
+                if((result==null || !result.specific)
+                        && "automatic".equals(mode)
+                        && connection.canUsePlan() && aiPreferences.autoConsent()
+                        && aiPreferences.remaining()>1
+                        && !aiPreferences.sourceSuggestionAttemptedToday(challengeKey)
+                        && !ProcessingControl.stopped() && !ProcessingControl.paused()){
+                    if(aiPreferences.reserve(true)){
+                        aiPreferences.markSourceSuggestionAttempted(challengeKey);
+                        try{
+                            List<ChatGptConnection.Model> models=connection.models();
+                            AiPreferences.Selection choice=AiPreferences.choose(
+                                models,aiPreferences.selected(challengeKey));
+                            java.util.List<String> suggested=
+                                connection.suggestOfficialChallengePages(
+                                    choice.slug,title,candidates.get(0));
+                            // Bounded verification: only 3 URLs, HTTPS, exactly
+                            // the same host, and the existing confidence check.
+                            for(String suggestion:suggested){
+                                if(ProcessingControl.stopped()||ProcessingControl.paused())break;
+                                try{
+                                    ChallengePageResolver.Outcome tested=
+                                        ChallengePageResolver.resolve(this,suggestion,title);
+                                    if(result==null || (!result.specific && tested.specific))
+                                        result=tested;
+                                    if(tested.specific)break;
+                                }catch(Exception ignored){}
+                            }
+                        }catch(Exception modelUnavailable){
+                            // The original public-source search remains usable;
+                            // no additional request or bypass is attempted.
+                        }
+                    }
+                }
                 if(result==null){
                     throw retrievalFailure==null
                         ?new Exception("No public challenge statement available")
