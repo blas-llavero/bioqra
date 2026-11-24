@@ -315,6 +315,8 @@ public final class UiLanguage {
         add("Manual review required — official statement unavailable","Cal revisió manual — enunciat oficial no disponible","Revisión manual necesaria — enunciado oficial no disponible");
         add("Automatic retrieval unavailable: ","Recuperació automàtica no disponible: ","Recuperación automática no disponible: ");
         add("You can still open the original site in your browser.","Pots obrir igualment el lloc web original al navegador.","Puedes abrir igualmente el sitio web original en el navegador.");
+        add("Main menu","Menú principal","Menú principal");
+        add("Back to challenge","Torna al repte","Volver al reto");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
