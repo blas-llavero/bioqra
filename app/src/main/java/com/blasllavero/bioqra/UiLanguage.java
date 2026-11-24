@@ -304,6 +304,10 @@ public final class UiLanguage {
         add("Searching and analyzing research data","Cerca i anàlisi de dades de recerca","Búsqueda y análisis de datos de investigación");
         add("Generating research proposal with AI","Generant la proposta de recerca amb IA","Generando la propuesta de investigación con IA");
         add("Generating PDF and ZIP","Generant PDF i ZIP","Generando PDF y ZIP");
+        add("ChatGPT setup required","Cal configurar ChatGPT","Se debe configurar ChatGPT");
+        add("Automatic mode needs a connected and authorized ChatGPT account. Configure ChatGPT in AI Settings to start processing challenges.","El mode automàtic necessita un compte de ChatGPT connectat i autoritzat. Configura ChatGPT a Configuració d'IA per començar a processar els reptes.","El modo automático necesita una cuenta de ChatGPT conectada y autorizada. Configura ChatGPT en Configuración de IA para empezar a procesar los retos.");
+        add("Open AI Settings","Obre Configuració d'IA","Abrir Configuración de IA");
+        add("Automatic mode selected. Authorize automatic AI processing in Settings to begin.","Mode automàtic seleccionat. Autoritza el processament automàtic amb IA a Configuració per començar.","Modo automático seleccionado. Autoriza el procesamiento automático con IA en Configuración para empezar.");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
