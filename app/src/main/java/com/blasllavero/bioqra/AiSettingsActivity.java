@@ -75,67 +75,6 @@ public final class AiSettingsActivity extends Activity {
             return insets;
         });
         scroll.addView(root);setContentView(scroll);
-        TextView languageLabel=label(UiLanguage.tr(this,"Language"),17);
-        root.addView(languageLabel);
-        Spinner languagePicker=new Spinner(this);
-        String[] codes={"system","ca","es","en"};
-        String[] names={
-            UiLanguage.tr(this,"Device language (automatic)"),
-            "Català","Español","English"
-        };
-        ArrayAdapter<String> languageAdapter=new ArrayAdapter<>(this,
-            android.R.layout.simple_spinner_item,names);
-        languageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        languagePicker.setAdapter(languageAdapter);
-        String preferred=UiLanguage.preference(this);
-        for(int i=0;i<codes.length;i++)if(codes[i].equals(preferred))
-            languagePicker.setSelection(i);
-        languagePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
-            private boolean initialized=false;
-            @Override public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){
-                String next=codes[position];
-                if(!initialized){initialized=true;return;}
-                if(next.equals(UiLanguage.preference(AiSettingsActivity.this)))return;
-                UiLanguage.setPreference(AiSettingsActivity.this,next);
-                recreate();
-            }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
-        });
-        root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(52)));
-        android.widget.CheckBox automaticTranslation=new android.widget.CheckBox(this);
-        automaticTranslation.setText(UiLanguage.tr(this,
-            "Automatically translate public challenge sections (uses ChatGPT requests)"));
-        automaticTranslation.setChecked(settings.autoTranslatePublicSections());
-        automaticTranslation.setOnCheckedChangeListener((buttonView,checked)->{
-            if(!checked){
-                settings.setAutoTranslatePublicSections(false);
-                return;
-            }
-            settings.setAutoTranslatePublicSections(true);
-            if(settings.automaticTranslationAuthorized())return;
-            new AlertDialog.Builder(this)
-                .setTitle(UiLanguage.tr(this,"Authorize automatic public translations?"))
-                .setMessage(UiLanguage.tr(this,
-                    "BIOQRA will send approved PUBLIC source sections to your connected ChatGPT account when viewed. Each uncached section can use one of your daily AI requests. Source originals stay unchanged. No patient data is transmitted."))
-                .setNegativeButton(UiLanguage.tr(this,"Not now"),(dialog,which)->{})
-                .setPositiveButton(UiLanguage.tr(this,"Authorize"),(dialog,which)->
-                    settings.authorizeAutomaticTranslation())
-                .show();
-        });
-        root.addView(automaticTranslation);
-        Button authorizeTranslations=button("Authorize ChatGPT translations");
-        authorizeTranslations.setOnClickListener(v->new AlertDialog.Builder(this)
-            .setTitle(UiLanguage.tr(this,"Authorize automatic public translations?"))
-            .setMessage(UiLanguage.tr(this,
-                "BIOQRA will send approved PUBLIC source sections to your connected ChatGPT account when viewed. Each uncached section can use one of your daily AI requests. Source originals stay unchanged. No patient data is transmitted."))
-            .setNegativeButton(UiLanguage.tr(this,"Not now"),null)
-            .setPositiveButton(UiLanguage.tr(this,"Authorize"),(dialog,which)->{
-                settings.authorizeAutomaticTranslation();
-                automaticTranslation.setChecked(true);
-            }).show());
-        root.addView(authorizeTranslations,new LinearLayout.LayoutParams(-1,dp(50)));
-
-
         Button back=button("← Back to BIOQRA");
         back.setOnClickListener(v->finish());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(55)));
@@ -192,6 +131,65 @@ public final class AiSettingsActivity extends Activity {
         Button reload=button("Refresh models from ChatGPT");
         root.addView(reload,new LinearLayout.LayoutParams(-1,dp(52)));
         reload.setOnClickListener(v->loadModels());
+        // Keep AI account, model and automation settings together. Language follows them.
+        TextView languageLabel=label(UiLanguage.tr(this,"Language"),17);
+        root.addView(languageLabel);
+        Spinner languagePicker=new Spinner(this);
+        String[] codes={"system","ca","es","en"};
+        String[] names={
+            UiLanguage.tr(this,"Device language (automatic)"),
+            "Català","Español","English"
+        };
+        ArrayAdapter<String> languageAdapter=new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item,names);
+        languageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languagePicker.setAdapter(languageAdapter);
+        String preferred=UiLanguage.preference(this);
+        for(int i=0;i<codes.length;i++)if(codes[i].equals(preferred))
+            languagePicker.setSelection(i);
+        languagePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            private boolean initialized=false;
+            @Override public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){
+                String next=codes[position];
+                if(!initialized){initialized=true;return;}
+                if(next.equals(UiLanguage.preference(AiSettingsActivity.this)))return;
+                UiLanguage.setPreference(AiSettingsActivity.this,next);
+                recreate();
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
+        });
+        root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(52)));
+        android.widget.CheckBox automaticTranslation=new android.widget.CheckBox(this);
+        automaticTranslation.setText(UiLanguage.tr(this,
+            "Automatically translate public challenge sections (uses ChatGPT requests)"));
+        automaticTranslation.setChecked(settings.autoTranslatePublicSections());
+        automaticTranslation.setOnCheckedChangeListener((buttonView,checked)->{
+            settings.setAutoTranslatePublicSections(checked);
+        });
+        root.addView(automaticTranslation);
+        android.widget.CheckBox authorizeTranslations=new android.widget.CheckBox(this);
+        authorizeTranslations.setText(UiLanguage.tr(this,"Authorize ChatGPT translations"));
+        authorizeTranslations.setChecked(settings.automaticTranslationAuthorized());
+        authorizeTranslations.setOnCheckedChangeListener((buttonView,checked)->{
+            if(!checked){
+                settings.revokeAutomaticTranslationAuthorization();
+                return;
+            }
+            new AlertDialog.Builder(this)
+                .setTitle(UiLanguage.tr(this,"Authorize automatic public translations?"))
+                .setMessage(UiLanguage.tr(this,
+                    "BIOQRA will send approved PUBLIC source sections to your connected ChatGPT account when viewed. Each uncached section can use one of your daily AI requests. Source originals stay unchanged. No patient data is transmitted."))
+                .setNegativeButton(UiLanguage.tr(this,"Not now"),(dialog,which)->
+                    authorizeTranslations.setChecked(false))
+                .setOnCancelListener(dialog->authorizeTranslations.setChecked(false))
+                .setPositiveButton(UiLanguage.tr(this,"Authorize"),(dialog,which)->{
+                    settings.authorizeAutomaticTranslation();
+                    automaticTranslation.setChecked(true);
+                }).show();
+        });
+        root.addView(authorizeTranslations,new LinearLayout.LayoutParams(-1,-2));
+
+
         TextView backupHeading=label("Backup, Restore & PDF",20);
         backupHeading.setTypeface(null,Typeface.BOLD);
         root.addView(backupHeading);
