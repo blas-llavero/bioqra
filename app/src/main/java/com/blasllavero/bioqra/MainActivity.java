@@ -185,7 +185,7 @@ public class MainActivity extends Activity {
         Button aiSettingsButton=button("⚙ AI Settings · models & automation");
         root.addView(aiSettingsButton,new LinearLayout.LayoutParams(-1,dp(49)));
         aiSettingsButton.setOnClickListener(v->startActivity(new Intent(this,AiSettingsActivity.class)));
-        TextView subtitle = text("Open Bioinformatics Research & Patient Assistance", 13, false);
+        TextView subtitle = text("Resolució de reptes bioinformàtics amb IA per minimitzar l’impacte dels tractaments en els pacient", 13, false);
         subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(subtitle);
         status = text("Loading verified public challenges...", 13, false);
@@ -438,7 +438,7 @@ public class MainActivity extends Activity {
         if(result!=RESULT_OK && !savedComplete){
             // Never skip incomplete exports or attempt a second AI request silently.
             status.setText(UiLanguage.tr(this,
-                "Automatic queue paused: challenge not yet verified complete."));
+                "Automatic queue interrupted: the current challenge did not complete. Reopen it only after checking its saved state."));
             showItems();
             return;
         }
