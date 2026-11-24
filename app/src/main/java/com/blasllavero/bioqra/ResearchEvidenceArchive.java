@@ -322,7 +322,7 @@ public final class ResearchEvidenceArchive {
                 }
                 if(result!=null){
                     zip.putNextEntry(new ZipEntry("research/proposal.pdf"));
-                    zip.write(ArchiveFiles.generatedPdf(result));
+                    zip.write(ArchiveFiles.generatedPdf(context,result));
                     zip.closeEntry();
                     zip.putNextEntry(new ZipEntry("research/proposal.md"));
                     zip.write(result.answer.getBytes(java.nio.charset.StandardCharsets.UTF_8));
