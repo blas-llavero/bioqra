@@ -426,9 +426,21 @@ public class MainActivity extends Activity {
         super.onActivityResult(request,result,data);
         if(request!=AUTOMATIC_CHALLENGE)return;
         if(ProcessingControl.paused()||ProcessingControl.stopped())return;
-        if(result!=RESULT_OK || !"automatic".equals(challengeMode)
+        if(!"automatic".equals(challengeMode)
                 || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()){
             automaticRows.clear();automaticIndex=-1;return;
+        }
+        // Android may cancel an Activity result on a lifecycle transition even
+        // when the export checkpoint has already been persisted successfully.
+        boolean savedComplete=automaticIndex>=0 && automaticIndex<automaticRows.size()
+                && aiPreferences.automaticExportCompleted(AiPreferences.stableKey(
+                    automaticRows.get(automaticIndex).title,automaticRows.get(automaticIndex).title));
+        if(result!=RESULT_OK && !savedComplete){
+            // Never skip incomplete exports or attempt a second AI request silently.
+            status.setText(UiLanguage.tr(this,
+                "Automatic queue paused: challenge not yet verified complete."));
+            showItems();
+            return;
         }
         showItems();
         continueAutomaticQueue();
