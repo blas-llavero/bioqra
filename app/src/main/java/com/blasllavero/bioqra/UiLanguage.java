@@ -308,6 +308,13 @@ public final class UiLanguage {
         add("Automatic mode needs a connected and authorized ChatGPT account. Configure ChatGPT in AI Settings to start processing challenges.","El mode automàtic necessita un compte de ChatGPT connectat i autoritzat. Configura ChatGPT a Configuració d'IA per començar a processar els reptes.","El modo automático necesita una cuenta de ChatGPT conectada y autorizada. Configura ChatGPT en Configuración de IA para empezar a procesar los retos.");
         add("Open AI Settings","Obre Configuració d'IA","Abrir Configuración de IA");
         add("Automatic mode selected. Authorize automatic AI processing in Settings to begin.","Mode automàtic seleccionat. Autoritza el processament automàtic amb IA a Configuració per començar.","Modo automático seleccionado. Autoriza el procesamiento automático con IA en Configuración para empezar.");
+        add("← Open first challenge","← Ves al primer repte del llistat","← Ir al primer reto de la lista");
+        add("Official statement unavailable; manual review required. The automatic queue will continue.","Enunciat oficial no disponible; cal revisió manual. La cua automàtica continuarà.","Enunciado oficial no disponible; se requiere revisión manual. La cola automática continuará.");
+        add("The organizer page did not contain a verifiable detailed challenge statement.","La pàgina de l'organitzador no conté cap enunciat detallat que es pugui verificar.","La página del organizador no contiene ningún enunciado detallado verificable.");
+        add("Source unavailable: marked for manual review. Continuing with the next challenge.","Font no disponible: repte marcat per a revisió manual. Continuant amb el repte següent.","Fuente no disponible: reto marcado para revisión manual. Continuando con el siguiente reto.");
+        add("Manual review required — official statement unavailable","Cal revisió manual — enunciat oficial no disponible","Revisión manual necesaria — enunciado oficial no disponible");
+        add("Automatic retrieval unavailable: ","Recuperació automàtica no disponible: ","Recuperación automática no disponible: ");
+        add("You can still open the original site in your browser.","Pots obrir igualment el lloc web original al navegador.","Puedes abrir igualmente el sitio web original en el navegador.");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
