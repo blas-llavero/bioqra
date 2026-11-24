@@ -120,6 +120,10 @@ public class MainActivity extends Activity {
         mergeGrand(GrandChallengeDiscovery.load(this));
         loadCached();
         buildUi();
+        if(getIntent().getBooleanExtra(OPEN_FIRST_CHALLENGE,false)){
+            getIntent().removeExtra(OPEN_FIRST_CHALLENGE);
+            openFirstDisplayedChallenge();
+        }
         refresh();
         refreshGrand();
     }
