@@ -477,6 +477,16 @@ public class MainActivity extends Activity {
         boolean savedComplete=automaticIndex>=0 && automaticIndex<automaticRows.size()
                 && aiPreferences.automaticExportCompleted(AiPreferences.stableKey(
                     automaticRows.get(automaticIndex).title,automaticRows.get(automaticIndex).title));
+        if(result==ChallengeActivity.RESULT_REVIEW_REQUIRED){
+            // A documented source retrieval failure is not a completed result.
+            // It can be skipped for this queue run but remains eligible for
+            // explicit manual review and later, user-approved retry.
+            status.setText(UiLanguage.tr(this,
+                "Source unavailable: marked for manual review. Continuing with the next challenge."));
+            showItems();
+            continueAutomaticQueue();
+            return;
+        }
         if(result!=RESULT_OK && !savedComplete){
             // Never skip incomplete exports or attempt a second AI request silently.
             status.setText(UiLanguage.tr(this,
@@ -586,7 +596,10 @@ public class MainActivity extends Activity {
                 "PDF and ZIP export pending","Processing completed"};
         TextView processing=text(UiLanguage.tr(this,stageLabels[Math.max(0,Math.min(5,stage))]),14,true);
         String outcome=aiPreferences.processingOutcome(key);
-        if("export_error".equals(outcome)){
+        if("review_required".equals(outcome)){
+            processing.setText(UiLanguage.tr(this,"Manual review required — official statement unavailable"));
+            processing.setTextColor(Color.rgb(170,91,32));
+        }else if("export_error".equals(outcome)){
             processing.setText(UiLanguage.tr(this,"PDF or ZIP export failed"));
             processing.setTextColor(Color.rgb(160,48,48));
         }else processing.setTextColor(stage==5?GREEN:BLUE);
