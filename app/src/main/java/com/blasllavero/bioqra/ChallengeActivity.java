@@ -1201,10 +1201,34 @@ public final class ChallengeActivity extends Activity {
     /** Known official organizer homepage, never a public leaderboard endpoint.
      * All other URLs retain the strict approved HTTPS no-redirect policy.
      */
-    private String verifiedStatementEntryUrl(){
-        if(url!=null && url.startsWith("https://cobra2026.grand-challenge.org/evaluation/"))
-            return "https://cobra2026.grand-challenge.org/";
-        return url;
+    /** Explicit, bounded public pages of the SAME organizer, never a leaderboard.
+     * These are candidates, not assumed verified challenge statements.
+     */
+    private java.util.List<String> officialStatementCandidates(){
+        java.util.LinkedHashSet<String> urls=new java.util.LinkedHashSet<>();
+        if(url!=null && TrustedChallengeReader.approved(url)){
+            try{
+                java.net.URI parsed=new java.net.URI(url);
+                String host=parsed.getHost();
+                String path=parsed.getPath()==null?"":parsed.getPath();
+                if(host!=null && host.endsWith(".grand-challenge.org")
+                        && (path.startsWith("/evaluation/") || path.contains("/leaderboard/"))){
+                    String homepage="https://"+host+"/";
+                    if(TrustedChallengeReader.approved(homepage)){
+                        if("selma3d2026.grand-challenge.org".equals(host)){
+                            urls.add(homepage+"tasks/");
+                            urls.add(homepage+"participate-rules/");
+                        }
+                        if("cobra2026.grand-challenge.org".equals(host)){
+                            urls.add(homepage+"evaluation/");
+                        }
+                        urls.add(homepage);
+                    }
+                }
+            }catch(Exception ignored){}
+            urls.add(url);
+        }
+        return new java.util.ArrayList<>(urls);
     }
 
     /** An unavailable source must not block the rest of the automatic queue.
@@ -1225,8 +1249,8 @@ public final class ChallengeActivity extends Activity {
 
     private void retrieve(){
         if(busy||ProcessingControl.stopped()||ProcessingControl.paused())return;
-        final String entryUrl=verifiedStatementEntryUrl();
-        if(!TrustedChallengeReader.approved(entryUrl)){
+        final java.util.List<String> candidates=officialStatementCandidates();
+        if(candidates.isEmpty()){
             requireManualReview(UiLanguage.tr(this,
                 "Blocked: URL is not a trusted HTTPS research domain. Open only after independent review."));
             return;
@@ -1238,30 +1262,48 @@ public final class ChallengeActivity extends Activity {
         updateButtons();
         EXEC.execute(()->{
             try {
-                ChallengePageResolver.Outcome result=ChallengePageResolver.resolve(this,entryUrl,title);
+                ChallengePageResolver.Outcome result=null;
+                Exception retrievalFailure=null;
+                for(String candidate:candidates){
+                    try{
+                        ChallengePageResolver.Outcome found=
+                            ChallengePageResolver.resolve(this,candidate,title);
+                        if(result==null || (!result.specific && found.specific))
+                            result=found;
+                        if(found.specific)break;
+                    }catch(Exception failure){
+                        retrievalFailure=failure;
+                    }
+                }
+                if(result==null){
+                    throw retrievalFailure==null
+                        ?new Exception("No public challenge statement available")
+                        :retrievalFailure;
+                }
+                final ChallengePageResolver.Outcome selected=result;
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
-                    fetchedText=result.text;
-                    specificPage=result.specific;
-                    verifiedPageUrl=result.resolvedUrl;
-                    renderStatement(result.text);
-                    resolvedLink.setText("Selected public page: "+result.resolvedUrl);
+                    fetchedText=selected.text;
+                    specificPage=selected.specific;
+                    verifiedPageUrl=selected.resolvedUrl;
+                    renderStatement(selected.text);
+                    resolvedLink.setText("Selected public page: "+selected.resolvedUrl);
                     loadedOfficialSections.clear();
                     loadingOfficialSections.clear();
                     translatedSections.clear();
                     attemptedAutomaticTranslations.clear();
-                    navigation=ChallengeSectionNavigator.fromText(result.resolvedUrl,
-                            result.text,result.deadlineSummary,result.documentLinks);
+                    navigation=ChallengeSectionNavigator.fromText(selected.resolvedUrl,
+                            selected.text,selected.deadlineSummary,selected.documentLinks);
                     selectSection(ChallengeSectionNavigator.FULL,true);
                     // Enrich the section index with original organizer links.
                     // Failure is nonfatal: the local formatted text remains usable.
                     EXEC.execute(()->{
                         try{
                             TrustedChallengeReader.Page page=
-                                    TrustedChallengeReader.fetchPage(result.resolvedUrl);
+                                    TrustedChallengeReader.fetchPage(selected.resolvedUrl);
                             ChallengeSectionNavigator.Snapshot extra=
                                     ChallengeSectionNavigator.fromPage(page,
-                                        result.deadlineSummary,result.documentLinks);
+                                        selected.deadlineSummary,selected.documentLinks);
                             runOnUiThread(()->{
                                 if(!isFinishing()&&!isDestroyed()){
                                     navigation=extra;
@@ -1274,13 +1316,13 @@ public final class ChallengeActivity extends Activity {
                             });
                         }catch(Exception ignored){}
                     });
-                    StringBuilder sources=new StringBuilder(result.deadlineSummary);
-                    if(!result.documentLinks.isEmpty()){
+                    StringBuilder sources=new StringBuilder(selected.deadlineSummary);
+                    if(!selected.documentLinks.isEmpty()){
                         sources.append("\n\nPUBLIC SUPPORTING PDF DOCUMENTS (read-only):\n");
-                        for(String doc:result.documentLinks)sources.append(doc).append("\n");
+                        for(String doc:selected.documentLinks)sources.append(doc).append("\n");
                     }
                     deadlinesView.setText(sources.toString());
-                    status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
+                    status.setText(selected.message+" Retrieved "+selected.text.length()+" characters.");
                     busy=false;updateButtons();
                     maybeAutoTranslateSection();
                     if("automatic".equals(mode) && !specificPage){
