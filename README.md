@@ -15,6 +15,14 @@ The workbench retains the original official text as the primary, unmodified evid
 
 This is not automatic, universal or offline translation. Full-document translation across every source, saved result and export remains a separate milestone. A translation is never an authoritative official version; verify claims against the original organizer document.
 
+## Settings layout and synchronized research progress (24 November)
+
+Settings displays **← Back to BIOQRA** as its first control, followed by the **AI Settings** account/model/automatic processing controls. The **Language** panel (device language selector and translation preferences) follows AI Settings and precedes Backup/Restore/PDF.
+
+Both translation options are checkboxes: the public-section translation preference and the **Authorize ChatGPT translations** permission. Permission is independently revocable; checking the authorization checkbox displays the information-sharing dialog, and the request is permitted only when both preference and explicit consent are active. Unchecking authorization immediately disables new automatic AI translation calls.
+
+The list and the challenge-detail screen now use the same `AiPreferences.processingPercent(challengeKey)` value. It is a **stage-based indicator in 20-percentage-point increments** (0, 20, 40, 60, 80, 100) rather than elapsed-time estimation or a falsely smooth progress animation. 100% is only reached when the saved result and export have been verified complete. The detail progress indicator is determinate and uses the same cached stage as the list; stage changes are reflected at normal UI refresh checkpoints. Manual/device QA is still needed for transitions.
+
 ## Android 24 November: automatic-mode default, visible Catalan labels and PDF settings cleanup
 
 On new installations, **Automatic mode** is the initial screen selection instead of Manual mode; an explicitly saved manual choice is retained. An automatic AI run still requires the user's connected ChatGPT account, the existing automatic consent grant and remaining usage allowance. The first queue starts only after the public Grand Challenge catalog refresh finishes, not on a partially loaded list. The user may pause, stop or switch back to manual mode at any time.
