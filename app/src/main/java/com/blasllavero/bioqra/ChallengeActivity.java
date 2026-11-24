@@ -52,6 +52,7 @@ public final class ChallengeActivity extends Activity {
     public static final String MODE="challenge_mode";
     public static final String KIND="challenge_kind";
     public static final String AUTO_QUEUE="automatic_queue";
+    public static final int RESULT_REVIEW_REQUIRED=RESULT_FIRST_USER+1;
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     // PDF viewing must not wait behind a long-running research or ChatGPT operation.
     private static final ExecutorService PDF_READS=Executors.newFixedThreadPool(2);
@@ -1198,10 +1199,37 @@ public final class ChallengeActivity extends Activity {
         });
     }
 
+    /** Known official organizer homepage, never a public leaderboard endpoint.
+     * All other URLs retain the strict approved HTTPS no-redirect policy.
+     */
+    private String verifiedStatementEntryUrl(){
+        if(url!=null && url.startsWith("https://cobra2026.grand-challenge.org/evaluation/"))
+            return "https://cobra2026.grand-challenge.org/";
+        return url;
+    }
+
+    /** An unavailable source must not block the rest of the automatic queue.
+     * This is not a completed research result or a verified exported PDF.
+     */
+    private void requireManualReview(String reason){
+        aiPreferences.setProcessingOutcome(challengeKey,"review_required");
+        status.setText(UiLanguage.tr(this,
+            "Official statement unavailable; manual review required. The automatic queue will continue.")
+            +" "+reason);
+        updateButtons();
+        if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                && !ProcessingControl.stopped() && !ProcessingControl.paused()){
+            setResult(RESULT_REVIEW_REQUIRED);
+            finish();
+        }
+    }
+
     private void retrieve(){
         if(busy||ProcessingControl.stopped()||ProcessingControl.paused())return;
-        if(!TrustedChallengeReader.approved(url)){
-            showError("Blocked: URL is not a trusted HTTPS research domain. Open only after independent review.");
+        final String entryUrl=verifiedStatementEntryUrl();
+        if(!TrustedChallengeReader.approved(entryUrl)){
+            requireManualReview(UiLanguage.tr(this,
+                "Blocked: URL is not a trusted HTTPS research domain. Open only after independent review."));
             return;
         }
         busy=true;
@@ -1211,7 +1239,7 @@ public final class ChallengeActivity extends Activity {
         updateButtons();
         EXEC.execute(()->{
             try {
-                ChallengePageResolver.Outcome result=ChallengePageResolver.resolve(this,url,title);
+                ChallengePageResolver.Outcome result=ChallengePageResolver.resolve(this,entryUrl,title);
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     fetchedText=result.text;
@@ -1256,6 +1284,11 @@ public final class ChallengeActivity extends Activity {
                     status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
                     busy=false;updateButtons();
                     maybeAutoTranslateSection();
+                    if("automatic".equals(mode) && !specificPage){
+                        requireManualReview(UiLanguage.tr(this,
+                            "The organizer page did not contain a verifiable detailed challenge statement."));
+                        return;
+                    }
                     if("automatic".equals(mode) && specificPage && !ProcessingControl.stopped() && !ProcessingControl.paused()){
                         // Search public metadata independently of AI consent.
                         boolean authorized=connection.canUsePlan() && aiPreferences.autoConsent()
@@ -1269,8 +1302,9 @@ public final class ChallengeActivity extends Activity {
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     busy=false;
-                    showError("Automatic retrieval unavailable: "+e.getMessage()
-                        +" You can still open the original site in your browser.");
+                    requireManualReview(UiLanguage.tr(this,
+                        "Automatic retrieval unavailable: ")+e.getMessage()
+                        +" "+UiLanguage.tr(this,"You can still open the original site in your browser."));
                 });
             }
         });
