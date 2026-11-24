@@ -78,6 +78,17 @@ public final class AiSettingsActivity extends Activity {
         Button back=button("← Back to BIOQRA");
         back.setOnClickListener(v->finish());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(55)));
+        Button firstChallenge=button("← Open first challenge");
+        LinearLayout.LayoutParams firstParams=new LinearLayout.LayoutParams(-1,dp(53));
+        firstParams.topMargin=dp(9);
+        root.addView(firstChallenge,firstParams);
+        firstChallenge.setOnClickListener(v->{
+            Intent main=new Intent(this,MainActivity.class);
+            main.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            main.putExtra(MainActivity.OPEN_FIRST_CHALLENGE,true);
+            startActivity(main);
+            finish();
+        });
         TextView heading=label("AI Settings",25);heading.setTypeface(null,Typeface.BOLD);
         root.addView(heading);
         TextView accountHeading=label("ChatGPT account",19);
