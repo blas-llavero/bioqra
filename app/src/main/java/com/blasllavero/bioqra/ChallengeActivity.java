@@ -816,16 +816,17 @@ public final class ChallengeActivity extends Activity {
         pdfProgress.setIndeterminate(false);
         pdfProgress.setMax(100);
         pdfProgress.setProgress(percent);
-        if(active){
+        if("automatic".equals(mode) || active){
             int stage=aiPreferences.processingStage(challengeKey);
-            // Reflect the real persisted phase, shared with the list.
-            // An export operation takes precedence over a stale earlier phase.
+            // Keep the actual stage visible even when between operations.
+            // An ongoing PDF export takes precedence over a stale earlier phase.
             String message=UiLanguage.progressStage(this,
                 pdfOperations>0?4:stage);
             pdfProgressLabel.setText(message+" · "+percent+"%");
         }
-        pdfProgressLabel.setVisibility(active?View.VISIBLE:View.GONE);
-        pdfProgress.setVisibility(active?View.VISIBLE:View.GONE);
+        boolean showProgress="automatic".equals(mode) || active;
+        pdfProgressLabel.setVisibility(showProgress?View.VISIBLE:View.GONE);
+        pdfProgress.setVisibility(showProgress?View.VISIBLE:View.GONE);
         viewSavedPdf.setEnabled(!active);
         savePdf.setEnabled(!active);
     }
