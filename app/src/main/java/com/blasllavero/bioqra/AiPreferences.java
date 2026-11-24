@@ -127,6 +127,9 @@ public final class AiPreferences {
         prefs.edit().putBoolean("auto_translate_public_sections",true)
             .putBoolean("auto_translate_public_sections_authorized",true).apply();
     }
+    public void revokeAutomaticTranslationAuthorization(){
+        prefs.edit().putBoolean("auto_translate_public_sections_authorized",false).apply();
+    }
 
     public boolean autoConsent(){return prefs.getBoolean("auto_consent",false);}
     public void setAutoConsent(boolean consent){prefs.edit().putBoolean("auto_consent",consent).apply();}
