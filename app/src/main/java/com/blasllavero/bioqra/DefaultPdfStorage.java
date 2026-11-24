@@ -41,7 +41,7 @@ public final class DefaultPdfStorage {
 
     public static Uri save(Context context,AiPreferences.SavedResult result) throws Exception{
         return saveVerifiedPdf(context,projectFolder(result),filename(result),
-                ArchiveFiles.generatedPdf(result),false);
+                ArchiveFiles.generatedPdf(context,result),false);
     }
 
     /** Restore an archived PDF without overwriting a user-owned existing document. */
