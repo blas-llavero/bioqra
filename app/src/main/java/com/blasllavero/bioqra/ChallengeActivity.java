@@ -165,6 +165,7 @@ public final class ChallengeActivity extends Activity {
         if(url==null)url="";
         if(!"automatic".equals(mode))mode="manual";
         challengeKey=AiPreferences.stableKey(title,title);
+        aiPreferences.rememberVisitedChallenge(title,url,kind,challengeNumber);
         aiPreferences.updateLegacyMetadata(challengeKey,title,url);
         getWindow().setStatusBarColor(Color.rgb(24,72,91));
         getWindow().setNavigationBarColor(Color.BLACK);
