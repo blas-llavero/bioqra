@@ -133,7 +133,7 @@ public final class FullBackup {
                 for(AiPreferences.SavedResult result:results){
                     String name=ArchiveFiles.archivePdfPath(result);
                     if(!included.add(name))continue;
-                    byte[] bytes=ArchiveFiles.generatedPdf(result);
+                    byte[] bytes=ArchiveFiles.generatedPdf(context,result);
                     total+=bytes.length;
                     if(bytes.length>MAX_PDF_BYTES||total>MAX_TOTAL||pdfs>=MAX_ENTRIES)
                         throw new Exception("PDF backup size/count exceeded.");
