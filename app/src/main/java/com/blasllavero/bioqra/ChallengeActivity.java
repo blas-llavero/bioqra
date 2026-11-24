@@ -273,9 +273,13 @@ public final class ChallengeActivity extends Activity {
         statement.setLinksClickable(true);
         statement.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(statement);
-        translateButton=button("Translate official section with ChatGPT");
-        translateButton.setOnClickListener(v->confirmSectionTranslation());
-        root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(52)));
+        // Automatic mode performs authorized translation without a manual button.
+        // Manual mode retains the explicit one-time translate action.
+        if(!"automatic".equals(mode)){
+            translateButton=button("Translate official section with ChatGPT");
+            translateButton.setOnClickListener(v->confirmSectionTranslation());
+            root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(52)));
+        }
         translationView=text("Official source (original language). Translation is optional and requires permission.",13,false);
         translationView.setTextIsSelectable(true);
         translationView.setLineSpacing(dp(4),1.08f);
@@ -813,9 +817,11 @@ public final class ChallengeActivity extends Activity {
         pdfProgress.setMax(100);
         pdfProgress.setProgress(percent);
         if(active){
-            boolean exporting=pdfOperations>0 || aiPreferences.processingStage(challengeKey)>=4;
-            String message=UiLanguage.tr(this,exporting
-                    ?"Preparing PDF and ZIP...":"Processing challenge...");
+            int stage=aiPreferences.processingStage(challengeKey);
+            // Reflect the real persisted phase, shared with the list.
+            // An export operation takes precedence over a stale earlier phase.
+            String message=UiLanguage.progressStage(this,
+                pdfOperations>0?4:stage);
             pdfProgressLabel.setText(message+" · "+percent+"%");
         }
         pdfProgressLabel.setVisibility(active?View.VISIBLE:View.GONE);
