@@ -1,5 +1,6 @@
 package com.blasllavero.bioqra;
 
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -24,6 +25,8 @@ final class ResearchPdfLayout {
     private static final int W=595,H=842,M=45,TOP=53,BOTTOM=793;
     private static final int INK=0xff19262d, ACCENT=0xff134250;
     private final PdfDocument pdf=new PdfDocument();
+    private final Context context;
+    private ResearchPdfLayout(Context context){this.context=context;}
     private PdfDocument.Page page;
     private Canvas canvas;
     private int y=TOP, number=0;
@@ -45,7 +48,7 @@ final class ResearchPdfLayout {
         if(++number>150)throw new Exception("PDF exceeds 150 pages");
         page=pdf.startPage(new PdfDocument.PageInfo.Builder(W,H,number).create());
         canvas=page.getCanvas();y=TOP;
-        canvas.drawText("BIOQRA  |  Research draft",M,29,paint(9,true,false,ACCENT));
+        canvas.drawText("BIOQRA  |  "+UiLanguage.pdfTr(context,"Research draft"),M,29,paint(9,true,false,ACCENT));
         canvas.drawText(String.valueOf(number),W-M-18,818,paint(9,false,false,ACCENT));
         decoration.setColor(Color.rgb(205,219,223));
         canvas.drawLine(M,37,W-M,37,decoration);
@@ -182,22 +185,22 @@ final class ResearchPdfLayout {
                 walk(child,indent+(node instanceof BlockQuote?16:0),depth+1);
         }
     }
-    static void write(OutputStream out,AiPreferences.SavedResult result)throws Exception{
-        ResearchPdfLayout r=new ResearchPdfLayout();
+    static void write(Context context,OutputStream out,AiPreferences.SavedResult result)throws Exception{
+        ResearchPdfLayout r=new ResearchPdfLayout(context);
         try{
             r.newPage();
-            SpannableStringBuilder projectLink=new SpannableStringBuilder("Open project files / research evidence ZIP");
+            SpannableStringBuilder projectLink=new SpannableStringBuilder(UiLanguage.pdfTr(context,"Open project files / research evidence ZIP"));
             projectLink.setSpan(new UnderlineSpan(),0,projectLink.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             r.block(projectLink,0,12,true,false,ACCENT,8,false);
-            r.block("Research evidence directory: "+DefaultEvidenceStorage.relativeDirectory(result)
-                    +"\nArchive: "+DefaultEvidenceStorage.filename(result)
-                    +"\nAvailability is checked when opened in BIOQRA.",0,10,false,false,INK,12,false);
-            r.block("BIOQRA — Unverified AI research draft",0,20,true,false,ACCENT,12,false);
-            r.block(result.title,0,16,true,false,INK,12,false);
-            r.block("Date: "+result.date+"\nAI model: "+result.model+"\nPublic source: "+result.source,
+            r.block(UiLanguage.pdfTr(context,"Research evidence directory: ")+DefaultEvidenceStorage.relativeDirectory(result)
+                    +"\n"+UiLanguage.pdfTr(context,"Archive: ")+DefaultEvidenceStorage.filename(result)
+                    +"\n"+UiLanguage.pdfTr(context,"Availability is checked when opened in BIOQRA."),0,10,false,false,INK,12,false);
+            r.block(UiLanguage.pdfTr(context,"BIOQRA — Unverified AI research draft"),0,20,true,false,ACCENT,12,false);
+            r.block(UiLanguage.pdfTitle(context,result.title),0,16,true,false,INK,12,false);
+            r.block(UiLanguage.pdfTr(context,"Date: ")+result.date+"\n"+UiLanguage.pdfTr(context,"AI model: ")+result.model+"\n"+UiLanguage.pdfTr(context,"Public source: ")+result.source,
                     0,10,false,false,INK,18,false);
             r.walk(parse(result.answer),0,0);
-            r.block("BIOQRA does not establish clinical efficacy or independently verify the AI proposal.",
+            r.block(UiLanguage.pdfTr(context,"BIOQRA does not establish clinical efficacy or independently verify the AI proposal."),
                     0,10,true,false,ACCENT,8,false);
             if(r.page!=null){r.pdf.finishPage(r.page);r.page=null;}
             java.io.ByteArrayOutputStream raw=new java.io.ByteArrayOutputStream();

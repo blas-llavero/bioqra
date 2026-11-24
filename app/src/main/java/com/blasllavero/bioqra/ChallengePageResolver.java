@@ -97,8 +97,9 @@ public final class ChallengePageResolver {
         if(a.equals(b))return true;
         if(a.replaceFirst("^www[.]","").equals(b.replaceFirst("^www[.]","")))
             return true;
-        return (a.equals("grand-challenge.org")||a.endsWith(".grand-challenge.org"))
-             &&(b.equals("grand-challenge.org")||b.endsWith(".grand-challenge.org"));
+        // grand-challenge.org hosts unrelated scientific challenges on
+        // different subdomains. Never mix their statement or dataset evidence.
+        return false;
     }
     private static boolean forbidden(String link){
         String s=link.toLowerCase(Locale.ROOT);

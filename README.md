@@ -1,5 +1,67 @@
 # BIOQRA — Open Bioinformatics Research & Patient Assistance
 
+## Automatic public-section translation (opt-in preview)
+
+In **AI Settings**, the **Automatically translate public challenge sections (uses ChatGPT requests)** toggle is **checked by default**. Checking it only expresses a preference: **public source text is never sent to ChatGPT until the user separately approves the specific ChatGPT translation consent** in Settings. The same screen provides a dedicated authorization button. Enabling it displays a separate consent dialog explaining that previously retrieved public source excerpts may be transmitted to the connected ChatGPT account. Once authorized, opening a Catalan or Spanish challenge section can automatically show an AI-produced, clearly labelled translation beneath the unmodified official source. No separate button press is needed for each eligible section after opting in.
+
+
+The Catalan and Spanish UI dictionary also includes the specific challenge-mode/model text and the backup/restore/PDF labels identified in November 23 tablet screenshots. Some organizer titles are mapped manually, including the gastroesophageal cancer challenge. Untranslated third-party text still requires the separate source-preserving translation workflow; do not treat this as complete localization.
+
+Privacy and resource limits: translated source text must be from the existing approved public HTTPS domains; sections over 10,000 characters are skipped, never silently truncated; a result is cached in memory per language/source/content for the current screen, and a failed automatic attempt is not retried endlessly during that visit. Each new translation consumes one local daily AI request. Automatic translation is separate from consent for automatic challenge-solving and does not apply to patient data, saved research results or generated PDF/ZIP files. When no model grant or quota is available, the user can still read the unchanged original. This is **not** comprehensive language support or translation of all website/PDF pages.
+
+## Opt-in translations of official challenge sections (preview)
+
+The workbench retains the original official text as the primary, unmodified evidence. A new **Translate official section with ChatGPT** button can show a separate, explicitly labelled machine translation in the currently selected application language (Catalan, Spanish or English). **Each request requires confirmation**, uses the account model selected for the challenge, consumes one of the configured local daily requests, and sends at most 10,000 characters of already-retrieved public official text from an approved HTTPS URL. Longer sections are not silently truncated; the user is notified. A translated section is kept only in memory during the current workbench session and is invalidated when the underlying official source changes. No translation overwrites the canonical challenge statement, application deadlines, PDF or stored scientific results.
+
+This is not automatic, universal or offline translation. Full-document translation across every source, saved result and export remains a separate milestone. A translation is never an authoritative official version; verify claims against the original organizer document.
+
+## Automatic mode usability (24 November)
+
+- In **Automatic mode**, the manual **Translate official section with ChatGPT** button is hidden. Consented, eligible section translation uses the existing automatic preference and separate ChatGPT authorization; Manual mode retains its explicit one-time translation button. Original official source text remains accessible.
+- Tapping **Automatic mode** while a ChatGPT account is not connected/authorized presents a localized dialog explaining that the user must configure ChatGPT in AI Settings. The user can choose **Open AI Settings** or **Not now**. A separate status message is shown when the account is connected but automatic research consent is still missing. No ChatGPT request occurs without the necessary grant.
+- The detail's bottom progress bar is determinate and visible throughout an automatic challenge, including between operations. Its message comes from the shared stage of the challenge: **Processing pending → Preparing the challenge statement → Searching and analyzing research data → Generating research proposal with AI → Generating PDF and ZIP → Processing completed**. These stages map to the same saved percent as the challenge list (0/20/40/60/80/100); they are not time-based estimates.
+
+## BIOQRA header, visible queue interruption and navigation fix (24 November)
+
+The home screen now displays the requested Catalan mission sentence **directly under the BIOQRA title**, with equivalent English/Spanish copy when those are the selected UI language. The prior English queue status now has Catalan and Spanish translations, and account-connection labels in AI Settings also use the selected language.
+
+The observed automatic queue interruption was traced to the detail screen's **Back to challenges** button directly calling `finish()` while the research/ZIP/PDF job was still owned by that Activity. This caused an Android `RESULT_CANCELED` before the export checkpoint and left the queue halted. When this detail screen is an active automatic-queue entry, the toolbar Back action **and system Back navigation** now bring the existing MainActivity to the foreground via `FLAG_ACTIVITY_REORDER_TO_FRONT` without calling `finish()`. The detail Activity may finish itself after a verified export, at which point MainActivity proceeds to the next challenge. Returning from a manually opened/completed challenge still exits normally.
+
+**Limitation:** This fix protects the active Activity across navigation while Android keeps the process alive. It does not turn the queue into an independent background service and does not guarantee survival of OS process termination. Full lifecycle-safe worker extraction remains tracked in issue #6. The queue does not invent completion of unsupported/failed challenges.
+
+## PDF report-language selection and automatic queue reliability (24 November)
+
+**PDF report language:** The AI Settings page now has a separate **PDF report language** selector under the general application language. It defaults to the selected app language (which itself follows Android device locale by default). Users can explicitly choose Catalan, Spanish or English for **newly generated** reports. The visible PDF layout headings, source/provenance labels and disclaimers are localized; archived report bodies and historical AI proposals are **not automatically translated**. Previously created PDFs remain unchanged unless explicitly regenerated. The same language preference is applied whether a report is created for normal storage or included inside ZIP backups/evidence exports.
+
+**Completed PDF access from the list:** Completed challenge cards now expose **View PDF** without opening the challenge workbench. BIOQRA looks up the actually saved PDF and validates its readability; if the file is missing or inaccessible, it reports the error and invalidates the stale completed marker rather than claiming success.
+
+**Sequential queue:** The existing automatic mode starts the next challenge only on a verified PDF/ZIP completion callback; a cancelled Android Activity return can still count as success **only if the persisted export-complete checkpoint is present**. Incomplete work is never skipped or automatically marked completed. This is currently an Android Activity-driven foreground queue, **not an independent background WorkManager/service**: the detail screen may open automatically as each challenge is processed, and processing is not guaranteed if the OS terminates the activity/process. A service/work scheduling refactor is needed for truly background operation while the user stays on the list.
+
+## Settings layout and synchronized research progress (24 November)
+
+Settings displays **← Back to BIOQRA** as its first control, followed by the **AI Settings** account/model/automatic processing controls. The **Language** panel (device language selector and translation preferences) follows AI Settings and precedes Backup/Restore/PDF.
+
+Both translation options are checkboxes: the public-section translation preference and the **Authorize ChatGPT translations** permission. Permission is independently revocable; checking the authorization checkbox displays the information-sharing dialog, and the request is permitted only when both preference and explicit consent are active. Unchecking authorization immediately disables new automatic AI translation calls.
+
+The list and the challenge-detail screen now use the same `AiPreferences.processingPercent(challengeKey)` value. It is a **stage-based indicator in 20-percentage-point increments** (0, 20, 40, 60, 80, 100) rather than elapsed-time estimation or a falsely smooth progress animation. 100% is only reached when the saved result and export have been verified complete. The detail progress indicator is determinate and uses the same cached stage as the list; stage changes are reflected at normal UI refresh checkpoints. Manual/device QA is still needed for transitions.
+
+## Android 24 November: automatic-mode default, visible Catalan labels and PDF settings cleanup
+
+On new installations, **Automatic mode** is the initial screen selection instead of Manual mode; an explicitly saved manual choice is retained. An automatic AI run still requires the user's connected ChatGPT account, the existing automatic consent grant and remaining usage allowance. The first queue starts only after the public Grand Challenge catalog refresh finishes, not on a partially loaded list. The user may pause, stop or switch back to manual mode at any time.
+
+The Catalan/Spanish workbench now renders structured research opportunity status and eligibility text from canonical catalog fields rather than relying on unrecognized English sentences; common official index boilerplate and three titles from the provided tablet screenshots are translated locally. **External organizer titles and unrecognized source summaries may still appear in their original language** until source-preserving translations are available and consented; BIOQRA does not present an untranslated official quote as a verified translation.
+
+The Settings backup/PDF area shows the default path **once**, above the optional folder-selection button. The duplicate explanatory paragraph was removed; the user still sees the destination and can choose another location.
+
+## Language preferences and challenge numbering (experimental)
+
+BIOQRA now offers **AI Settings → Language**, with **Device language (automatic)** as the default, or an explicit choice of **Català / Español / English**. Device languages beyond these initial translations currently fall back to English. The preference remains stored on the Android device and the home screen refreshes after returning from settings. The basic challenge labels, some catalog titles, source and availability filters, and selected buttons use the existing local translation dictionary. This is a **partial localization milestone**, not a guarantee that every dynamic label or external source is translated.
+
+The challenge list displays one-based consecutive numbers across the complete filtered result set, even when it spans multiple pages. Tapping an item passes its visible number into the challenge detail header; the same numbering is used by the automatic queue when items are in the current filtered list. Numbers may change when the user changes filters, search results or the source refreshes; challenge identity and saved research remain tied to the original title/key, **not** the displayed list number.
+
+When a new research proposal is generated through the existing ChatGPT integration, BIOQRA asks for human-readable commentary in the selected language while preserving scientific codes, public-source quotes, links and executable code. Existing saved proposals and official third-party HTML/PDF documents are **not translated by this change**. Those must retain accessible originals and require an additional safe, provenance-labelled translation workflow; they are not silently rewritten.
+
+
 ![BIOQRA — Official full logo](docs/images/bioqra_full_logo.png)
 
 BIOQRA is an open-source project for Android and the web. It aims to help researchers discover bioinformatics challenges, develop reproducible computational approaches, and verify results with scientific software. A separate, privacy-first patient research module is planned to help people document their experiences, securely manage health records, and optionally contribute de-identified information to ethically reviewed research. BIOQRA is not a diagnostic, treatment, vaccine-testing, or medication-safety determination tool.

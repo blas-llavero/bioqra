@@ -48,12 +48,12 @@ public final class AiSettingsActivity extends Activity {
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private TextView label(String content,int size){
         TextView t=new TextView(this);
-        t.setText(content);t.setTextSize(size);t.setTextColor(Color.rgb(24,72,91));
+        t.setText(UiLanguage.tr(this,content));t.setTextSize(size);t.setTextColor(Color.rgb(24,72,91));
         t.setPadding(dp(2),dp(12),dp(2),dp(9));
         return t;
     }
     private Button button(String title){
-        Button b=new Button(this);b.setText(title);b.setAllCaps(false);return b;
+        Button b=new Button(this);b.setText(UiLanguage.tr(this,title));b.setAllCaps(false);return b;
     }
 
     @Override public void onCreate(Bundle state){
@@ -75,9 +75,37 @@ public final class AiSettingsActivity extends Activity {
             return insets;
         });
         scroll.addView(root);setContentView(scroll);
-        Button back=button("← Back to BIOQRA");
-        back.setOnClickListener(v->finish());
-        root.addView(back,new LinearLayout.LayoutParams(-1,dp(55)));
+        Button mainMenu=button("Main menu");
+        mainMenu.setOnClickListener(v->{
+            Intent main=new Intent(this,MainActivity.class);
+            main.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            main.putExtra(MainActivity.SHOW_MAIN_MENU,true);
+            startActivity(main);
+            finish();
+        });
+        root.addView(mainMenu,new LinearLayout.LayoutParams(-1,dp(55)));
+
+        Button returnChallenge=button("Back to challenge");
+        LinearLayout.LayoutParams challengeParams=new LinearLayout.LayoutParams(-1,dp(53));
+        challengeParams.topMargin=dp(9);
+        root.addView(returnChallenge,challengeParams);
+        AiPreferences.VisitedChallenge visited=settings.lastVisitedChallenge();
+        returnChallenge.setEnabled(visited!=null);
+        returnChallenge.setOnClickListener(v->{
+            AiPreferences.VisitedChallenge current=settings.lastVisitedChallenge();
+            if(current==null)return;
+            Intent detail=new Intent(this,ChallengeActivity.class);
+            detail.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            detail.putExtra(ChallengeActivity.TITLE,current.title);
+            detail.putExtra(ChallengeActivity.URL,current.url);
+            detail.putExtra(ChallengeActivity.KIND,current.kind);
+            detail.putExtra(ChallengeActivity.NUMBER,current.number);
+            // Only a restored missing Activity uses manual read-only mode.
+            // An existing automatic task is reused, never duplicated/restarted.
+            detail.putExtra(ChallengeActivity.MODE,"manual");
+            startActivity(detail);
+            finish();
+        });
         TextView heading=label("AI Settings",25);heading.setTypeface(null,Typeface.BOLD);
         root.addView(heading);
         TextView accountHeading=label("ChatGPT account",19);
@@ -131,25 +159,106 @@ public final class AiSettingsActivity extends Activity {
         Button reload=button("Refresh models from ChatGPT");
         root.addView(reload,new LinearLayout.LayoutParams(-1,dp(52)));
         reload.setOnClickListener(v->loadModels());
+        // Keep AI account, model and automation settings together. Language follows them.
+        TextView languageLabel=label(UiLanguage.tr(this,"Language"),17);
+        root.addView(languageLabel);
+        Spinner languagePicker=new Spinner(this);
+        String[] codes={"system","ca","es","en"};
+        String[] names={
+            UiLanguage.tr(this,"Device language (automatic)"),
+            "Català","Español","English"
+        };
+        ArrayAdapter<String> languageAdapter=new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item,names);
+        languageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languagePicker.setAdapter(languageAdapter);
+        String preferred=UiLanguage.preference(this);
+        for(int i=0;i<codes.length;i++)if(codes[i].equals(preferred))
+            languagePicker.setSelection(i);
+        languagePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            private boolean initialized=false;
+            @Override public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){
+                String next=codes[position];
+                if(!initialized){initialized=true;return;}
+                if(next.equals(UiLanguage.preference(AiSettingsActivity.this)))return;
+                UiLanguage.setPreference(AiSettingsActivity.this,next);
+                recreate();
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
+        });
+        root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(52)));
+        root.addView(label("PDF report language",17));
+        Spinner pdfLanguagePicker=new Spinner(this);
+        String[] pdfCodes={"system","ca","es","en"};
+        String[] pdfNames={
+            UiLanguage.tr(this,"Same as app language (automatic)"),
+            "Català","Español","English"
+        };
+        ArrayAdapter<String> pdfLanguageAdapter=new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item,pdfNames);
+        pdfLanguageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        pdfLanguagePicker.setAdapter(pdfLanguageAdapter);
+        String pdfPreferred=UiLanguage.pdfLanguagePreference(this);
+        for(int i=0;i<pdfCodes.length;i++)if(pdfCodes[i].equals(pdfPreferred))
+            pdfLanguagePicker.setSelection(i);
+        pdfLanguagePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            private boolean initialized=false;
+            @Override public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){
+                if(!initialized){initialized=true;return;}
+                UiLanguage.setPdfLanguage(AiSettingsActivity.this,pdfCodes[pos]);
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
+        });
+        root.addView(pdfLanguagePicker,new LinearLayout.LayoutParams(-1,dp(52)));
+        root.addView(label("Report language changes only new PDFs; existing reports are not silently overwritten.",13));
+
+        android.widget.CheckBox automaticTranslation=new android.widget.CheckBox(this);
+        automaticTranslation.setText(UiLanguage.tr(this,
+            "Automatically translate public challenge sections (uses ChatGPT requests)"));
+        automaticTranslation.setChecked(settings.autoTranslatePublicSections());
+        root.addView(automaticTranslation);
+        android.widget.CheckBox authorizeTranslations=new android.widget.CheckBox(this);
+        authorizeTranslations.setText(UiLanguage.tr(this,"Authorize ChatGPT translations"));
+        authorizeTranslations.setChecked(settings.automaticTranslationAuthorized());
+        authorizeTranslations.setOnCheckedChangeListener((buttonView,checked)->{
+            if(!checked){
+                settings.revokeAutomaticTranslationAuthorization();
+                return;
+            }
+            new AlertDialog.Builder(this)
+                .setTitle(UiLanguage.tr(this,"Authorize automatic public translations?"))
+                .setMessage(UiLanguage.tr(this,
+                    "BIOQRA will send approved PUBLIC source sections to your connected ChatGPT account when viewed. Each uncached section can use one of your daily AI requests. Source originals stay unchanged. No patient data is transmitted."))
+                .setNegativeButton(UiLanguage.tr(this,"Not now"),(dialog,which)->
+                    authorizeTranslations.setChecked(false))
+                .setOnCancelListener(dialog->authorizeTranslations.setChecked(false))
+                .setPositiveButton(UiLanguage.tr(this,"Authorize"),(dialog,which)->{
+                    settings.authorizeAutomaticTranslation();
+                    automaticTranslation.setChecked(true);
+                }).show();
+        });
+        root.addView(authorizeTranslations,new LinearLayout.LayoutParams(-1,-2));
+        automaticTranslation.setOnCheckedChangeListener((buttonView,checked)->{
+            settings.setAutoTranslatePublicSections(checked);
+            // Turning translation off also revokes the separate transmission grant.
+            if(!checked)authorizeTranslations.setChecked(false);
+        });
+
+
         TextView backupHeading=label("Backup, Restore & PDF",20);
         backupHeading.setTypeface(null,Typeface.BOLD);
         root.addView(backupHeading);
-        root.addView(label("Create a single ZIP containing settings, saved AI results "
-                +"and PDFs, or use the individual JSON buttons below. "
-                +"ChatGPT tokens/passwords and unattended consent are never exported.",14));
+        root.addView(label("Create a single ZIP containing settings, saved AI results and PDFs, or use the individual JSON buttons below. ChatGPT tokens/passwords and unattended consent are never exported.",14));
         Button exportAll=button("Export all · settings + results + PDFs (.zip)");
         root.addView(exportAll,new LinearLayout.LayoutParams(-1,dp(56)));
         exportAll.setOnClickListener(v->createZipFile());
         Button importAll=button("Import all · restore ZIP backup");
         root.addView(importAll,new LinearLayout.LayoutParams(-1,dp(56)));
         importAll.setOnClickListener(v->new AlertDialog.Builder(this)
-            .setTitle("Restore complete BIOQRA backup?")
-            .setMessage("Settings will be replaced and saved AI results merged. "
-                +"Existing PDF files will not be overwritten. "
-                +"Configure the PDF folder first. "
-                +"ChatGPT login and permission for unattended AI use are NOT imported.")
-            .setNegativeButton("Cancel",null)
-            .setPositiveButton("Choose ZIP",(d,w)->openZipFile()).show());
+            .setTitle(UiLanguage.tr(this,"Restore complete BIOQRA backup?"))
+            .setMessage(UiLanguage.tr(this,"Settings will be replaced and saved AI results merged. Existing PDF files will not be overwritten. Configure the PDF folder first. ChatGPT login and permission for unattended AI use are NOT imported."))
+            .setNegativeButton(UiLanguage.tr(this,"Cancel"),null)
+            .setPositiveButton(UiLanguage.tr(this,"Choose ZIP"),(d,w)->openZipFile()).show());
         Button exportSettings=button("Export settings (.json)");
         root.addView(exportSettings,new LinearLayout.LayoutParams(-1,dp(50)));
         exportSettings.setOnClickListener(v->createJsonFile(SAVE_SETTINGS,"bioqra-settings.json"));
@@ -178,10 +287,6 @@ public final class AiSettingsActivity extends Activity {
         Button exportPdf=button("Export all saved results as PDFs");
         root.addView(exportPdf,new LinearLayout.LayoutParams(-1,dp(53)));
         exportPdf.setOnClickListener(v->exportAllPdfs());
-        root.addView(label("Default PDF location: Downloads/Bioqra/YYMMDD-Project/Project.pdf. "
-                +"You can optionally choose another parent folder. New dates create separate project folders; "
-                +"exporting twice on the same day updates that file. "
-                +"No folder configuration is needed for the default location.",13));
         backupStatus=label("Backups and PDFs stay on your device until you share them.",13);
         root.addView(backupStatus);
         loadModels();
@@ -218,15 +323,15 @@ public final class AiSettingsActivity extends Activity {
         if(pdfFolderStatus==null)return;
         String folder=settings.pdfTreeUri();
         pdfFolderStatus.setText(folder==null
-                ? "Default PDF folder: Downloads/Bioqra/YYMMDD-Project/ (no setup needed)."
-                : "Custom PDF folder: "+Uri.parse(folder).getLastPathSegment()+"/Bioqra/YYMMDD-Project/");
+                ? UiLanguage.tr(this,"Default PDF folder: Downloads/Bioqra/YYMMDD-Project/ (no setup needed).")
+                : UiLanguage.format(this,"Custom PDF folder: %s/Bioqra/YYMMDD-Project/",Uri.parse(folder).getLastPathSegment()));
     }
     private void exportAllPdfs(){
         String folder=settings.pdfTreeUri();
 
         List<AiPreferences.SavedResult> saved=settings.savedResults();
-        if(saved.isEmpty()){backupStatus.setText("No saved AI results to export.");return;}
-        backupStatus.setText("Exporting "+saved.size()+" research PDFs...");
+        if(saved.isEmpty()){backupStatus.setText(UiLanguage.tr(this,"No saved AI results to export."));return;}
+        backupStatus.setText(UiLanguage.format(this,"Exporting %d research PDFs...",saved.size()));
         WORKER.execute(()->{
             int count=0;String failure="";
             for(AiPreferences.SavedResult item:saved){
@@ -237,7 +342,7 @@ public final class AiSettingsActivity extends Activity {
             final String error=failure;
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
-                backupStatus.setText("Exported "+done+"/"+saved.size()+" PDFs."
+                backupStatus.setText(UiLanguage.format(this,"Exported %d/%d PDFs.",done,saved.size())
                         +(error.isEmpty()?"":" Error: "+error));
             });
         });
@@ -312,12 +417,15 @@ public final class AiSettingsActivity extends Activity {
     private void updateAccountStatus(){
         if(accountStatus==null || accountButton==null)return;
         boolean connected=!"Not connected".equals(account.accountLabel());
-        String scope=account.canUsePlan() ? "AI plan usage authorized"
-                : "AI plan usage not authorized";
-        accountStatus.setText("ChatGPT: "+account.accountLabel()
-                +"\n"+(connected?scope+" · Session saved securely on this device. Automatic token renewal is used where supported.":"Log in once to connect this device."));
-        accountButton.setText(signingIn?"Connecting..."
-                : connected?"ChatGPT ✓ · Account & sign out":"ChatGPT login");
+        String scope=UiLanguage.tr(this,account.canUsePlan() ? "AI plan usage authorized"
+                : "AI plan usage not authorized");
+        accountStatus.setText("ChatGPT: "
+                +(connected?account.accountLabel():UiLanguage.tr(this,"Not connected"))
+                +"\n"+(connected?scope+" · "
+                        +UiLanguage.tr(this,"Session saved securely on this device. Automatic token renewal is used where supported.")
+                        :UiLanguage.tr(this,"Log in once to connect this device.")));
+        accountButton.setText(UiLanguage.tr(this,signingIn?"Connecting..."
+                : connected?"ChatGPT ✓ · Account & sign out":"ChatGPT login"));
         accountButton.setEnabled(!signingIn);
     }
 
@@ -329,25 +437,25 @@ public final class AiSettingsActivity extends Activity {
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("ChatGPT account")
+                .setTitle(UiLanguage.tr(this,"ChatGPT account"))
                 .setMessage("Connected: "+account.accountLabel()
                     +"\nPlan use: "+(account.canUsePlan()?"authorized":"not authorized")
                     +"\n\nYou can reconnect or sign out locally.")
-                .setPositiveButton("Close",null)
-                .setNeutralButton("Reconnect",(d,w)->startChatGptLogin())
-                .setNegativeButton("Sign out",(d,w)->
+                .setPositiveButton(UiLanguage.tr(this,"Close"),null)
+                .setNeutralButton(UiLanguage.tr(this,"Reconnect"),(d,w)->startChatGptLogin())
+                .setNegativeButton(UiLanguage.tr(this,"Sign out"),(d,w)->
                     new AlertDialog.Builder(this)
-                        .setTitle("Sign out of BIOQRA?")
+                        .setTitle(UiLanguage.tr(this,"Sign out of BIOQRA?"))
                         .setMessage("This removes the stored local connection and disables "
                             +"automatic ChatGPT analysis. To revoke app access completely, "
                             +"use ChatGPT account settings.")
                         .setNegativeButton("Cancel",null)
-                        .setPositiveButton("Sign out",(confirm,which)->{
+                        .setPositiveButton(UiLanguage.tr(this,"Sign out"),(confirm,which)->{
                             account.signOut();
                             settings.setAutoConsent(false);
                             populateModels(new ArrayList<>());
                             updateAccountStatus();
-                            info.setText("Connect a ChatGPT account to load available models.");
+                            info.setText(UiLanguage.tr(this,"Connect a ChatGPT account to load available models."));
                         }).show())
                 .show();
     }
@@ -378,20 +486,20 @@ public final class AiSettingsActivity extends Activity {
 
     private void updateRemaining(){
         if(remaining!=null)
-            remaining.setText("Local AI attempts remaining today: "+settings.remaining());
+            remaining.setText(UiLanguage.format(this,"Local AI attempts remaining today: %d",settings.remaining()));
     }
     private void populateModels(List<ChatGptConnection.Model> source){
         available=new ArrayList<>(source);
         modelKeys.clear();
         List<String> titles=new ArrayList<>();
-        titles.add("Auto · highest-tier model available");
+        titles.add(UiLanguage.tr(this,"Auto · highest-tier model available"));
         modelKeys.add(AiPreferences.AUTO);
         for(ChatGptConnection.Model m:available){
             titles.add(m.title);modelKeys.add(m.slug);
         }
         String chosen=settings.globalModel();
         if(!modelKeys.contains(chosen)){
-            titles.add("Unavailable saved global model: "+chosen);
+            titles.add(UiLanguage.format(this,"Unavailable saved global model: %s",chosen));
             modelKeys.add(chosen);
         }
         ArrayAdapter<String> adapter=new ArrayAdapter<>(this,
@@ -410,20 +518,22 @@ public final class AiSettingsActivity extends Activity {
         });
     }
     private void loadModels(){
-        info.setText("Refreshing available ChatGPT models...");
+        info.setText(UiLanguage.tr(this,"Refreshing available ChatGPT models..."));
         WORKER.execute(()->{
             try{
                 List<ChatGptConnection.Model> got=account.models();
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     populateModels(got);
-                    info.setText(got.size()+" models offered by the connected account. Auto prefers the highest-tier available model by name and reasoning mode; not an official capability ranking.");
+                    info.setText(UiLanguage.format(this,"%d models offered by the connected account. Auto prefers the highest-tier available model by name and reasoning mode; not an official capability ranking.",got.size()));
                 });
             }catch(Exception ex){
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     populateModels(new ArrayList<>());
-                    info.setText("Model list unavailable: "+ex.getMessage());
+                    info.setText(UiLanguage.format(this,"Model list unavailable: %s",
+                    "Connect a ChatGPT account first".equals(ex.getMessage())
+                        ?UiLanguage.tr(this,"Connect a ChatGPT account first"):ex.getMessage()));
                 });
             }
         });

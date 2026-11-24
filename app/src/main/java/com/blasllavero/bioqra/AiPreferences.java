@@ -110,9 +110,36 @@ public final class AiPreferences {
         return new Selection(preferred.slug,preferred.title);
     }
 
+    /** Automatic translation requires separate opt-in from research processing. */
+    /** Translation is requested by default, but never transmitted without a separate grant. */
+    public boolean autoTranslatePublicSections(){
+        return prefs.getBoolean("auto_translate_public_sections",true);
+    }
+    public boolean automaticTranslationAuthorized(){
+        return prefs.getBoolean("auto_translate_public_sections_authorized",false);
+    }
+    public void setAutoTranslatePublicSections(boolean enabled){
+        SharedPreferences.Editor editor=prefs.edit().putBoolean("auto_translate_public_sections",enabled);
+        if(!enabled)editor.putBoolean("auto_translate_public_sections_authorized",false);
+        editor.apply();
+    }
+    public void authorizeAutomaticTranslation(){
+        prefs.edit().putBoolean("auto_translate_public_sections",true)
+            .putBoolean("auto_translate_public_sections_authorized",true).apply();
+    }
+    public void revokeAutomaticTranslationAuthorization(){
+        prefs.edit().putBoolean("auto_translate_public_sections_authorized",false).apply();
+    }
+
     public boolean autoConsent(){return prefs.getBoolean("auto_consent",false);}
     public void setAutoConsent(boolean consent){prefs.edit().putBoolean("auto_consent",consent).apply();}
     public int dailyLimit(){return prefs.getInt("daily_limit_v2",40);}
+    /** One canonical, persisted stage-based percentage for list and detail.
+     * Stage 0..4 = 0..80%; 100% only after verified complete export.
+     */
+    public int processingPercent(String key){
+        return Math.min(100,Math.max(0,processingStage(key))*20);
+    }
     public int processingStage(String key){
         return automaticExportCompleted(key)?5:prefs.getInt("processing_stage_"+key,0);
     }
@@ -159,6 +186,14 @@ public final class AiPreferences {
                 .putString("processing_outcome_"+key,"export_error").apply();
     }
 
+    /** Never consume multiple source-suggestion AI requests on repeat screen visits. */
+    public boolean sourceSuggestionAttemptedToday(String key){
+        return today().equals(prefs.getString("official_suggest_day_"+key,""));
+    }
+    public void markSourceSuggestionAttempted(String key){
+        prefs.edit().putString("official_suggest_day_"+key,today()).apply();
+    }
+
     public boolean alreadyAttempted(String key){
         return today().equals(prefs.getString("attempt_"+key,""));
     }
@@ -167,6 +202,34 @@ public final class AiPreferences {
     }
     public String lastResult(String key){
         return prefs.getString("latest_"+key,null);
+    }
+
+    /** Only public, approved challenge navigation metadata; never secrets or research data. */
+    public static final class VisitedChallenge {
+        public final String title,url,kind;
+        public final int number;
+        VisitedChallenge(String title,String url,String kind,int number){
+            this.title=title;this.url=url;this.kind=kind;this.number=number;
+        }
+    }
+
+    public void rememberVisitedChallenge(String title,String url,String kind,int number){
+        if(title==null || title.isEmpty() || title.length()>250
+                || url==null || !TrustedChallengeReader.approved(url))return;
+        prefs.edit().putString("last_visited_title",title)
+            .putString("last_visited_url",url)
+            .putString("last_visited_kind",kind==null?"directory":kind)
+            .putInt("last_visited_number",Math.max(0,number)).apply();
+    }
+
+    public VisitedChallenge lastVisitedChallenge(){
+        String title=prefs.getString("last_visited_title",null);
+        String url=prefs.getString("last_visited_url",null);
+        if(title==null || title.isEmpty() || url==null
+                || !TrustedChallengeReader.approved(url))return null;
+        return new VisitedChallenge(title,url,
+            prefs.getString("last_visited_kind","directory"),
+            prefs.getInt("last_visited_number",0));
     }
 
     public String pdfTreeUri(){ return prefs.getString("pdf_tree_uri",null); }

@@ -58,13 +58,14 @@ public class MainActivity extends Activity {
     private AiPreferences aiPreferences;
     private final List<ChatGptConnection.Model> aiModels=new ArrayList<>();
     private boolean loadingModels=false;
-    private String challengeMode = "manual";
+    private String challengeMode = "automatic";
     private Button manualModeButton, automaticModeButton;
     private EditText search;
     private Spinner sourcePicker, availabilityPicker;
     private int currentPage = 0;
     private final List<ResearchCatalog.Item> researchItems = new ArrayList<>();
     private String section = "Challenges";
+    private String lastLanguage="en";
 
     private static class Challenge {
         final String id, title, url;
@@ -73,14 +74,26 @@ public class MainActivity extends Activity {
         }
     }
 
+    public static final String SHOW_MAIN_MENU="show_main_menu_from_settings";
+
+    @Override protected void onNewIntent(Intent intent){
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if(intent.getBooleanExtra(SHOW_MAIN_MENU,false)){
+            intent.removeExtra(SHOW_MAIN_MENU);
+            if(list!=null)showSection("Challenges");
+        }
+    }
+
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        lastLanguage=UiLanguage.language(this);
         getWindow().setStatusBarColor(BLUE);
         getWindow().setNavigationBarColor(Color.BLACK);
         chatGptConnection = new ChatGptConnection(this);
         aiPreferences = new AiPreferences(this);
         challengeMode = getSharedPreferences("bioqra_mode", MODE_PRIVATE)
-                .getString("mode","manual");
+                .getString("mode","automatic");
         if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()
                 && !"manual".equals(challengeMode))
             challengeMode="automatic";
@@ -89,6 +102,10 @@ public class MainActivity extends Activity {
         mergeGrand(GrandChallengeDiscovery.load(this));
         loadCached();
         buildUi();
+        if(getIntent().getBooleanExtra(SHOW_MAIN_MENU,false)){
+            getIntent().removeExtra(SHOW_MAIN_MENU);
+            showSection("Challenges");
+        }
         refresh();
         refreshGrand();
     }
@@ -180,18 +197,20 @@ public class MainActivity extends Activity {
         TextView title = text("BIOQRA", 30, true);
         title.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(58)));
-        Button aiSettingsButton=button("⚙ AI Settings · models & automation");
-        root.addView(aiSettingsButton,new LinearLayout.LayoutParams(-1,dp(49)));
-        aiSettingsButton.setOnClickListener(v->startActivity(new Intent(this,AiSettingsActivity.class)));
-        TextView subtitle = text("Open Bioinformatics Research & Patient Assistance", 13, false);
+        TextView subtitle = text("Resolving bioinformatics challenges with AI to minimize the impact of treatments on patients", 13, false);
         subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(subtitle);
+        Button aiSettingsButton=button("⚙ AI Settings · models & automation");
+        LinearLayout.LayoutParams aiSettingsLayout=new LinearLayout.LayoutParams(-1,dp(49));
+        aiSettingsLayout.topMargin=dp(12);
+        root.addView(aiSettingsButton,aiSettingsLayout);
+        aiSettingsButton.setOnClickListener(v->startActivity(new Intent(this,AiSettingsActivity.class)));
         status = text("Loading verified public challenges...", 13, false);
         status.setPadding(0, dp(12), 0, dp(12));
         root.addView(status);
         search = new EditText(this);
         search.setSingleLine(true);
-        search.setHint("Search challenges...");
+        search.setHint(UiLanguage.tr(this,"Search challenges..."));
         search.setTextSize(16);
         root.addView(search);
         search.addTextChangedListener(new TextWatcher() {
@@ -201,7 +220,7 @@ public class MainActivity extends Activity {
         });
         sourcePicker = new Spinner(this);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item,
-                ResearchCatalog.FILTERS);
+                localizedOptions(ResearchCatalog.FILTERS));
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         sourcePicker.setAdapter(adapter);
         sourcePicker.setContentDescription("Filter bioinformatics challenges by source");
@@ -213,7 +232,7 @@ public class MainActivity extends Activity {
         });
         availabilityPicker = new Spinner(this);
         ArrayAdapter<String> availabilityAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, ResearchCatalog.AVAILABILITY_FILTERS);
+                android.R.layout.simple_spinner_item,localizedOptions(ResearchCatalog.AVAILABILITY_FILTERS));
         availabilityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         availabilityPicker.setAdapter(availabilityAdapter);
         availabilityPicker.setContentDescription("Filter by competition availability");
@@ -305,10 +324,13 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         if(list!=null){
+            if(!lastLanguage.equals(UiLanguage.language(this))){
+                recreate();return;
+            }
             if(chatGptConnection!=null && chatGptConnection.canUsePlan()
                     && aiPreferences.autoConsent()
                     && "automatic".equals(getSharedPreferences("bioqra_mode",MODE_PRIVATE)
-                        .getString("mode","manual"))){
+                        .getString("mode","automatic"))){
                 challengeMode="automatic";
                 updateModeControls();
             }
@@ -317,22 +339,33 @@ public class MainActivity extends Activity {
             }
             showItems();
             refreshAiModels();
+            if(initialCatalogDiscoveryFinished)startDefaultAutomaticQueueOnce();
         }
     }
 
     private void setChallengeMode(String next) {
-        if("automatic".equals(next) && !chatGptConnection.canUsePlan()){
-            // An account grant is needed before automatic AI requests.
-            startActivity(new Intent(this,AiSettingsActivity.class));
-            return;
-        }
         challengeMode = "automatic".equals(next) ? "automatic" : "manual";
         getSharedPreferences("bioqra_mode",MODE_PRIVATE).edit()
                 .putString("mode",challengeMode).apply();
         updateModeControls();
         if("automatic".equals(challengeMode)){
             showItems();
-            startAutomaticQueue();
+            if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()){
+                initialAutomaticQueueStarted=true;
+                startAutomaticQueue();
+            }else if(!chatGptConnection.canUsePlan()){
+                status.setText(UiLanguage.tr(this,
+                    "Automatic mode selected. Connect ChatGPT in Settings to start research."));
+                new AlertDialog.Builder(this)
+                    .setTitle(UiLanguage.tr(this,"ChatGPT setup required"))
+                    .setMessage(UiLanguage.tr(this,
+                        "Automatic mode needs a connected and authorized ChatGPT account. Configure ChatGPT in AI Settings to start processing challenges."))
+                    .setNegativeButton(UiLanguage.tr(this,"Not now"),null)
+                    .setPositiveButton(UiLanguage.tr(this,"Open AI Settings"),(dialog,which)->
+                        startActivity(new Intent(this,AiSettingsActivity.class)))
+                    .show();
+            }else status.setText(UiLanguage.tr(this,
+                "Automatic mode selected. Authorize automatic AI processing in Settings to begin."));
         }else{
             automaticRows.clear();
             automaticIndex=-1;
@@ -362,15 +395,14 @@ public class MainActivity extends Activity {
             String key=AiPreferences.stableKey(next.title,next.title);
             if(aiPreferences.automaticExportCompleted(key))continue;
             if(aiPreferences.alreadyAttempted(key) && aiPreferences.lastResult(key)==null){
-                status.setText("Automatic processing paused: previous attempt has no saved result for "
-                        +next.title);
+                status.setText(UiLanguage.format(this,"Automatic processing paused: previous attempt has no saved result for %s",UiLanguage.challengeTitle(this,next.title)));
                 return;
             }
             if(aiPreferences.remaining()<=0 && aiPreferences.lastResult(key)==null){
                 status.setText(UiLanguage.tr(this,"Automatic queue paused: daily request limit reached."));
                 return;
             }
-            status.setText("Automatic processing: "+next.title);
+            status.setText(UiLanguage.format(this,"Automatic processing: %s",UiLanguage.challengeTitle(this,next.title)));
             launchChallenge(next.title,next.url,next.kind,true);
             return;
         }
@@ -390,8 +422,8 @@ public class MainActivity extends Activity {
         }
         // Use a short and readable confirmation in the existing status line.
         if(status!=null && status.getText().toString().startsWith("Mode:"))
-            status.setText("Mode: "+("automatic".equals(challengeMode)
-                    ? "Automatic — public research starts when a challenge opens" : "Manual — offline tools and no AI usage"));
+            status.setText(UiLanguage.format(this,"Mode: %s",UiLanguage.tr(this,"automatic".equals(challengeMode)
+                    ? "Automatic — public research starts when a challenge opens" : "Manual — offline tools and no AI usage")));
     }
 
     private void refreshAiModels() {
@@ -414,15 +446,39 @@ public class MainActivity extends Activity {
     private final List<ResultRow> automaticRows=new ArrayList<>();
     private final List<ResultRow> displayedRows=new ArrayList<>();
     private int automaticIndex=-1;
+    private boolean initialAutomaticQueueStarted=false;
+    private boolean initialCatalogDiscoveryFinished=false;
     private static final int AUTOMATIC_CHALLENGE=8124;
 
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
         if(request!=AUTOMATIC_CHALLENGE)return;
         if(ProcessingControl.paused()||ProcessingControl.stopped())return;
-        if(result!=RESULT_OK || !"automatic".equals(challengeMode)
+        if(!"automatic".equals(challengeMode)
                 || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()){
             automaticRows.clear();automaticIndex=-1;return;
+        }
+        // Android may cancel an Activity result on a lifecycle transition even
+        // when the export checkpoint has already been persisted successfully.
+        boolean savedComplete=automaticIndex>=0 && automaticIndex<automaticRows.size()
+                && aiPreferences.automaticExportCompleted(AiPreferences.stableKey(
+                    automaticRows.get(automaticIndex).title,automaticRows.get(automaticIndex).title));
+        if(result==ChallengeActivity.RESULT_REVIEW_REQUIRED){
+            // A documented source retrieval failure is not a completed result.
+            // It can be skipped for this queue run but remains eligible for
+            // explicit manual review and later, user-approved retry.
+            status.setText(UiLanguage.tr(this,
+                "Source unavailable: marked for manual review. Continuing with the next challenge."));
+            showItems();
+            continueAutomaticQueue();
+            return;
+        }
+        if(result!=RESULT_OK && !savedComplete){
+            // Never skip incomplete exports or attempt a second AI request silently.
+            status.setText(UiLanguage.tr(this,
+                "Automatic queue interrupted: the current challenge did not complete. Reopen it only after checking its saved state."));
+            showItems();
+            return;
         }
         showItems();
         continueAutomaticQueue();
@@ -433,6 +489,7 @@ public class MainActivity extends Activity {
         if(aiPreferences.automaticExportCompleted(key) || ProcessingControl.paused() || ProcessingControl.stopped()){
             Intent review=new Intent(this,ChallengeActivity.class);
             review.putExtra(ChallengeActivity.TITLE,title);
+            review.putExtra(ChallengeActivity.NUMBER,numberFor(title,url));
             review.putExtra(ChallengeActivity.URL,url);
             review.putExtra(ChallengeActivity.KIND,kind);
             review.putExtra(ChallengeActivity.MODE,"manual");
@@ -453,6 +510,7 @@ public class MainActivity extends Activity {
     private void launchChallenge(String title,String url,String kind,boolean queue){
         Intent intent=new Intent(this,ChallengeActivity.class);
         intent.putExtra(ChallengeActivity.TITLE,title);
+        intent.putExtra(ChallengeActivity.NUMBER,numberFor(title,url));
         intent.putExtra(ChallengeActivity.URL,url);
         intent.putExtra(ChallengeActivity.MODE,challengeMode);
         intent.putExtra(ChallengeActivity.KIND,kind);
@@ -487,10 +545,10 @@ public class MainActivity extends Activity {
     }
 
     private void addLink(String title, String description, String url) {
-        addLink(title, description, url, "directory");
+        addLink(title, description, url, "directory",0);
     }
 
-    private void addLink(String title, String description, String url, String kind) {
+    private void addLink(String title, String description, String url, String kind,int number) {
         LinearLayout card=new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackground(bg(Color.WHITE));
@@ -498,7 +556,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams outer=new LinearLayout.LayoutParams(-1,-2);
         outer.setMargins(0,dp(4),0,dp(8));
         list.addView(card,outer);
-        TextView t=text(title+"\n"+description,16,false);
+        TextView t=text((number>0?number+". ":"")+UiLanguage.challengeTitle(this,title)+"\n"+UiLanguage.translateNote(this,description),16,false);
         card.addView(t);
         t.setOnClickListener(v->openChallenge(title,url,kind));
         LinearLayout modelRow=new LinearLayout(this);
@@ -524,7 +582,13 @@ public class MainActivity extends Activity {
                 "PDF and ZIP export pending","Processing completed"};
         TextView processing=text(UiLanguage.tr(this,stageLabels[Math.max(0,Math.min(5,stage))]),14,true);
         String outcome=aiPreferences.processingOutcome(key);
-        if("export_error".equals(outcome)){
+        if("review_required".equals(outcome) || "research_review_required".equals(outcome)){
+            processing.setText(UiLanguage.tr(this,
+                "research_review_required".equals(outcome)
+                    ?"Manual review required — research could not continue"
+                    :"Manual review required — official statement unavailable"));
+            processing.setTextColor(Color.rgb(170,91,32));
+        }else if("export_error".equals(outcome)){
             processing.setText(UiLanguage.tr(this,"PDF or ZIP export failed"));
             processing.setTextColor(Color.rgb(160,48,48));
         }else processing.setTextColor(stage==5?GREEN:BLUE);
@@ -550,9 +614,13 @@ public class MainActivity extends Activity {
         }
         android.widget.ProgressBar progress=new android.widget.ProgressBar(
                 this,null,android.R.attr.progressBarStyleHorizontal);
-        progress.setMax(5);
-        progress.setProgress(stage);
+        progress.setIndeterminate(false);
+        progress.setMax(100);
+        progress.setProgress(aiPreferences.processingPercent(key));
         card.addView(progress,new LinearLayout.LayoutParams(-1,dp(12)));
+        TextView percent=text(aiPreferences.processingPercent(key)+"%",12,true);
+        percent.setGravity(Gravity.END);
+        card.addView(percent);
         String override=aiPreferences.override(key);
         if(override!=null && !keys.contains(override)){
             names.add("Unavailable saved model: "+override);
@@ -576,6 +644,52 @@ public class MainActivity extends Activity {
         Button open=button("Open challenge");
         card.addView(open,new LinearLayout.LayoutParams(-1,dp(42)));
         open.setOnClickListener(v->openChallenge(title,url,kind));
+        if(aiPreferences.automaticExportCompleted(key)){
+            Button viewPdf=button("View PDF");
+            LinearLayout.LayoutParams pdfButtonLayout=new LinearLayout.LayoutParams(-1,dp(42));
+            pdfButtonLayout.topMargin=dp(9);
+            card.addView(viewPdf,pdfButtonLayout);
+            viewPdf.setOnClickListener(v->showCompletedPdf(key));
+        }
+    }
+
+    /** Open the completed research PDF directly from the catalog; no need
+     * to visit the challenge screen to finish a previously exported item. */
+    private void showCompletedPdf(String key){
+        AiPreferences.SavedResult found=null;
+        for(AiPreferences.SavedResult item:aiPreferences.savedResults()){
+            if(key.equals(item.key)){found=item;break;}
+        }
+        if(found==null){
+            status.setText(UiLanguage.tr(this,"Saved PDF unavailable"));
+            return;
+        }
+        final AiPreferences.SavedResult saved=found;
+        final String destination=aiPreferences.pdfTreeUri();
+        status.setText(UiLanguage.tr(this,"Checking saved PDF..."));
+        WORKER.execute(()->{
+            Uri tree=destination==null?null:Uri.parse(destination);
+            Uri pdf=null;
+            String error=null;
+            try{
+                pdf=ArchiveFiles.findSavedPdf(this,tree,saved);
+                if(pdf==null)throw new Exception("PDF file is missing");
+                try(android.os.ParcelFileDescriptor descriptor=
+                    SecurePdfAccess.open(this,pdf,tree,saved)){
+                    if(descriptor==null)throw new Exception("PDF is not readable");
+                }
+            }catch(Exception e){error=e.getMessage();}
+            final Uri verified=pdf, selectedTree=tree;
+            final String failure=error;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                if(failure!=null){
+                    aiPreferences.invalidateAutomaticExport(key);
+                    status.setText(UiLanguage.tr(this,"Saved PDF unavailable")+": "+failure);
+                    showItems();
+                }else ChallengePdfViewer.show(this,verified,selectedTree,saved);
+            });
+        });
     }
 
     private static class ResultRow {
@@ -586,8 +700,27 @@ public class MainActivity extends Activity {
     }
 
     private void addResearch(List<ResultRow> rows, ResearchCatalog.Item item) {
-        rows.add(new ResultRow(item.title, item.source+" · "+item.label()
-                +"\n"+item.summary, item.url, item.kind));
+        rows.add(new ResultRow(item.title, item.source+" · "+UiLanguage.researchStatus(this,item)
+                +"\n"+UiLanguage.translateNote(this,item.summary), item.url, item.kind));
+    }
+
+    private String[] localizedOptions(String[] options){
+        String[] result=new String[options.length];
+        for(int i=0;i<options.length;i++)result[i]=UiLanguage.tr(this,options[i]);
+        return result;
+    }
+
+    /** The visible 1-based number follows the filtered catalog and its pages. */
+    private int numberFor(String title,String url){
+        for(int i=0;i<displayedRows.size();i++){
+            ResultRow item=displayedRows.get(i);
+            if(item.title.equals(title)&&item.url.equals(url))return i+1;
+        }
+        for(int i=0;i<automaticRows.size();i++){
+            ResultRow item=automaticRows.get(i);
+            if(item.title.equals(title)&&item.url.equals(url))return i+1;
+        }
+        return 0;
     }
 
     private void displayPage(List<ResultRow> rows) {
@@ -602,13 +735,14 @@ public class MainActivity extends Activity {
         }
         int start=currentPage * ResearchCatalog.PAGE_SIZE;
         int end=Math.min(total,start + ResearchCatalog.PAGE_SIZE);
-        TextView summary=text("Showing "+(start+1)+"–"+end+" of "+total+
-                " · Page "+(currentPage+1)+" / "+pageCount,14,true);
+        TextView summary=text(UiLanguage.tr(this,"Showing")+" "+(start+1)+"–"+end
+                +" "+UiLanguage.tr(this,"of")+" "+total+" · "+UiLanguage.tr(this,"Page")
+                +" "+(currentPage+1)+" / "+pageCount,14,true);
         summary.setPadding(0,dp(8),0,dp(12));
         list.addView(summary);
         for (int i=start; i<end; i++) {
             ResultRow row=rows.get(i);
-            addLink(row.title,row.description,row.url,row.kind);
+            addLink(row.title,row.description,row.url,row.kind,i+1);
         }
         LinearLayout nav=new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
@@ -639,20 +773,21 @@ public class MainActivity extends Activity {
     private void showItems() {
         if (list == null) return;
         list.removeAllViews();
-        heading.setText(section);
+        heading.setText(UiLanguage.tr(this,section));
         List<ResultRow> rows=new ArrayList<>();
         if (section.equals("Challenges")) {
             String query=search.getText().toString().trim().toLowerCase(Locale.ROOT);
-            String source=(String) sourcePicker.getSelectedItem();
+            String source=ResearchCatalog.FILTERS[sourcePicker.getSelectedItemPosition()<0?0:sourcePicker.getSelectedItemPosition()];
             if (source==null) source="All sources";
-            String availability=(String) availabilityPicker.getSelectedItem();
+            String availability=ResearchCatalog.AVAILABILITY_FILTERS[availabilityPicker.getSelectedItemPosition()<0?0:availabilityPicker.getSelectedItemPosition()];
             if (availability==null) availability="Open / Upcoming";
 
             // Real competitions, research benchmarks and education are separated.
             if (availability.equals("Educational exercises") || availability.equals("All records")) {
                 if (source.equals("All sources") || source.equals(ResearchCatalog.ROSALIND)) {
                     for (Challenge challenge:challenges) {
-                        String haystack=(challenge.title+" "+challenge.id+" Rosalind").toLowerCase(Locale.ROOT);
+                        String haystack=(challenge.title+" "+UiLanguage.challengeTitle(this,challenge.title)
+                                +" "+challenge.id+" Rosalind").toLowerCase(Locale.ROOT);
                         if(haystack.contains(query)) rows.add(new ResultRow(challenge.title,
                                 "Rosalind · Educational exercise · "+challenge.id.toUpperCase(Locale.ROOT),
                                 challenge.url, "educational"));
@@ -661,7 +796,9 @@ public class MainActivity extends Activity {
             }
             for(ResearchCatalog.Item item:researchItems) {
                 if(!source.equals("All sources") && !source.equals(item.source)) continue;
-                String haystack=(item.title+" "+item.source+" "+item.summary+" "+item.topic)
+                String haystack=(item.title+" "+UiLanguage.challengeTitle(this,item.title)
+                        +" "+item.source+" "+item.summary+" "+UiLanguage.translateNote(this,item.summary)
+                        +" "+item.topic)
                         .toLowerCase(Locale.ROOT);
                 if(!haystack.contains(query)) continue;
                 String state=item.availability();
@@ -717,18 +854,29 @@ public class MainActivity extends Activity {
                 GrandChallengeDiscovery.save(this,updated);
                 runOnUiThread(() -> {
                     mergeGrand(updated);
-                    status.setText("Official Grand Challenge index refreshed: "
-                            + updated.size()+" accepting/upcoming entries · Rosalind and Open Problems available");
+                    status.setText(UiLanguage.format(this,"Official Grand Challenge index refreshed: %d accepting/upcoming entries · Rosalind and Open Problems available",updated.size()));
                     showItems();
+                    startDefaultAutomaticQueueOnce();
                 });
             } catch(Exception e) {
                 runOnUiThread(() -> {
-                    status.setText("Grand Challenge live search unavailable; saved list kept. "
-                            + "Use Refresh to retry.");
+                    status.setText(UiLanguage.tr(this,
+                        "Grand Challenge live search unavailable; saved list kept. Use Refresh to retry."));
                     showItems();
+                    startDefaultAutomaticQueueOnce();
                 });
             }
         });
+    }
+
+    /** Starts only after catalog refresh, with prior user authorization, once per screen launch. */
+    private void startDefaultAutomaticQueueOnce(){
+        initialCatalogDiscoveryFinished=true;
+        if(initialAutomaticQueueStarted || !"automatic".equals(challengeMode)
+                || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()
+                || ProcessingControl.paused() || ProcessingControl.stopped())return;
+        initialAutomaticQueueStarted=true;
+        startAutomaticQueue();
     }
 
     private void refresh() {

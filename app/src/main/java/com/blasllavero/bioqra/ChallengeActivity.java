@@ -22,6 +22,8 @@ import android.widget.HorizontalScrollView;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import android.net.Uri;
 import android.os.Bundle;
@@ -45,14 +47,17 @@ import java.util.concurrent.Executors;
  */
 public final class ChallengeActivity extends Activity {
     public static final String TITLE="challenge_title";
+    public static final String NUMBER="challenge_number";
     public static final String URL="challenge_url";
     public static final String MODE="challenge_mode";
     public static final String KIND="challenge_kind";
     public static final String AUTO_QUEUE="automatic_queue";
+    public static final int RESULT_REVIEW_REQUIRED=RESULT_FIRST_USER+1;
     private static final ExecutorService EXEC=Executors.newSingleThreadExecutor();
     // PDF viewing must not wait behind a long-running research or ChatGPT operation.
     private static final ExecutorService PDF_READS=Executors.newFixedThreadPool(2);
     private String title, url, mode, kind;
+    private int challengeNumber=0;
     private TextView status, output, statement, resolvedLink, deadlinesView, pdfFeedback;
     private Button viewSavedPdf, savePdf;
     private android.widget.ProgressBar pdfProgress;
@@ -61,7 +66,11 @@ public final class ChallengeActivity extends Activity {
     private Uri lastSavedPdf;
     private Uri lastSavedPdfTree;
     private AiPreferences.SavedResult lastSavedPdfResult;
-    private TextView sectionHeading, searchCounter;
+    private TextView sectionHeading, searchCounter, translationView;
+    private Button translateButton;
+    private boolean translating=false;
+    private final Map<String,String> translatedSections=new HashMap<>();
+    private final Set<String> attemptedAutomaticTranslations=new HashSet<>();
     private Button originalDocumentButton;
     private String activeDocumentUrl="";
     private PublicDatasetDiscovery.Report discoveredDatasets;
@@ -106,6 +115,48 @@ public final class ChallengeActivity extends Activity {
         Button b=new Button(this);b.setAllCaps(false);b.setText(UiLanguage.tr(this,name));
         return b;
     }
+    /**
+     * Preserve the active queued research Activity when the user views the
+     * catalog. A normal finish() here destroyed the export owner and returned
+     * RESULT_CANCELED, leaving the queue stalled even though it wasn't paused.
+     */
+    private void returnToChallengeList(){
+        if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                && "automatic".equals(mode)
+                && !aiPreferences.automaticExportCompleted(challengeKey)
+                && !ProcessingControl.stopped()){
+            android.content.Intent catalog=new android.content.Intent(this,MainActivity.class);
+            catalog.addFlags(android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    |android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(catalog);
+            // Do not finish: the Activity continues export work while stopped.
+            // This remains lifecycle-dependent; a future background worker is needed.
+            return;
+        }
+        finish();
+    }
+
+    /** Navigate explicitly to the complete BIOQRA catalog.
+     * Keep the current Activity alive if it owns an unfinished automatic job,
+     * so the return action does not cancel its PDF/ZIP export.
+     */
+    private void openMainMenu(){
+        boolean activeQueue=getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                && "automatic".equals(mode)
+                && !aiPreferences.automaticExportCompleted(challengeKey)
+                && !ProcessingControl.stopped();
+        Intent catalog=new Intent(this,MainActivity.class);
+        catalog.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                |Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        catalog.putExtra(MainActivity.SHOW_MAIN_MENU,true);
+        startActivity(catalog);
+        if(!activeQueue)finish();
+    }
+
+    @Override public void onBackPressed(){
+        returnToChallengeList();
+    }
+
     private void showError(String message){
         status.setText(message);
         updateButtons();
@@ -122,6 +173,7 @@ public final class ChallengeActivity extends Activity {
         connection=new ChatGptConnection(this);
         aiPreferences=new AiPreferences(this);
         title=getIntent().getStringExtra(TITLE);
+        challengeNumber=Math.max(0,getIntent().getIntExtra(NUMBER,0));
         url=getIntent().getStringExtra(URL);
         mode=getIntent().getStringExtra(MODE);
         kind=getIntent().getStringExtra(KIND);
@@ -130,6 +182,7 @@ public final class ChallengeActivity extends Activity {
         if(url==null)url="";
         if(!"automatic".equals(mode))mode="manual";
         challengeKey=AiPreferences.stableKey(title,title);
+        aiPreferences.rememberVisitedChallenge(title,url,kind,challengeNumber);
         aiPreferences.updateLegacyMetadata(challengeKey,title,url);
         getWindow().setStatusBarColor(Color.rgb(24,72,91));
         getWindow().setNavigationBarColor(Color.BLACK);
@@ -152,9 +205,10 @@ public final class ChallengeActivity extends Activity {
         setContentView(scroll);
 
         Button back=button("← Back to challenges");
-        back.setOnClickListener(v->finish());
+        back.setOnClickListener(v->returnToChallengeList());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(52)));
-        root.addView(text(title,23,true));
+        root.addView(text((challengeNumber>0?challengeNumber+". ":"")
+                +UiLanguage.challengeTitle(this,title),23,true));
         LinearLayout processingControls=new LinearLayout(this);
         processingControls.setOrientation(LinearLayout.HORIZONTAL);
         for(String action:new String[]{"Pause processing","Stop processing","Resume processing"}){
@@ -185,13 +239,13 @@ public final class ChallengeActivity extends Activity {
             });
         }
         root.addView(processingControls);
-        root.addView(text("Mode: "+("automatic".equals(mode)?"Automatic (ChatGPT)":"Manual (no AI)")
-                +" · Read-only · No contest submissions",14,false));
+        root.addView(text(UiLanguage.tr(this,"Mode: ")
+                +UiLanguage.tr(this,"automatic".equals(mode)?"Automatic (ChatGPT)":"Manual (no AI)")
+                +UiLanguage.tr(this," · Read-only · No contest submissions"),14,false));
         root.addView(text(url,12,false));
-        root.addView(text("AI model: configured for this challenge on the main list; "
-                +"otherwise inherits the global AI Settings model. "
-                +"Automatic use is limited to "+aiPreferences.dailyLimit()
-                +" requests per day on this device.",13,false));
+        root.addView(text(UiLanguage.format(this,
+                "AI model: configured for this challenge on the main list; otherwise inherits the global AI Settings model. Automatic use is limited to %d requests per day on this device.",
+                aiPreferences.dailyLimit()),13,false));
         if(isFunding()) {
             root.addView(text("Research funding opportunity · Not a programming contest",17,true));
             root.addView(text("ChatGPT can prepare a research proposal and an unexecuted methodology, but it cannot establish that this cancer research challenge is solved. The organizer may require an eligible research team, experimental data and scientific validation.",14,false));
@@ -238,6 +292,17 @@ public final class ChallengeActivity extends Activity {
         statement.setLinksClickable(true);
         statement.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(statement);
+        // Automatic mode performs authorized translation without a manual button.
+        // Manual mode retains the explicit one-time translate action.
+        if(!"automatic".equals(mode)){
+            translateButton=button("Translate official section with ChatGPT");
+            translateButton.setOnClickListener(v->confirmSectionTranslation());
+            root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(52)));
+        }
+        translationView=text("Official source (original language). Translation is optional and requires permission.",13,false);
+        translationView.setTextIsSelectable(true);
+        translationView.setLineSpacing(dp(4),1.08f);
+        root.addView(translationView);
         root.addView(text("Participation dates and supporting documents",18,true));
         deadlinesView=text("Not checked. Dates must be verified on the official organizer website.",13,false);
         deadlinesView.setTextIsSelectable(true);
@@ -294,7 +359,7 @@ public final class ChallengeActivity extends Activity {
         if("automatic".equals(mode))aiButton.setVisibility(View.GONE);
         aiButton.setOnClickListener(v->confirmAI());
         String oldResult=aiPreferences.lastResult(challengeKey);
-        output=text(oldResult!=null ? "SAVED AI DRAFT (not reverified)\n\n"+oldResult
+        output=text(oldResult!=null ? UiLanguage.tr(this,"Original saved result (language may differ from your selected language).")+"\n\n"+oldResult
                 : isFunding() ? "No research proposal or independent validation yet."
                 : "No solution proposal or independent verification yet.",14,false);
         output.setTextIsSelectable(true);
@@ -320,7 +385,9 @@ public final class ChallengeActivity extends Activity {
         pdfProgressLabel=text("Preparing PDF and ZIP...",13,false);
         pdfProgressLabel.setVisibility(View.GONE);
         pdfProgress=new android.widget.ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);
-        pdfProgress.setIndeterminate(true);
+        pdfProgress.setIndeterminate(false);
+        pdfProgress.setMax(100);
+        pdfProgress.setProgress(aiPreferences.processingPercent(challengeKey));
         pdfProgress.setVisibility(View.GONE);
         pdfActions.addView(viewSavedPdf,new LinearLayout.LayoutParams(-1,dp(52)));
         // The processing indicator belongs at the very bottom of the result
@@ -330,6 +397,29 @@ public final class ChallengeActivity extends Activity {
         pdfFeedback=text("PDFs save by default to Downloads/Bioqra.",13,false);
         root.addView(pdfFeedback);
         root.addView(pdfActions,new LinearLayout.LayoutParams(-1,-2));
+
+        // Repeat navigation after the full research output and PDF controls.
+        // The second button returns to the TOP OF THIS CHALLENGE, never to
+        // another record and never restarts an automatic ChatGPT operation.
+        LinearLayout footerNavigation=new LinearLayout(this);
+        footerNavigation.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams footerParams=new LinearLayout.LayoutParams(-1,-2);
+        footerParams.topMargin=dp(16);
+        root.addView(footerNavigation,footerParams);
+
+        Button footerMainMenu=button("Back to main menu");
+        footerMainMenu.setOnClickListener(v->openMainMenu());
+        footerNavigation.addView(footerMainMenu,
+                new LinearLayout.LayoutParams(-1,dp(54)));
+
+        Button footerChallenge=button("Back to challenge");
+        footerChallenge.setOnClickListener(v->{
+            if(pageScroll!=null)pageScroll.smoothScrollTo(0,0);
+        });
+        LinearLayout.LayoutParams challengeButtonParams=
+                new LinearLayout.LayoutParams(-1,dp(54));
+        challengeButtonParams.topMargin=dp(10);
+        footerNavigation.addView(footerChallenge,challengeButtonParams);
         updatePdfFeedback();
         updateButtons();
 
@@ -361,18 +451,21 @@ public final class ChallengeActivity extends Activity {
         LinearLayout controls=new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);
         controls.setGravity(Gravity.CENTER_VERTICAL);
+        // One consistent size for history, search and scientific section tabs.
+        final int toolbarWidth=dp(160), toolbarHeight=dp(64);
         backSectionButton=button("← Back");
         forwardSectionButton=button("Forward →");
         backSectionButton.setOnClickListener(v->stepHistory(-1));
         forwardSectionButton.setOnClickListener(v->stepHistory(1));
-        controls.addView(backSectionButton,new LinearLayout.LayoutParams(dp(117),dp(48)));
-        controls.addView(forwardSectionButton,new LinearLayout.LayoutParams(dp(130),dp(48)));
+        controls.addView(backSectionButton,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
+        controls.addView(forwardSectionButton,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
         Button fullText=button("Full text");
         fullText.setOnClickListener(v->selectSection(ChallengeSectionNavigator.FULL,true));
-        controls.addView(fullText,new LinearLayout.LayoutParams(dp(112),dp(48)));
+        controls.addView(fullText,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
         Button searchToggle=button("🔍 Search");
-        searchToggle.setContentDescription("Search within the current challenge document");
-        controls.addView(searchToggle,new LinearLayout.LayoutParams(dp(119),dp(48)));
+        searchToggle.setContentDescription(UiLanguage.tr(this,
+                "Search within the current challenge document"));
+        controls.addView(searchToggle,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
         searchToggle.setOnClickListener(v->{
             if(searchPanel==null)return;
             boolean open=searchPanel.getVisibility()!=View.VISIBLE;
@@ -385,13 +478,8 @@ public final class ChallengeActivity extends Activity {
             tab.setMaxLines(2);
             tab.setEllipsize(null);
             tab.setGravity(Gravity.CENTER);
-            tab.setPadding(dp(14),dp(3),dp(14),dp(3));
-            // The Related Content label needs more width in Catalan and
-            // Spanish. Calculate a width from the actual localized text.
-            int textWidth=(int)Math.ceil(tab.getPaint().measureText(tab.getText().toString()));
-            int desired=Math.max(dp(125),textWidth+dp(42));
-            int width=Math.min(dp(270),desired);
-            controls.addView(tab,new LinearLayout.LayoutParams(width,dp(64)));
+            tab.setPadding(dp(9),dp(3),dp(9),dp(3));
+            controls.addView(tab,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
             tab.setOnClickListener(v->selectSection(key,true));
         }
         horizontal.addView(controls);
@@ -497,30 +585,144 @@ public final class ChallengeActivity extends Activity {
             ?"📄 Open original PDF with its layout":"🌐 Open original source in browser"));
     }
 
+
+    private String translationKey(ChallengeSectionNavigator.Section section){
+        return UiLanguage.language(this)+"|"+section.url+"|"
+            +section.body.hashCode()+"|"+section.body.length();
+    }
+
+    private void updateTranslationView(){
+        if(translationView==null || navigation==null)return;
+        ChallengeSectionNavigator.Section current=navigation.get(activeSection);
+        if(current==null){
+            translationView.setText(UiLanguage.tr(this,
+                "Official source (original language). Translation is optional and requires permission."));
+            return;
+        }
+        String localized=translatedSections.get(translationKey(current));
+        translationView.setText(localized!=null?localized:UiLanguage.tr(this,
+            "Official source (original language). Translation is optional and requires permission."));
+    }
+
+    private void maybeAutoTranslateSection(){
+        if(!aiPreferences.autoTranslatePublicSections()
+                || !aiPreferences.automaticTranslationAuthorized() || translating || busy
+                || navigation==null || !connection.canUsePlan() || aiPreferences.remaining()<=0)return;
+        String language=UiLanguage.language(this);
+        if(!"ca".equals(language) && !"es".equals(language))return;
+        ChallengeSectionNavigator.Section selected=navigation.get(activeSection);
+        if(selected==null || selected.body.length()<20 || selected.body.length()>10000
+                || !TrustedChallengeReader.approved(selected.url))return;
+        if(navigation.link(activeSection)!=null
+                && !loadedOfficialSections.contains(activeSection))return;
+        String key=translationKey(selected);
+        if(translatedSections.containsKey(key) || !attemptedAutomaticTranslations.add(key))return;
+        runSectionTranslation(navigation,activeSection,selected,
+            "ca".equals(language)?"Catalan":"Spanish",language);
+    }
+
+    private void confirmSectionTranslation(){
+        if(translating || busy || navigation==null)return;
+        final ChallengeSectionNavigator.Snapshot originalSnapshot=navigation;
+        final String sectionKey=activeSection;
+        final ChallengeSectionNavigator.Section source=navigation.get(sectionKey);
+        if(source==null || source.body.trim().length()<20){
+            status.setText(UiLanguage.tr(this,"No official text is available for translation."));
+            return;
+        }
+        if(!TrustedChallengeReader.approved(source.url)){
+            status.setText(UiLanguage.tr(this,"This source is not approved for translation."));
+            return;
+        }
+        if(source.body.length()>10000){
+            status.setText(UiLanguage.tr(this,
+                "This section is too long for the current translation preview."));
+            return;
+        }
+        if(!connection.canUsePlan() || aiPreferences.remaining()<=0){
+            status.setText(UiLanguage.tr(this,
+                "Connect ChatGPT and check your daily request allowance."));
+            return;
+        }
+        final String code=UiLanguage.language(this);
+        final String language="ca".equals(code)?"Catalan":"es".equals(code)?"Spanish":"English";
+        new AlertDialog.Builder(this)
+            .setTitle(UiLanguage.tr(this,"Translate official section with ChatGPT"))
+            .setMessage(UiLanguage.tr(this,"Send the PUBLIC official section to ChatGPT?")
+                +"\n"+source.url+"\n"+source.body.length()+" characters"
+                +"\n"+language+" · "+aiPreferences.remaining()+" requests remaining"
+                +"\n"+UiLanguage.tr(this,"The original source stays unchanged."))
+            .setNegativeButton(UiLanguage.tr(this,"Cancel"),null)
+            .setPositiveButton(UiLanguage.tr(this,"Translate once"),
+                (dialog,which)->runSectionTranslation(originalSnapshot,sectionKey,source,language,code))
+            .show();
+    }
+
+    private void runSectionTranslation(ChallengeSectionNavigator.Snapshot snapshot,
+                                        String key,ChallengeSectionNavigator.Section source,
+                                        String language,String code){
+        if(translating || busy)return;
+        translating=true;
+        if(translateButton!=null)translateButton.setEnabled(false);
+        status.setText(UiLanguage.tr(this,"Translating official public text..."));
+        EXEC.execute(()->{
+            try{
+                List<ChatGptConnection.Model> available=connection.models();
+                AiPreferences.Selection selection=AiPreferences.choose(
+                    available,aiPreferences.selected(challengeKey));
+                if(!aiPreferences.reserve(false))
+                    throw new Exception("Daily AI request limit reached");
+                String translated=connection.translatePublicDocument(
+                    selection.slug,source.url,source.body,language);
+                final String originalUrl=source.url;
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    translating=false;
+                    if(translateButton!=null)translateButton.setEnabled(true);
+                    if(navigation!=snapshot || !UiLanguage.language(this).equals(code))return;
+                    translatedSections.put(translationKey(source),
+                        UiLanguage.tr(this,"AI-generated translation — unverified")
+                        +"\n"+originalUrl+"\n\n"+translated);
+                    if(key.equals(activeSection))updateTranslationView();
+                    status.setText(UiLanguage.tr(this,"Translation ready; verify against official source."));
+                });
+            }catch(Exception e){
+                runOnUiThread(()->{
+                    if(isFinishing()||isDestroyed())return;
+                    translating=false;
+                    if(translateButton!=null)translateButton.setEnabled(true);
+                    status.setText(UiLanguage.tr(this,"Translation unavailable: ")+e.getMessage());
+                });
+            }
+        });
+    }
+
     private void showSection(String key){
         if(navigation==null){
-            status.setText("First retrieve the official challenge statement.");
+            status.setText(UiLanguage.tr(this,"First retrieve the official challenge statement."));
             return;
         }
         ChallengeSectionNavigator.Section selected=navigation.get(key);
+        updateTranslationView();
         sectionHeading.setText(UiLanguage.tr(this,ChallengeSectionNavigator.label(key)));
         String link=navigation.link(key);
         if(selected!=null){
             renderStatement(selected.body);
             setDocumentLink(selected.url);
-            resolvedLink.setText("Official source: "+selected.url);
+            resolvedLink.setText(UiLanguage.tr(this,"Official source: ")+selected.url);
         }else if(link==null){
             setDocumentLink(navigation.sourceUrl);
             renderStatement("This section was not identified in the public official "
                 +"statement. BIOQRA will not invent missing challenge details. "
                 +"Use the original organizer page for more information.");
-            resolvedLink.setText("Source: "+navigation.sourceUrl);
+            resolvedLink.setText(UiLanguage.tr(this,"Source: ")+navigation.sourceUrl);
         }else{
             renderStatement("Official link identified. Retrieving the public section...");
             setDocumentLink(link);
-            resolvedLink.setText("Official source to check: "+link);
+            resolvedLink.setText(UiLanguage.tr(this,"Official source to check: ")+link);
         }
         highlightSearch(false);
+        maybeAutoTranslateSection();
         pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
         if(link!=null && !loadedOfficialSections.contains(key)
                 && !loadingOfficialSections.contains(key)){
@@ -538,9 +740,10 @@ public final class ChallengeActivity extends Activity {
                             if(loaded!=null){
                                 renderStatement(loaded.body);
                                 setDocumentLink(loaded.url);
-                                resolvedLink.setText("Official source: "+loaded.url);
-                            }else renderStatement("This linked section is not accessible.");
+                                resolvedLink.setText(UiLanguage.tr(this,"Official source: ")+loaded.url);
+                            }else renderStatement(UiLanguage.tr(this,"This linked section is not accessible."));
                             highlightSearch(false);
+                            maybeAutoTranslateSection();
                             pageScroll.post(()->pageScroll.smoothScrollTo(0,sectionHeading.getTop()));
                         }
                     });
@@ -635,9 +838,9 @@ public final class ChallengeActivity extends Activity {
     private void updatePdfFeedback(){
         if(pdfFeedback==null)return;
         String folder=aiPreferences.pdfTreeUri();
-        pdfFeedback.setText(folder==null
+        pdfFeedback.setText(UiLanguage.tr(this,folder==null
             ?"PDFs save automatically to Downloads/Bioqra/YYMMDD-Project/."
-            :"PDFs save to Bioqra/YYMMDD-Project/ inside your selected folder.");
+            :"PDFs save to Bioqra/YYMMDD-Project/ inside your selected folder."));
     }
 
     @Override protected void onResume(){
@@ -650,13 +853,22 @@ public final class ChallengeActivity extends Activity {
         if(pdfProgress==null)return;
         boolean active=pdfOperations>0 || ("automatic".equals(mode)
                 && (busy || datasetSearchInProgress));
-        if(active){
-            boolean exporting=pdfOperations>0 || aiPreferences.processingStage(challengeKey)>=4;
-            pdfProgressLabel.setText(UiLanguage.tr(this,exporting
-                    ?"Preparing PDF and ZIP...":"Processing challenge..."));
+        // Same persisted stage and percentage as the main challenge list.
+        int percent=aiPreferences.processingPercent(challengeKey);
+        pdfProgress.setIndeterminate(false);
+        pdfProgress.setMax(100);
+        pdfProgress.setProgress(percent);
+        if("automatic".equals(mode) || active){
+            int stage=aiPreferences.processingStage(challengeKey);
+            // Keep the actual stage visible even when between operations.
+            // An ongoing PDF export takes precedence over a stale earlier phase.
+            String message=UiLanguage.progressStage(this,
+                pdfOperations>0?4:stage);
+            pdfProgressLabel.setText(message+" · "+percent+"%");
         }
-        pdfProgressLabel.setVisibility(active?View.VISIBLE:View.GONE);
-        pdfProgress.setVisibility(active?View.VISIBLE:View.GONE);
+        boolean showProgress="automatic".equals(mode) || active;
+        pdfProgressLabel.setVisibility(showProgress?View.VISIBLE:View.GONE);
+        pdfProgress.setVisibility(showProgress?View.VISIBLE:View.GONE);
         viewSavedPdf.setEnabled(!active);
         savePdf.setEnabled(!active);
     }
@@ -1018,48 +1230,175 @@ public final class ChallengeActivity extends Activity {
                     datasetStatus.setText("No dataset loaded. "+datasetDiscoveryNote);
                 }
                 datasetResults.addView(text("Only bounded exploratory QC is performed on downloaded real GEO matrices. No differential expression, clinical prediction, or challenge solution is established.",13,false));
-                if(thenAi && !ProcessingControl.stopped() && !ProcessingControl.paused() && connection.canUsePlan() && aiPreferences.autoConsent()
-                        && !aiPreferences.alreadyAttempted(challengeKey) && specificPage)
+                boolean canGenerate=thenAi && !ProcessingControl.stopped()
+                        && !ProcessingControl.paused() && connection.canUsePlan()
+                        && aiPreferences.autoConsent()
+                        && !aiPreferences.alreadyAttempted(challengeKey) && specificPage;
+                if(canGenerate){
                     chooseModelAndRun(true);
+                }else if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                        && !ProcessingControl.stopped() && !ProcessingControl.paused()
+                        && aiPreferences.lastResult(challengeKey)==null){
+                    // An unavailable model grant or an already attempted request
+                    // must not leave the queue permanently at the dataset stage.
+                    // This challenge remains unfinished and needs explicit review.
+                    requireManualReview(UiLanguage.tr(this,
+                        "No authorized research proposal was generated. Review this challenge manually."));
+                    return;
+                }
                 refreshPdfProgress();
             });
         });
     }
 
+    /** Explicit, bounded public pages of the SAME organizer, never a leaderboard.
+     * These are candidates, not assumed verified challenge statements.
+     */
+    private java.util.List<String> officialStatementCandidates(){
+        java.util.LinkedHashSet<String> urls=new java.util.LinkedHashSet<>();
+        if(url!=null && TrustedChallengeReader.approved(url)){
+            try{
+                java.net.URI parsed=new java.net.URI(url);
+                String host=parsed.getHost();
+                String path=parsed.getPath()==null?"":parsed.getPath();
+                if(host!=null && host.endsWith(".grand-challenge.org")
+                        && (path.startsWith("/evaluation/") || path.contains("/leaderboard/"))){
+                    String homepage="https://"+host+"/";
+                    if(TrustedChallengeReader.approved(homepage)){
+                        if("selma3d2026.grand-challenge.org".equals(host)){
+                            urls.add(homepage+"tasks/");
+                            urls.add(homepage+"participate-rules/");
+                        }
+                        if("cobra2026.grand-challenge.org".equals(host)){
+                            urls.add(homepage+"evaluation/");
+                        }
+                        urls.add(homepage);
+                    }
+                }
+            }catch(Exception ignored){}
+            urls.add(url);
+        }
+        return new java.util.ArrayList<>(urls);
+    }
+
+    /** An unavailable source must not block the rest of the automatic queue.
+     * This is not a completed research result or a verified exported PDF.
+     */
+    private void requireManualReview(String reason){
+        boolean statementVerified=specificPage
+                && aiPreferences.processingStage(challengeKey)>=2;
+        aiPreferences.setProcessingOutcome(challengeKey,
+            statementVerified?"research_review_required":"review_required");
+        status.setText(UiLanguage.tr(this,statementVerified
+            ?"Research cannot continue automatically; manual review required. The queue will continue."
+            :"Official statement unavailable; manual review required. The automatic queue will continue.")
+            +" "+reason);
+        updateButtons();
+        if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                && !ProcessingControl.stopped() && !ProcessingControl.paused()){
+            setResult(RESULT_REVIEW_REQUIRED);
+            finish();
+        }
+    }
+
     private void retrieve(){
         if(busy||ProcessingControl.stopped()||ProcessingControl.paused())return;
-        if(!TrustedChallengeReader.approved(url)){
-            showError("Blocked: URL is not a trusted HTTPS research domain. Open only after independent review.");
+        final java.util.List<String> candidates=officialStatementCandidates();
+        if(candidates.isEmpty()){
+            requireManualReview(UiLanguage.tr(this,
+                "Blocked: URL is not a trusted HTTPS research domain. Open only after independent review."));
             return;
         }
         busy=true;
         aiPreferences.setProcessingStage(challengeKey,1);
+        refreshPdfProgress();
         status.setText("Checking official organizer links for the detailed challenge statement...");
         updateButtons();
         EXEC.execute(()->{
             try {
-                ChallengePageResolver.Outcome result=ChallengePageResolver.resolve(this,url,title);
+                ChallengePageResolver.Outcome result=null;
+                Exception retrievalFailure=null;
+                for(String candidate:candidates){
+                    try{
+                        ChallengePageResolver.Outcome found=
+                            ChallengePageResolver.resolve(this,candidate,title);
+                        if(result==null || (!result.specific && found.specific))
+                            result=found;
+                        if(found.specific)break;
+                    }catch(Exception failure){
+                        retrievalFailure=failure;
+                    }
+                }
+                // The deterministic, public same-organizer crawl remains the
+                // first choice. The model may SUGGEST URLs only after that fails.
+                // It does not have a live browser, and its guesses are not evidence.
+                if((result==null || !result.specific)
+                        && "automatic".equals(mode)
+                        && connection.canUsePlan() && aiPreferences.autoConsent()
+                        && aiPreferences.remaining()>1
+                        && !aiPreferences.sourceSuggestionAttemptedToday(challengeKey)
+                        && !ProcessingControl.stopped() && !ProcessingControl.paused()){
+                    try{
+                        List<ChatGptConnection.Model> models=connection.models();
+                        AiPreferences.Selection choice=AiPreferences.choose(
+                            models,aiPreferences.selected(challengeKey));
+                        if(aiPreferences.reserve(true)){
+                            aiPreferences.markSourceSuggestionAttempted(challengeKey);
+                            runOnUiThread(()->{
+                                if(!isFinishing()&&!isDestroyed())
+                                    status.setText(UiLanguage.tr(this,
+                                        "Looking for another official public challenge page..."));
+                            });
+                            java.util.List<String> suggested=
+                                connection.suggestOfficialChallengePages(
+                                    choice.slug,title,candidates.get(0));
+                            // Bounded verification: only 3 URLs, HTTPS, exactly
+                            // the same host, and the existing confidence check.
+                            for(String suggestion:suggested){
+                                if(ProcessingControl.stopped()||ProcessingControl.paused())break;
+                                try{
+                                    ChallengePageResolver.Outcome tested=
+                                        ChallengePageResolver.resolve(this,suggestion,title);
+                                    if(result==null || (!result.specific && tested.specific))
+                                        result=tested;
+                                    if(tested.specific)break;
+                                }catch(Exception ignored){}
+                            }
+                        }
+                    }catch(Exception modelUnavailable){
+                        // The original public-source search remains usable;
+                        // no additional request or bypass is attempted.
+                    }
+                }
+                if(result==null){
+                    throw retrievalFailure==null
+                        ?new Exception("No public challenge statement available")
+                        :retrievalFailure;
+                }
+                final ChallengePageResolver.Outcome selected=result;
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
-                    fetchedText=result.text;
-                    specificPage=result.specific;
-                    verifiedPageUrl=result.resolvedUrl;
-                    renderStatement(result.text);
-                    resolvedLink.setText("Selected public page: "+result.resolvedUrl);
+                    fetchedText=selected.text;
+                    specificPage=selected.specific;
+                    verifiedPageUrl=selected.resolvedUrl;
+                    renderStatement(selected.text);
+                    resolvedLink.setText("Selected public page: "+selected.resolvedUrl);
                     loadedOfficialSections.clear();
                     loadingOfficialSections.clear();
-                    navigation=ChallengeSectionNavigator.fromText(result.resolvedUrl,
-                            result.text,result.deadlineSummary,result.documentLinks);
+                    translatedSections.clear();
+                    attemptedAutomaticTranslations.clear();
+                    navigation=ChallengeSectionNavigator.fromText(selected.resolvedUrl,
+                            selected.text,selected.deadlineSummary,selected.documentLinks);
                     selectSection(ChallengeSectionNavigator.FULL,true);
                     // Enrich the section index with original organizer links.
                     // Failure is nonfatal: the local formatted text remains usable.
                     EXEC.execute(()->{
                         try{
                             TrustedChallengeReader.Page page=
-                                    TrustedChallengeReader.fetchPage(result.resolvedUrl);
+                                    TrustedChallengeReader.fetchPage(selected.resolvedUrl);
                             ChallengeSectionNavigator.Snapshot extra=
                                     ChallengeSectionNavigator.fromPage(page,
-                                        result.deadlineSummary,result.documentLinks);
+                                        selected.deadlineSummary,selected.documentLinks);
                             runOnUiThread(()->{
                                 if(!isFinishing()&&!isDestroyed()){
                                     navigation=extra;
@@ -1067,18 +1406,25 @@ public final class ChallengeActivity extends Activity {
                                     loadingOfficialSections.clear();
                                     if(!ChallengeSectionNavigator.FULL.equals(activeSection))
                                         showSection(activeSection);
+                                    else maybeAutoTranslateSection();
                                 }
                             });
                         }catch(Exception ignored){}
                     });
-                    StringBuilder sources=new StringBuilder(result.deadlineSummary);
-                    if(!result.documentLinks.isEmpty()){
+                    StringBuilder sources=new StringBuilder(selected.deadlineSummary);
+                    if(!selected.documentLinks.isEmpty()){
                         sources.append("\n\nPUBLIC SUPPORTING PDF DOCUMENTS (read-only):\n");
-                        for(String doc:result.documentLinks)sources.append(doc).append("\n");
+                        for(String doc:selected.documentLinks)sources.append(doc).append("\n");
                     }
                     deadlinesView.setText(sources.toString());
-                    status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
+                    status.setText(selected.message+" Retrieved "+selected.text.length()+" characters.");
                     busy=false;updateButtons();
+                    maybeAutoTranslateSection();
+                    if("automatic".equals(mode) && !specificPage){
+                        requireManualReview(UiLanguage.tr(this,
+                            "The organizer page did not contain a verifiable detailed challenge statement."));
+                        return;
+                    }
                     if("automatic".equals(mode) && specificPage && !ProcessingControl.stopped() && !ProcessingControl.paused()){
                         // Search public metadata independently of AI consent.
                         boolean authorized=connection.canUsePlan() && aiPreferences.autoConsent()
@@ -1092,8 +1438,9 @@ public final class ChallengeActivity extends Activity {
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     busy=false;
-                    showError("Automatic retrieval unavailable: "+e.getMessage()
-                        +" You can still open the original site in your browser.");
+                    requireManualReview(UiLanguage.tr(this,
+                        "Automatic retrieval unavailable: ")+e.getMessage()
+                        +" "+UiLanguage.tr(this,"You can still open the original site in your browser."));
                 });
             }
         });
@@ -1133,6 +1480,7 @@ public final class ChallengeActivity extends Activity {
         }
         busy=true;
         aiPreferences.setProcessingStage(challengeKey,3);
+        refreshPdfProgress();
         status.setText("Checking your saved model selection...");
         updateButtons();
         final String publicStatement=fetchedText;
