@@ -411,18 +411,21 @@ public final class ChallengeActivity extends Activity {
         LinearLayout controls=new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);
         controls.setGravity(Gravity.CENTER_VERTICAL);
+        // One consistent size for history, search and scientific section tabs.
+        final int toolbarWidth=dp(160), toolbarHeight=dp(64);
         backSectionButton=button("← Back");
         forwardSectionButton=button("Forward →");
         backSectionButton.setOnClickListener(v->stepHistory(-1));
         forwardSectionButton.setOnClickListener(v->stepHistory(1));
-        controls.addView(backSectionButton,new LinearLayout.LayoutParams(dp(117),dp(48)));
-        controls.addView(forwardSectionButton,new LinearLayout.LayoutParams(dp(130),dp(48)));
+        controls.addView(backSectionButton,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
+        controls.addView(forwardSectionButton,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
         Button fullText=button("Full text");
         fullText.setOnClickListener(v->selectSection(ChallengeSectionNavigator.FULL,true));
-        controls.addView(fullText,new LinearLayout.LayoutParams(dp(112),dp(48)));
+        controls.addView(fullText,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
         Button searchToggle=button("🔍 Search");
-        searchToggle.setContentDescription("Search within the current challenge document");
-        controls.addView(searchToggle,new LinearLayout.LayoutParams(dp(119),dp(48)));
+        searchToggle.setContentDescription(UiLanguage.tr(this,
+                "Search within the current challenge document"));
+        controls.addView(searchToggle,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
         searchToggle.setOnClickListener(v->{
             if(searchPanel==null)return;
             boolean open=searchPanel.getVisibility()!=View.VISIBLE;
@@ -435,13 +438,8 @@ public final class ChallengeActivity extends Activity {
             tab.setMaxLines(2);
             tab.setEllipsize(null);
             tab.setGravity(Gravity.CENTER);
-            tab.setPadding(dp(14),dp(3),dp(14),dp(3));
-            // The Related Content label needs more width in Catalan and
-            // Spanish. Calculate a width from the actual localized text.
-            int textWidth=(int)Math.ceil(tab.getPaint().measureText(tab.getText().toString()));
-            int desired=Math.max(dp(125),textWidth+dp(42));
-            int width=Math.min(dp(270),desired);
-            controls.addView(tab,new LinearLayout.LayoutParams(width,dp(64)));
+            tab.setPadding(dp(9),dp(3),dp(9),dp(3));
+            controls.addView(tab,new LinearLayout.LayoutParams(toolbarWidth,toolbarHeight));
             tab.setOnClickListener(v->selectSection(key,true));
         }
         horizontal.addView(controls);
