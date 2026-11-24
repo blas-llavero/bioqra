@@ -186,6 +186,14 @@ public final class AiPreferences {
                 .putString("processing_outcome_"+key,"export_error").apply();
     }
 
+    /** Never consume multiple source-suggestion AI requests on repeat screen visits. */
+    public boolean sourceSuggestionAttemptedToday(String key){
+        return today().equals(prefs.getString("official_suggest_day_"+key,""));
+    }
+    public void markSourceSuggestionAttempted(String key){
+        prefs.edit().putString("official_suggest_day_"+key,today()).apply();
+    }
+
     public boolean alreadyAttempted(String key){
         return today().equals(prefs.getString("attempt_"+key,""));
     }
