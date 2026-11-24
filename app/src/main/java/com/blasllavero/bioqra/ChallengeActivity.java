@@ -1245,9 +1245,13 @@ public final class ChallengeActivity extends Activity {
      * This is not a completed research result or a verified exported PDF.
      */
     private void requireManualReview(String reason){
-        aiPreferences.setProcessingOutcome(challengeKey,"review_required");
-        status.setText(UiLanguage.tr(this,
-            "Official statement unavailable; manual review required. The automatic queue will continue.")
+        boolean statementVerified=specificPage
+                && aiPreferences.processingStage(challengeKey)>=2;
+        aiPreferences.setProcessingOutcome(challengeKey,
+            statementVerified?"research_review_required":"review_required");
+        status.setText(UiLanguage.tr(this,statementVerified
+            ?"Research cannot continue automatically; manual review required. The queue will continue."
+            :"Official statement unavailable; manual review required. The automatic queue will continue.")
             +" "+reason);
         updateButtons();
         if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
