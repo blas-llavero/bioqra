@@ -182,12 +182,12 @@ public class MainActivity extends Activity {
         TextView title = text("BIOQRA", 30, true);
         title.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(58)));
-        Button aiSettingsButton=button("⚙ AI Settings · models & automation");
-        root.addView(aiSettingsButton,new LinearLayout.LayoutParams(-1,dp(49)));
-        aiSettingsButton.setOnClickListener(v->startActivity(new Intent(this,AiSettingsActivity.class)));
         TextView subtitle = text("Resolució de reptes bioinformàtics amb IA per minimitzar l’impacte dels tractaments en els pacient", 13, false);
         subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(subtitle);
+        Button aiSettingsButton=button("⚙ AI Settings · models & automation");
+        root.addView(aiSettingsButton,new LinearLayout.LayoutParams(-1,dp(49)));
+        aiSettingsButton.setOnClickListener(v->startActivity(new Intent(this,AiSettingsActivity.class)));
         status = text("Loading verified public challenges...", 13, false);
         status.setPadding(0, dp(12), 0, dp(12));
         root.addView(status);
