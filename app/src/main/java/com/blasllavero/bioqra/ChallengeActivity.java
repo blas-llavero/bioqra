@@ -637,7 +637,8 @@ public final class ChallengeActivity extends Activity {
                 final String originalUrl=source.url;
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
-                    translating=false;translateButton.setEnabled(true);
+                    translating=false;
+                    if(translateButton!=null)translateButton.setEnabled(true);
                     if(navigation!=snapshot || !UiLanguage.language(this).equals(code))return;
                     translatedSections.put(translationKey(source),
                         UiLanguage.tr(this,"AI-generated translation — unverified")
@@ -648,7 +649,8 @@ public final class ChallengeActivity extends Activity {
             }catch(Exception e){
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
-                    translating=false;translateButton.setEnabled(true);
+                    translating=false;
+                    if(translateButton!=null)translateButton.setEnabled(true);
                     status.setText(UiLanguage.tr(this,"Translation unavailable: ")+e.getMessage());
                 });
             }
