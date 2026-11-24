@@ -1190,17 +1190,27 @@ public final class ChallengeActivity extends Activity {
                     datasetStatus.setText("No dataset loaded. "+datasetDiscoveryNote);
                 }
                 datasetResults.addView(text("Only bounded exploratory QC is performed on downloaded real GEO matrices. No differential expression, clinical prediction, or challenge solution is established.",13,false));
-                if(thenAi && !ProcessingControl.stopped() && !ProcessingControl.paused() && connection.canUsePlan() && aiPreferences.autoConsent()
-                        && !aiPreferences.alreadyAttempted(challengeKey) && specificPage)
+                boolean canGenerate=thenAi && !ProcessingControl.stopped()
+                        && !ProcessingControl.paused() && connection.canUsePlan()
+                        && aiPreferences.autoConsent()
+                        && !aiPreferences.alreadyAttempted(challengeKey) && specificPage;
+                if(canGenerate){
                     chooseModelAndRun(true);
+                }else if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                        && !ProcessingControl.stopped() && !ProcessingControl.paused()
+                        && aiPreferences.lastResult(challengeKey)==null){
+                    // An unavailable model grant or an already attempted request
+                    // must not leave the queue permanently at the dataset stage.
+                    // This challenge remains unfinished and needs explicit review.
+                    requireManualReview(UiLanguage.tr(this,
+                        "No authorized research proposal was generated. Review this challenge manually."));
+                    return;
+                }
                 refreshPdfProgress();
             });
         });
     }
 
-    /** Known official organizer homepage, never a public leaderboard endpoint.
-     * All other URLs retain the strict approved HTTPS no-redirect policy.
-     */
     /** Explicit, bounded public pages of the SAME organizer, never a leaderboard.
      * These are candidates, not assumed verified challenge statements.
      */
