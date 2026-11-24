@@ -159,6 +159,31 @@ public final class AiSettingsActivity extends Activity {
             @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
         });
         root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(52)));
+        root.addView(label("PDF report language",17));
+        Spinner pdfLanguagePicker=new Spinner(this);
+        String[] pdfCodes={"system","ca","es","en"};
+        String[] pdfNames={
+            UiLanguage.tr(this,"Same as app language (automatic)"),
+            "Català","Español","English"
+        };
+        ArrayAdapter<String> pdfLanguageAdapter=new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item,pdfNames);
+        pdfLanguageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        pdfLanguagePicker.setAdapter(pdfLanguageAdapter);
+        String pdfPreferred=UiLanguage.pdfLanguagePreference(this);
+        for(int i=0;i<pdfCodes.length;i++)if(pdfCodes[i].equals(pdfPreferred))
+            pdfLanguagePicker.setSelection(i);
+        pdfLanguagePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            private boolean initialized=false;
+            @Override public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){
+                if(!initialized){initialized=true;return;}
+                UiLanguage.setPdfLanguage(AiSettingsActivity.this,pdfCodes[pos]);
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> p){}
+        });
+        root.addView(pdfLanguagePicker,new LinearLayout.LayoutParams(-1,dp(52)));
+        root.addView(label("Report language changes only new PDFs; existing reports are not silently overwritten.",13));
+
         android.widget.CheckBox automaticTranslation=new android.widget.CheckBox(this);
         automaticTranslation.setText(UiLanguage.tr(this,
             "Automatically translate public challenge sections (uses ChatGPT requests)"));
