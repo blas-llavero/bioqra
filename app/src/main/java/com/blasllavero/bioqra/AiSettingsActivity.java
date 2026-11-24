@@ -75,18 +75,35 @@ public final class AiSettingsActivity extends Activity {
             return insets;
         });
         scroll.addView(root);setContentView(scroll);
-        Button back=button("← Back to BIOQRA");
-        back.setOnClickListener(v->finish());
-        root.addView(back,new LinearLayout.LayoutParams(-1,dp(55)));
-        Button firstChallenge=button("← Open first challenge");
-        LinearLayout.LayoutParams firstParams=new LinearLayout.LayoutParams(-1,dp(53));
-        firstParams.topMargin=dp(9);
-        root.addView(firstChallenge,firstParams);
-        firstChallenge.setOnClickListener(v->{
+        Button mainMenu=button("Main menu");
+        mainMenu.setOnClickListener(v->{
             Intent main=new Intent(this,MainActivity.class);
-            main.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            main.putExtra(MainActivity.OPEN_FIRST_CHALLENGE,true);
+            main.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            main.putExtra(MainActivity.SHOW_MAIN_MENU,true);
             startActivity(main);
+            finish();
+        });
+        root.addView(mainMenu,new LinearLayout.LayoutParams(-1,dp(55)));
+
+        Button returnChallenge=button("Back to challenge");
+        LinearLayout.LayoutParams challengeParams=new LinearLayout.LayoutParams(-1,dp(53));
+        challengeParams.topMargin=dp(9);
+        root.addView(returnChallenge,challengeParams);
+        AiPreferences.VisitedChallenge visited=settings.lastVisitedChallenge();
+        returnChallenge.setEnabled(visited!=null);
+        returnChallenge.setOnClickListener(v->{
+            AiPreferences.VisitedChallenge current=settings.lastVisitedChallenge();
+            if(current==null)return;
+            Intent detail=new Intent(this,ChallengeActivity.class);
+            detail.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            detail.putExtra(ChallengeActivity.TITLE,current.title);
+            detail.putExtra(ChallengeActivity.URL,current.url);
+            detail.putExtra(ChallengeActivity.KIND,current.kind);
+            detail.putExtra(ChallengeActivity.NUMBER,current.number);
+            // Only a restored missing Activity uses manual read-only mode.
+            // An existing automatic task is reused, never duplicated/restarted.
+            detail.putExtra(ChallengeActivity.MODE,"manual");
+            startActivity(detail);
             finish();
         });
         TextView heading=label("AI Settings",25);heading.setTypeface(null,Typeface.BOLD);
