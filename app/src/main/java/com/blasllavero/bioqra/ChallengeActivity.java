@@ -114,6 +114,31 @@ public final class ChallengeActivity extends Activity {
         Button b=new Button(this);b.setAllCaps(false);b.setText(UiLanguage.tr(this,name));
         return b;
     }
+    /**
+     * Preserve the active queued research Activity when the user views the
+     * catalog. A normal finish() here destroyed the export owner and returned
+     * RESULT_CANCELED, leaving the queue stalled even though it wasn't paused.
+     */
+    private void returnToChallengeList(){
+        if(getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                && "automatic".equals(mode)
+                && !aiPreferences.automaticExportCompleted(challengeKey)
+                && !ProcessingControl.stopped()){
+            android.content.Intent catalog=new android.content.Intent(this,MainActivity.class);
+            catalog.addFlags(android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    |android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(catalog);
+            // Do not finish: the Activity continues export work while stopped.
+            // This remains lifecycle-dependent; a future background worker is needed.
+            return;
+        }
+        finish();
+    }
+
+    @Override public void onBackPressed(){
+        returnToChallengeList();
+    }
+
     private void showError(String message){
         status.setText(message);
         updateButtons();
@@ -161,7 +186,7 @@ public final class ChallengeActivity extends Activity {
         setContentView(scroll);
 
         Button back=button("← Back to challenges");
-        back.setOnClickListener(v->finish());
+        back.setOnClickListener(v->returnToChallengeList());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(52)));
         root.addView(text((challengeNumber>0?challengeNumber+". ":"")
                 +UiLanguage.challengeTitle(this,title),23,true));
