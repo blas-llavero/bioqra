@@ -582,8 +582,11 @@ public class MainActivity extends Activity {
                 "PDF and ZIP export pending","Processing completed"};
         TextView processing=text(UiLanguage.tr(this,stageLabels[Math.max(0,Math.min(5,stage))]),14,true);
         String outcome=aiPreferences.processingOutcome(key);
-        if("review_required".equals(outcome)){
-            processing.setText(UiLanguage.tr(this,"Manual review required — official statement unavailable"));
+        if("review_required".equals(outcome) || "research_review_required".equals(outcome)){
+            processing.setText(UiLanguage.tr(this,
+                "research_review_required".equals(outcome)
+                    ?"Manual review required — research could not continue"
+                    :"Manual review required — official statement unavailable"));
             processing.setTextColor(Color.rgb(170,91,32));
         }else if("export_error".equals(outcome)){
             processing.setText(UiLanguage.tr(this,"PDF or ZIP export failed"));
