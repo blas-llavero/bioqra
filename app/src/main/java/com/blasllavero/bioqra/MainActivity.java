@@ -186,7 +186,9 @@ public class MainActivity extends Activity {
         subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(subtitle);
         Button aiSettingsButton=button("⚙ AI Settings · models & automation");
-        root.addView(aiSettingsButton,new LinearLayout.LayoutParams(-1,dp(49)));
+        LinearLayout.LayoutParams aiSettingsLayout=new LinearLayout.LayoutParams(-1,dp(49));
+        aiSettingsLayout.topMargin=dp(12);
+        root.addView(aiSettingsButton,aiSettingsLayout);
         aiSettingsButton.setOnClickListener(v->startActivity(new Intent(this,AiSettingsActivity.class)));
         status = text("Loading verified public challenges...", 13, false);
         status.setPadding(0, dp(12), 0, dp(12));
@@ -613,7 +615,9 @@ public class MainActivity extends Activity {
         open.setOnClickListener(v->openChallenge(title,url,kind));
         if(aiPreferences.automaticExportCompleted(key)){
             Button viewPdf=button("View PDF");
-            card.addView(viewPdf,new LinearLayout.LayoutParams(-1,dp(42)));
+            LinearLayout.LayoutParams pdfButtonLayout=new LinearLayout.LayoutParams(-1,dp(42));
+            pdfButtonLayout.topMargin=dp(9);
+            card.addView(viewPdf,pdfButtonLayout);
             viewPdf.setOnClickListener(v->showCompletedPdf(key));
         }
     }
