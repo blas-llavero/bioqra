@@ -136,6 +136,23 @@ public final class ChallengeActivity extends Activity {
         finish();
     }
 
+    /** Navigate explicitly to the complete BIOQRA catalog.
+     * Keep the current Activity alive if it owns an unfinished automatic job,
+     * so the return action does not cancel its PDF/ZIP export.
+     */
+    private void openMainMenu(){
+        boolean activeQueue=getIntent().getBooleanExtra(AUTO_QUEUE,false)
+                && "automatic".equals(mode)
+                && !aiPreferences.automaticExportCompleted(challengeKey)
+                && !ProcessingControl.stopped();
+        Intent catalog=new Intent(this,MainActivity.class);
+        catalog.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                |Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        catalog.putExtra(MainActivity.SHOW_MAIN_MENU,true);
+        startActivity(catalog);
+        if(!activeQueue)finish();
+    }
+
     @Override public void onBackPressed(){
         returnToChallengeList();
     }
@@ -380,6 +397,29 @@ public final class ChallengeActivity extends Activity {
         pdfFeedback=text("PDFs save by default to Downloads/Bioqra.",13,false);
         root.addView(pdfFeedback);
         root.addView(pdfActions,new LinearLayout.LayoutParams(-1,-2));
+
+        // Repeat navigation after the full research output and PDF controls.
+        // The second button returns to the TOP OF THIS CHALLENGE, never to
+        // another record and never restarts an automatic ChatGPT operation.
+        LinearLayout footerNavigation=new LinearLayout(this);
+        footerNavigation.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams footerParams=new LinearLayout.LayoutParams(-1,-2);
+        footerParams.topMargin=dp(16);
+        root.addView(footerNavigation,footerParams);
+
+        Button footerMainMenu=button("Back to main menu");
+        footerMainMenu.setOnClickListener(v->openMainMenu());
+        footerNavigation.addView(footerMainMenu,
+                new LinearLayout.LayoutParams(-1,dp(54)));
+
+        Button footerChallenge=button("Back to challenge");
+        footerChallenge.setOnClickListener(v->{
+            if(pageScroll!=null)pageScroll.smoothScrollTo(0,0);
+        });
+        LinearLayout.LayoutParams challengeButtonParams=
+                new LinearLayout.LayoutParams(-1,dp(54));
+        challengeButtonParams.topMargin=dp(10);
+        footerNavigation.addView(footerChallenge,challengeButtonParams);
         updatePdfFeedback();
         updateButtons();
 
