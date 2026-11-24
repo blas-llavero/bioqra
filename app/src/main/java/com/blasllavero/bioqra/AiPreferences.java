@@ -134,6 +134,12 @@ public final class AiPreferences {
     public boolean autoConsent(){return prefs.getBoolean("auto_consent",false);}
     public void setAutoConsent(boolean consent){prefs.edit().putBoolean("auto_consent",consent).apply();}
     public int dailyLimit(){return prefs.getInt("daily_limit_v2",40);}
+    /** One canonical, persisted stage-based percentage for list and detail.
+     * Stage 0..4 = 0..80%; 100% only after verified complete export.
+     */
+    public int processingPercent(String key){
+        return Math.min(100,Math.max(0,processingStage(key))*20);
+    }
     public int processingStage(String key){
         return automaticExportCompleted(key)?5:prefs.getInt("processing_stage_"+key,0);
     }
