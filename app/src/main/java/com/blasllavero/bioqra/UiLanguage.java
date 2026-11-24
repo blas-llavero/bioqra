@@ -320,6 +320,7 @@ public final class UiLanguage {
         add("No authorized research proposal was generated. Review this challenge manually.","No s'ha pogut generar cap proposta de recerca autoritzada. Revisa aquest repte manualment.","No se ha podido generar ninguna propuesta de investigación autorizada. Revisa este reto manualmente.");
         add("Research cannot continue automatically; manual review required. The queue will continue.","La recerca no pot continuar automàticament; cal revisió manual. La cua continuarà.","La investigación no puede continuar automáticamente; se requiere revisión manual. La cola continuará.");
         add("Manual review required — research could not continue","Cal revisió manual — la recerca no ha pogut continuar","Revisión manual necesaria — la investigación no ha podido continuar");
+        add("Looking for another official public challenge page...","Cercant una altra pàgina pública oficial del repte...","Buscando otra página pública oficial del reto...");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static final String SYSTEM="system";
