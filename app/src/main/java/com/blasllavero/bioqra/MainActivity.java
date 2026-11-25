@@ -243,15 +243,10 @@ public class MainActivity extends Activity {
                     ProcessingControl.stop();
                 }else{
                     ProcessingControl.resume();
-                    if("automatic".equals(challengeMode)){
-                        if(automaticRows.isEmpty()){
-                            automaticIndex=-1;
-                            showItems();
-                            startAutomaticQueue();
-                        }else if(automaticIndex>=0 && automaticIndex<automaticRows.size()){
-                            ResultRow pending=automaticRows.get(automaticIndex);
-                            launchChallenge(pending.title,pending.url,pending.kind,true);
-                        }
+                    if("automatic".equals(challengeMode)
+                            && !AutomaticChallengeRunner.running()){
+                        showItems();
+                        startAutomaticQueue();
                     }
                 }
                 for(int i=0;i<controls.getChildCount();i++){
@@ -302,8 +297,29 @@ public class MainActivity extends Activity {
         root.addView(r);
     }
 
+    private final android.os.Handler uiRefresh=
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable pollAutomation=new Runnable(){
+        @Override public void run(){
+            if(isFinishing()||isDestroyed())return;
+            if(list!=null && "automatic".equals(challengeMode)){
+                showItems();
+                String message=AutomaticChallengeRunner.status();
+                if(message!=null&&!message.isEmpty())status.setText(message);
+            }
+            uiRefresh.postDelayed(this,1500);
+        }
+    };
+
+    @Override protected void onPause(){
+        uiRefresh.removeCallbacks(pollAutomation);
+        super.onPause();
+    }
+
     @Override protected void onResume() {
         super.onResume();
+        uiRefresh.removeCallbacks(pollAutomation);
+        uiRefresh.postDelayed(pollAutomation,500);
         if(list!=null){
             if(chatGptConnection!=null && chatGptConnection.canUsePlan()
                     && aiPreferences.autoConsent()
@@ -334,49 +350,24 @@ public class MainActivity extends Activity {
             showItems();
             startAutomaticQueue();
         }else{
-            automaticRows.clear();
-            automaticIndex=-1;
+            ProcessingControl.stop();
         }
     }
 
-    /** Start from the first eligible challenge in the current filtered list.
-     * No user click on an individual challenge is required. */
+    /** Process the currently filtered challenge list without launching a detail screen. */
     private void startAutomaticQueue(){
         if(!"automatic".equals(challengeMode)
                 ||!chatGptConnection.canUsePlan()||!aiPreferences.autoConsent())return;
-        if(automaticIndex>=0 && automaticIndex<automaticRows.size())return;
-        ProcessingControl.resume();
-        automaticRows.clear();
+        if(AutomaticChallengeRunner.running())return;
         if(!"Challenges".equals(section))showSection("Challenges");
-        automaticRows.addAll(displayedRows);
-        automaticIndex=-1;
-        continueAutomaticQueue();
-    }
-
-    private void continueAutomaticQueue(){
-        if(ProcessingControl.paused()||ProcessingControl.stopped()
-                ||!"automatic".equals(challengeMode))return;
-        while(++automaticIndex<automaticRows.size()){
-            ResultRow next=automaticRows.get(automaticIndex);
-            if(!TrustedChallengeReader.approved(next.url))continue;
-            String key=AiPreferences.stableKey(next.title,next.title);
-            if(aiPreferences.automaticExportCompleted(key))continue;
-            if(aiPreferences.alreadyAttempted(key) && aiPreferences.lastResult(key)==null){
-                status.setText("Automatic processing paused: previous attempt has no saved result for "
-                        +next.title);
-                return;
-            }
-            if(aiPreferences.remaining()<=0 && aiPreferences.lastResult(key)==null){
-                status.setText(UiLanguage.tr(this,"Automatic queue paused: daily request limit reached."));
-                return;
-            }
-            status.setText("Automatic processing: "+next.title);
-            launchChallenge(next.title,next.url,next.kind,true);
-            return;
+        List<AutomaticChallengeRunner.Item> tasks=new ArrayList<>();
+        for(ResultRow row:displayedRows){
+            if(!TrustedChallengeReader.approved(row.url))continue;
+            tasks.add(new AutomaticChallengeRunner.Item(row.title,row.url,row.kind));
         }
-        status.setText(UiLanguage.tr(this,"Automatic queue finished."));
-        automaticRows.clear();
-        automaticIndex=-1;
+        ProcessingControl.resume();
+        AutomaticChallengeRunner.start(this,tasks);
+        status.setText(AutomaticChallengeRunner.status());
     }
 
     private void updateModeControls() {
@@ -411,54 +402,17 @@ public class MainActivity extends Activity {
         });
     }
 
-    private final List<ResultRow> automaticRows=new ArrayList<>();
     private final List<ResultRow> displayedRows=new ArrayList<>();
-    private int automaticIndex=-1;
-    private static final int AUTOMATIC_CHALLENGE=8124;
 
-    @Override protected void onActivityResult(int request,int result,Intent data){
-        super.onActivityResult(request,result,data);
-        if(request!=AUTOMATIC_CHALLENGE)return;
-        if(ProcessingControl.paused()||ProcessingControl.stopped())return;
-        if(result!=RESULT_OK || !"automatic".equals(challengeMode)
-                || !chatGptConnection.canUsePlan() || !aiPreferences.autoConsent()){
-            automaticRows.clear();automaticIndex=-1;return;
-        }
-        showItems();
-        continueAutomaticQueue();
-    }
-
-    private void openChallenge(String title, String url, String kind){
-        String key=AiPreferences.stableKey(title,title);
-        if(aiPreferences.automaticExportCompleted(key) || ProcessingControl.paused() || ProcessingControl.stopped()){
-            Intent review=new Intent(this,ChallengeActivity.class);
-            review.putExtra(ChallengeActivity.TITLE,title);
-            review.putExtra(ChallengeActivity.URL,url);
-            review.putExtra(ChallengeActivity.KIND,kind);
-            review.putExtra(ChallengeActivity.MODE,"manual");
-            startActivity(review);
-            return;
-        }
-        automaticRows.clear();automaticIndex=-1;
-        if("automatic".equals(challengeMode) && "Challenges".equals(section)){
-            automaticRows.addAll(displayedRows);
-            for(int i=0;i<automaticRows.size();i++){
-                ResultRow row=automaticRows.get(i);
-                if(row.title.equals(title)&&row.url.equals(url)){automaticIndex=i;break;}
-            }
-        }
-        launchChallenge(title,url,kind,automaticIndex>=0);
-    }
-
-    private void launchChallenge(String title,String url,String kind,boolean queue){
+    private void openChallenge(String title,String url,String kind){
+        // Detail screens are for inspection. They never start or drive the queue.
         Intent intent=new Intent(this,ChallengeActivity.class);
         intent.putExtra(ChallengeActivity.TITLE,title);
         intent.putExtra(ChallengeActivity.URL,url);
-        intent.putExtra(ChallengeActivity.MODE,challengeMode);
         intent.putExtra(ChallengeActivity.KIND,kind);
-        intent.putExtra(ChallengeActivity.AUTO_QUEUE,queue);
-        if(queue)startActivityForResult(intent,AUTOMATIC_CHALLENGE);
-        else startActivity(intent);
+        intent.putExtra(ChallengeActivity.MODE,"manual");
+        intent.putExtra(ChallengeActivity.AUTO_QUEUE,false);
+        startActivity(intent);
     }
 
     private void playApprovedIntroduction() {
@@ -547,6 +501,12 @@ public class MainActivity extends Activity {
                 note.setTextColor(Color.rgb(157,102,18));
                 card.addView(note,new LinearLayout.LayoutParams(-1,-2));
             }
+        }
+        String error=aiPreferences.processingError(key);
+        if(!error.isEmpty() && stage<5){
+            TextView notice=text(error,12,false);
+            notice.setTextColor(Color.rgb(160,48,48));
+            card.addView(notice,new LinearLayout.LayoutParams(-1,-2));
         }
         android.widget.ProgressBar progress=new android.widget.ProgressBar(
                 this,null,android.R.attr.progressBarStyleHorizontal);
