@@ -494,8 +494,13 @@ public final class ChallengeActivity extends Activity {
         styleStatement(original);
         // Only translate verified public organizer text; fallback explanations
         // and error messages use local UI strings, without consuming AI calls.
-        if(!specificPage||original.length()<100||!new AiPreferences(this).translateDisplayText())
-            return;
+        boolean verifiedExcerpt=original.equals(fetchedText);
+        if(!verifiedExcerpt && navigation!=null){
+            ChallengeSectionNavigator.Section selected=navigation.get(activeSection);
+            verifiedExcerpt=selected!=null && original.equals(selected.body);
+        }
+        if(!verifiedExcerpt||!specificPage||original.length()<100
+                ||!aiPreferences.translateDisplayText())return;
         DisplayTranslation.translate(this,challengeKey,original,translated->{
             if(!original.equals(originalStatementText)
                     ||translated.equals(original))return;
