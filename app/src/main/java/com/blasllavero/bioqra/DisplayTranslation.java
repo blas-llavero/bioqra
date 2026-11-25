@@ -30,7 +30,7 @@ final class DisplayTranslation {
         Context app=activity.getApplicationContext();
         AiPreferences prefs=new AiPreferences(app);
         ChatGptConnection chat=new ChatGptConnection(app);
-        if(!prefs.translateDisplayText()||!prefs.autoConsent()||!chat.canUsePlan())return;
+        if(!prefs.translateDisplayText())return;
         final String lang=UiLanguage.language(app);
         final String source=original.length()>40000?original.substring(0,40000):original;
         final String extra=original.length()>40000?original.substring(40000):"";
@@ -46,9 +46,10 @@ final class DisplayTranslation {
                     String text=readCache(cached);
                     if(text==null){
                         if(!prefs.translateDisplayText()||!prefs.autoConsent()
-                                ||!chat.canUsePlan()||!prefs.reserve(true))return;
+                                ||!chat.canUsePlan())return;
                         if(model==null)model=AiPreferences.choose(chat.models(),
                                 prefs.selected(challengeKey)).slug;
+                        if(!prefs.reserve(true))return;
                         text=chat.translateDisplayText(model,part,lang);
                         if(text.isEmpty())return;
                         writeCache(folder,cached,text);
