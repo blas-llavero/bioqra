@@ -1059,10 +1059,12 @@ public final class ChallengeActivity extends Activity {
                     displayOfficialStatement(loaded.text,loaded.resolvedUrl,
                         UiLanguage.tr(this,"Official statement retrieved"));
                 }else{
+                    String explanation=failure!=null?failure:
+                            loaded!=null?loaded.message:"No official statement returned";
                     status.setText(UiLanguage.tr(this,"Official challenge statement unavailable")
-                            +(failure==null?"":": "+failure));
+                            +": "+explanation);
                     renderStatement(UiLanguage.tr(this,"Official challenge statement unavailable")
-                        +"\n"+url);
+                        +"\n"+explanation+"\n"+url);
                 }
             });
         });
@@ -1135,7 +1137,8 @@ public final class ChallengeActivity extends Activity {
                         for(String doc:result.documentLinks)sources.append(doc).append("\n");
                     }
                     deadlinesView.setText(sources.toString());
-                    status.setText(result.message+" Retrieved "+result.text.length()+" characters.");
+                    status.setText(UiLanguage.tr(this,result.message)
+                        +" "+result.text.length()+" "+UiLanguage.tr(this,"characters retrieved."));
                     busy=false;updateButtons();
                     if("automatic".equals(mode) && specificPage && !ProcessingControl.stopped() && !ProcessingControl.paused()){
                         // Search public metadata independently of AI consent.
