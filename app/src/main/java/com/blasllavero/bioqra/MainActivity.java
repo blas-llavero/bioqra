@@ -365,6 +365,10 @@ public class MainActivity extends Activity {
             if(!TrustedChallengeReader.approved(row.url))continue;
             tasks.add(new AutomaticChallengeRunner.Item(row.title,row.url,row.kind));
         }
+        if(tasks.isEmpty()){
+            status.setText("No eligible challenges for the current filters.");
+            return;
+        }
         ProcessingControl.resume();
         AutomaticChallengeRunner.start(this,tasks);
         status.setText(AutomaticChallengeRunner.status());
@@ -478,7 +482,16 @@ public class MainActivity extends Activity {
                 "PDF and ZIP export pending","Processing completed"};
         TextView processing=text(UiLanguage.tr(this,stageLabels[Math.max(0,Math.min(5,stage))]),14,true);
         String outcome=aiPreferences.processingOutcome(key);
-        if("export_error".equals(outcome)){
+        if("source_error".equals(outcome)){
+            processing.setText("Official challenge statement unavailable");
+            processing.setTextColor(Color.rgb(160,48,48));
+        }else if("processing_error".equals(outcome)){
+            processing.setText("Processing error");
+            processing.setTextColor(Color.rgb(160,48,48));
+        }else if("attempt_pending".equals(outcome)){
+            processing.setText("AI attempt not completed; review required");
+            processing.setTextColor(Color.rgb(157,102,18));
+        }else if("export_error".equals(outcome)){
             processing.setText(UiLanguage.tr(this,"PDF or ZIP export failed"));
             processing.setTextColor(Color.rgb(160,48,48));
         }else processing.setTextColor(stage==5?GREEN:BLUE);
