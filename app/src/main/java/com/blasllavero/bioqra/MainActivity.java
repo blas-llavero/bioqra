@@ -505,7 +505,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams outer=new LinearLayout.LayoutParams(-1,-2);
         outer.setMargins(0,dp(4),0,dp(8));
         list.addView(card,outer);
-        TextView t=text(title+"\n"+description,16,false);
+        TextView t=text(title+"\n"+UiLanguage.tr(this,description),16,false);
         card.addView(t);
         t.setOnClickListener(v->openChallenge(title,url,kind));
         LinearLayout modelRow=new LinearLayout(this);
@@ -566,7 +566,7 @@ public class MainActivity extends Activity {
         }
         String error=aiPreferences.processingError(key);
         if(!error.isEmpty() && stage<5){
-            TextView notice=text(error,12,false);
+            TextView notice=text(UiLanguage.tr(this,error),12,false);
             notice.setTextColor(Color.rgb(160,48,48));
             card.addView(notice,new LinearLayout.LayoutParams(-1,-2));
         }
@@ -608,8 +608,8 @@ public class MainActivity extends Activity {
     }
 
     private void addResearch(List<ResultRow> rows, ResearchCatalog.Item item) {
-        rows.add(new ResultRow(item.title, item.source+" · "+item.label()
-                +"\n"+item.summary, item.url, item.kind));
+        rows.add(new ResultRow(item.title, item.source+" · "+UiLanguage.challengeLabel(this,item)
+                +"\n"+UiLanguage.challengeSummary(this,item), item.url, item.kind));
     }
 
     private void displayPage(List<ResultRow> rows) {
@@ -679,7 +679,7 @@ public class MainActivity extends Activity {
                     for (Challenge challenge:challenges) {
                         String haystack=(challenge.title+" "+challenge.id+" Rosalind").toLowerCase(Locale.ROOT);
                         if(haystack.contains(query)) rows.add(new ResultRow(challenge.title,
-                                "Rosalind · Educational exercise · "+challenge.id.toUpperCase(Locale.ROOT),
+                                "Rosalind · "+UiLanguage.tr(this,"Educational exercise")+" · "+challenge.id.toUpperCase(Locale.ROOT),
                                 challenge.url, "educational"));
                     }
                 }
