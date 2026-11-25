@@ -112,6 +112,9 @@ final class AutomaticChallengeRunner {
             update("Retrieving official statement: "+item.title);
             ChallengePageResolver.Outcome statement=
                     ChallengePageResolver.resolve(app,item.url,item.title);
+            if(statement.specific && statement.text!=null
+                    && statement.text.trim().length()>=100)
+                prefs.saveOfficialStatement(key,statement.resolvedUrl,statement.text);
             if(!statement.specific || statement.text==null ||
                     statement.text.trim().length()<100){
                 prefs.setProcessingOutcome(key,"source_error");
