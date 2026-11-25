@@ -142,6 +142,22 @@ public final class AiPreferences {
         return prefs.edit().putString("usage_day",today()).putInt("usage_count",used+1).commit();
     }
 
+    /** Verified official text is cached for read-only viewing after automatic processing. */
+    public void saveOfficialStatement(String key,String pageUrl,String content){
+        if(key==null||!key.matches("[a-f0-9]{32}")||pageUrl==null
+                ||!TrustedChallengeReader.approved(pageUrl)||content==null
+                ||content.trim().length()<100)return;
+        String bounded=content.length()>40000?content.substring(0,40000):content;
+        prefs.edit().putString("official_text_"+key,bounded)
+                .putString("official_url_"+key,pageUrl).apply();
+    }
+    public String officialStatement(String key){
+        return prefs.getString("official_text_"+key,null);
+    }
+    public String officialStatementUrl(String key){
+        String value=prefs.getString("official_url_"+key,null);
+        return TrustedChallengeReader.approved(value)?value:null;
+    }
     public String processingError(String key){
         return prefs.getString("processing_error_"+key,"");
     }
