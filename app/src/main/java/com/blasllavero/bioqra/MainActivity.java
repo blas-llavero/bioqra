@@ -317,7 +317,7 @@ public class MainActivity extends Activity {
             if(list!=null && "automatic".equals(challengeMode)){
                 showItems();
                 String message=AutomaticChallengeRunner.status();
-                if(message!=null&&!message.isEmpty())status.setText(UiLanguage.tr(this,message));
+                if(message!=null&&!message.isEmpty())status.setText(UiLanguage.tr(MainActivity.this,message));
             }
             uiRefresh.postDelayed(this,1500);
         }
