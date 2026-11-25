@@ -58,6 +58,7 @@ public class MainActivity extends Activity {
     private AiPreferences aiPreferences;
     private final List<ChatGptConnection.Model> aiModels=new ArrayList<>();
     private boolean loadingModels=false;
+    private boolean automaticStartAttempted=false;
     private String challengeMode = "automatic";
     private Button manualModeButton, automaticModeButton;
     private EditText search;
@@ -89,6 +90,9 @@ public class MainActivity extends Activity {
         mergeGrand(GrandChallengeDiscovery.load(this));
         loadCached();
         buildUi();
+        if("automatic".equals(challengeMode) && chatGptConnection.canUsePlan()
+                && aiPreferences.autoConsent() && !ProcessingControl.stopped()
+                && !ProcessingControl.paused())startAutomaticQueue();
         refresh();
         refreshGrand();
     }
@@ -329,8 +333,10 @@ public class MainActivity extends Activity {
             refreshAiModels();
             if("automatic".equals(challengeMode)){
                 if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()
-                        && !ProcessingControl.paused() && !ProcessingControl.stopped()){
-                    // Also starts after returning from the official login flow.
+                        && !ProcessingControl.paused() && !ProcessingControl.stopped()
+                        && !automaticStartAttempted){
+                    // Start once after a login or restored session, without
+                    // restarting already processed failures on every navigation.
                     startAutomaticQueue();
                 }else if(!chatGptConnection.canUsePlan()){
                     status.setText("Automatic Mode selected. Connect ChatGPT in Settings to start.");
@@ -351,6 +357,7 @@ public class MainActivity extends Activity {
                 .putString("mode",challengeMode).apply();
         updateModeControls();
         if("automatic".equals(challengeMode)){
+            automaticStartAttempted=false;
             showItems();
             startAutomaticQueue();
         }else{
@@ -375,6 +382,7 @@ public class MainActivity extends Activity {
             return;
         }
         AutomaticChallengeRunner.start(this,tasks);
+        automaticStartAttempted=true;
         status.setText(AutomaticChallengeRunner.status());
     }
 
