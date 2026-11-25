@@ -58,7 +58,7 @@ public class MainActivity extends Activity {
     private AiPreferences aiPreferences;
     private final List<ChatGptConnection.Model> aiModels=new ArrayList<>();
     private boolean loadingModels=false;
-    private String challengeMode = "manual";
+    private String challengeMode = "automatic";
     private Button manualModeButton, automaticModeButton;
     private EditText search;
     private Spinner sourcePicker, availabilityPicker;
@@ -79,11 +79,11 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(Color.BLACK);
         chatGptConnection = new ChatGptConnection(this);
         aiPreferences = new AiPreferences(this);
+        // Automatic is the initial mode. An explicit choice of Manual is
+        // preserved across launches; AI requests still require signed-in
+        // ChatGPT authorization and the existing local usage limits.
         challengeMode = getSharedPreferences("bioqra_mode", MODE_PRIVATE)
-                .getString("mode","manual");
-        if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()
-                && !"manual".equals(challengeMode))
-            challengeMode="automatic";
+                .getString("mode","automatic");
         seed();
         researchItems.addAll(ResearchCatalog.initial());
         mergeGrand(GrandChallengeDiscovery.load(this));
@@ -321,18 +321,21 @@ public class MainActivity extends Activity {
         uiRefresh.removeCallbacks(pollAutomation);
         uiRefresh.postDelayed(pollAutomation,500);
         if(list!=null){
-            if(chatGptConnection!=null && chatGptConnection.canUsePlan()
-                    && aiPreferences.autoConsent()
-                    && "automatic".equals(getSharedPreferences("bioqra_mode",MODE_PRIVATE)
-                        .getString("mode","manual"))){
-                challengeMode="automatic";
-                updateModeControls();
-            }
-            if(chatGptConnection!=null && !chatGptConnection.canUsePlan()){
-                aiModels.clear();
-            }
+            challengeMode=getSharedPreferences("bioqra_mode",MODE_PRIVATE)
+                    .getString("mode","automatic");
+            updateModeControls();
+            if(!chatGptConnection.canUsePlan())aiModels.clear();
             showItems();
             refreshAiModels();
+            if("automatic".equals(challengeMode)){
+                if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()
+                        && !ProcessingControl.paused() && !ProcessingControl.stopped()){
+                    // Also starts after returning from the official login flow.
+                    startAutomaticQueue();
+                }else if(!chatGptConnection.canUsePlan()){
+                    status.setText("Automatic Mode selected. Connect ChatGPT in Settings to start.");
+                }
+            }
         }
     }
 
@@ -343,6 +346,7 @@ public class MainActivity extends Activity {
             return;
         }
         challengeMode = "automatic".equals(next) ? "automatic" : "manual";
+        if("automatic".equals(challengeMode))ProcessingControl.resume();
         getSharedPreferences("bioqra_mode",MODE_PRIVATE).edit()
                 .putString("mode",challengeMode).apply();
         updateModeControls();
@@ -357,7 +361,8 @@ public class MainActivity extends Activity {
     /** Process the currently filtered challenge list without launching a detail screen. */
     private void startAutomaticQueue(){
         if(!"automatic".equals(challengeMode)
-                ||!chatGptConnection.canUsePlan()||!aiPreferences.autoConsent())return;
+                ||!chatGptConnection.canUsePlan()||!aiPreferences.autoConsent()
+                ||ProcessingControl.paused()||ProcessingControl.stopped())return;
         if(AutomaticChallengeRunner.running())return;
         if(!"Challenges".equals(section))showSection("Challenges");
         List<AutomaticChallengeRunner.Item> tasks=new ArrayList<>();
@@ -369,15 +374,19 @@ public class MainActivity extends Activity {
             status.setText("No eligible challenges for the current filters.");
             return;
         }
-        ProcessingControl.resume();
         AutomaticChallengeRunner.start(this,tasks);
         status.setText(AutomaticChallengeRunner.status());
     }
 
     private void updateModeControls() {
         if(manualModeButton!=null && automaticModeButton!=null){
-            manualModeButton.setAlpha("manual".equals(challengeMode)?1f:0.55f);
-            automaticModeButton.setAlpha("automatic".equals(challengeMode)?1f:0.55f);
+            boolean manual="manual".equals(challengeMode);
+            manualModeButton.setSelected(manual);
+            automaticModeButton.setSelected(!manual);
+            manualModeButton.setAlpha(manual?1f:0.75f);
+            automaticModeButton.setAlpha(manual?0.75f:1f);
+            manualModeButton.setBackground(bg(manual?GREEN:Color.rgb(125,125,125)));
+            automaticModeButton.setBackground(bg(manual?Color.rgb(125,125,125):GREEN));
             manualModeButton.setContentDescription("Manual mode, no AI usage"+
                     ("manual".equals(challengeMode)?", selected":""));
             automaticModeButton.setContentDescription("Automatic mode, ChatGPT analysis"+
@@ -386,7 +395,7 @@ public class MainActivity extends Activity {
         // Use a short and readable confirmation in the existing status line.
         if(status!=null && status.getText().toString().startsWith("Mode:"))
             status.setText("Mode: "+("automatic".equals(challengeMode)
-                    ? "Automatic — public research starts when a challenge opens" : "Manual — offline tools and no AI usage"));
+                    ? "Automatic — challenge processing starts from the main list" : "Manual — offline tools and no AI usage"));
     }
 
     private void refreshAiModels() {
