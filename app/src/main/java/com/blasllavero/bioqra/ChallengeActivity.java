@@ -332,6 +332,9 @@ public final class ChallengeActivity extends Activity {
         root.addView(pdfActions,new LinearLayout.LayoutParams(-1,-2));
         updatePdfFeedback();
         updateButtons();
+        // Show the official text cached by unattended research immediately.
+        // A missing cache starts a separate read-only retrieval, never an AI request.
+        loadPublicStatementForReview();
 
         // Automatic mode retrieves the public challenge on opening.
         // Actual ChatGPT usage still requires consent to transmit each statement.
@@ -1026,6 +1029,60 @@ public final class ChallengeActivity extends Activity {
         });
     }
 
+    private void loadPublicStatementForReview(){
+        String cached=aiPreferences.officialStatement(challengeKey);
+        String officialUrl=aiPreferences.officialStatementUrl(challengeKey);
+        if(cached!=null && cached.trim().length()>=100 && officialUrl!=null){
+            displayOfficialStatement(cached,officialUrl,
+                    UiLanguage.tr(this,"Official statement saved locally"));
+            return;
+        }
+        if(!TrustedChallengeReader.approved(url)){
+            status.setText(UiLanguage.tr(this,"Official challenge source unavailable"));
+            return;
+        }
+        status.setText(UiLanguage.tr(this,"Loading official challenge statement..."));
+        PDF_READS.execute(()->{
+            ChallengePageResolver.Outcome result=null;
+            String error=null;
+            try{
+                result=ChallengePageResolver.resolve(this,url,title);
+                if(result.specific && result.text!=null && result.text.trim().length()>=100)
+                    aiPreferences.saveOfficialStatement(challengeKey,result.resolvedUrl,result.text);
+            }catch(Exception exception){error=exception.getMessage();}
+            final ChallengePageResolver.Outcome loaded=result;
+            final String failure=error;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                if(loaded!=null && loaded.specific && loaded.text!=null
+                        && loaded.text.trim().length()>=100){
+                    displayOfficialStatement(loaded.text,loaded.resolvedUrl,
+                        UiLanguage.tr(this,"Official statement retrieved"));
+                }else{
+                    status.setText(UiLanguage.tr(this,"Official challenge statement unavailable")
+                            +(failure==null?"":": "+failure));
+                    renderStatement(UiLanguage.tr(this,"Official challenge statement unavailable")
+                        +"\n"+url);
+                }
+            });
+        });
+    }
+
+    private void displayOfficialStatement(String content,String officialUrl,String message){
+        fetchedText=content;
+        specificPage=true;
+        verifiedPageUrl=officialUrl;
+        navigation=ChallengeSectionNavigator.fromText(officialUrl,content,"",
+                java.util.Collections.emptyList());
+        loadedOfficialSections.clear();
+        loadingOfficialSections.clear();
+        activeSection=ChallengeSectionNavigator.FULL;
+        renderStatement(content);
+        resolvedLink.setText(UiLanguage.tr(this,"Official source")+": "+officialUrl);
+        status.setText(message);
+        updateButtons();
+    }
+
     private void retrieve(){
         if(busy||ProcessingControl.stopped()||ProcessingControl.paused())return;
         if(!TrustedChallengeReader.approved(url)){
@@ -1042,6 +1099,7 @@ public final class ChallengeActivity extends Activity {
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     fetchedText=result.text;
+                    if(result.specific)aiPreferences.saveOfficialStatement(challengeKey,result.resolvedUrl,result.text);
                     specificPage=result.specific;
                     verifiedPageUrl=result.resolvedUrl;
                     renderStatement(result.text);
