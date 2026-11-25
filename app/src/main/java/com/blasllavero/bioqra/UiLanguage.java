@@ -184,6 +184,7 @@ public final class UiLanguage {
         add("Backup, Restore & PDF","Còpia de seguretat, restauració i PDF","Copia de seguridad, restauración y PDF");
         add("No matching challenges. Change the filters or refresh.","No hi ha reptes coincidents. Canvia els filtres o actualitza.","No hay retos coincidentes. Cambia los filtros o actualiza.");
         add("Loading verified public challenges...","Carregant els reptes públics verificats...","Cargando los retos públicos verificados...");
+        add("Automatic Open Bioinformatics Research & Patient Assistance","Recerca oberta automàtica en bioinformàtica i suport al pacient","Investigación abierta automática en bioinformática y apoyo al paciente");
         add("Open Bioinformatics Research & Patient Assistance","Recerca oberta en bioinformàtica i suport al pacient","Investigación abierta en bioinformática y apoyo al paciente");
         add("Cancer Research","Recerca sobre el càncer","Investigación sobre el cáncer");
         add("Refresh","Actualitza","Actualizar");
