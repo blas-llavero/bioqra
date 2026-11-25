@@ -12,6 +12,38 @@ public final class UiLanguage {
     private static final Map<String,String[]> LABELS=new HashMap<>();
     private static void add(String en,String ca,String es){LABELS.put(en,new String[]{ca,es});}
     static{
+        add("Automatic research started","S'ha iniciat la recerca automàtica","Investigación automática iniciada");
+        add("Automatic queue finished","Cua automàtica finalitzada","Cola automática finalizada");
+        add("Automatic research paused: ChatGPT authorization unavailable","Recerca automàtica en pausa: no hi ha autorització de ChatGPT","Investigación automática en pausa: no hay autorización de ChatGPT");
+        add("Automatic research paused: daily request limit reached","Recerca automàtica en pausa: s'ha arribat al límit diari de peticions","Investigación automática en pausa: se ha alcanzado el límite diario de solicitudes");
+        add("Research step failed for ","Ha fallat un pas de recerca per a ","Ha fallado un paso de investigación de ");
+        add("Retrieving official statement: ","Recuperant l'enunciat oficial: ","Recuperando el enunciado oficial: ");
+        add("Discovering public datasets: ","Cercant conjunts de dades públics: ","Buscando conjuntos de datos públicos: ");
+        add("Generating research proposal: ","Generant la proposta de recerca: ","Generando la propuesta de investigación: ");
+        add("Preparing PDF and ZIP: ","Preparant el PDF i el ZIP: ","Preparando el PDF y el ZIP: ");
+        add("Processing completed: ","Processament completat: ","Procesamiento completado: ");
+        add("Processing: ","Processant: ","Procesando: ");
+        add("Automatic research stopped","S'ha aturat la recerca automàtica","Se ha detenido la investigación automática");
+        add("Automatic research paused","Recerca automàtica en pausa","Investigación automática en pausa");
+        add("Mode: ","Mode: ","Modo: ");
+        add("Search challenges...","Cerca reptes...","Buscar retos...");
+        add("Filter bioinformatics challenges by source","Filtra els reptes de bioinformàtica per font","Filtrar retos de bioinformática por fuente");
+        add("Filter by competition availability","Filtra per disponibilitat del repte","Filtrar por disponibilidad del reto");
+        add("Showing ","Mostrant ","Mostrando ");
+        add(" of "," de "," de ");
+        add("PDF preview unavailable: ","No es pot mostrar el PDF: ","No se puede mostrar el PDF: ");
+        add("Automatic retrieval unavailable: ","No s'ha pogut recuperar automàticament: ","No se pudo recuperar automáticamente: ");
+        add("Official Grand Challenge index refreshed: ","Índex oficial de Grand Challenge actualitzat: ","Índice oficial de Grand Challenge actualizado: ");
+        add("Grand Challenge live search unavailable; saved list kept. ","No es pot actualitzar Grand Challenge; es conserva la llista desada. ","No se puede actualizar Grand Challenge; se conserva la lista guardada. ");
+        add("Refreshing Rosalind and Open Problems...","Actualitzant Rosalind i Open Problems...","Actualizando Rosalind y Open Problems...");
+        add("Saving PDF in Bioqra/","Desant el PDF a Bioqra/","Guardando el PDF en Bioqra/");
+        add("AI attempt unavailable: ","Intent d'IA no disponible: ","Intento de IA no disponible: ");
+        add("Automatic queue paused: ","Cua automàtica en pausa: ","Cola automática en pausa: ");
+        add("No saved AI result for this challenge; PDF not available yet.","No hi ha cap resultat d'IA desat per a aquest repte; el PDF encara no està disponible.","No hay ningún resultado de IA guardado para este reto; el PDF aún no está disponible.");
+        add("Saved result unavailable","No hi ha cap resultat desat","No hay resultados guardados");
+        add("AI analysis in progress. No scientific result validated.","Anàlisi d'IA en curs. No hi ha resultats científics validats.","Análisis de IA en curso. No hay resultados científicos validados.");
+        add("PDFs save automatically to Downloads/Bioqra/YYMMDD-Project/.","Els PDF es desen automàticament a Downloads/Bioqra/YYMMDD-Project/.","Los PDF se guardan automáticamente en Downloads/Bioqra/YYMMDD-Project/.");
+        add("PDFs save to Bioqra/YYMMDD-Project/ inside your selected folder.","Els PDF es desen a Bioqra/YYMMDD-Project/ dins de la carpeta seleccionada.","Los PDF se guardan en Bioqra/YYMMDD-Project/ dentro de la carpeta seleccionada.");
         add("⚙ AI Settings · models & automation","⚙ Configuració d'IA · models i automatització","⚙ Configuración de IA · modelos y automatización");
         add("Automatic Mode selected. Connect ChatGPT in Settings to start.","Mode automàtic seleccionat. Connecta ChatGPT a Configuració per començar.","Modo automático seleccionado. Conecta ChatGPT en Configuración para empezar.");
         add("No eligible challenges for the current filters.","No hi ha reptes compatibles amb els filtres actuals.","No hay retos compatibles con los filtros actuales.");
@@ -200,8 +232,25 @@ public final class UiLanguage {
     public static String tr(Context context,String english){
         if(english==null)return "";
         String[] translation=LABELS.get(english);
-        if(translation==null)return english;
         String code=language(context);
-        return "ca".equals(code)?translation[0]:"es".equals(code)?translation[1]:english;
+        if("en".equals(code))return english;
+        if(translation!=null)return "ca".equals(code)?translation[0]:translation[1];
+        // Only match carefully delimited UI status prefixes. Source material,
+        // research text, code and verified document titles stay untouched.
+        String[] prefixes={"Retrieving official statement: ","Discovering public datasets: ",
+            "Generating research proposal: ","Preparing PDF and ZIP: ",
+            "Processing completed: ","Processing: ","Research step failed for ",
+            "Automatic retrieval unavailable: ","PDF preview unavailable: ",
+            "Saving PDF in Bioqra/","Automatic queue paused: ",
+            "AI attempt unavailable: ","Official Grand Challenge index refreshed: ",
+            "Grand Challenge live search unavailable; saved list kept. "};
+        for(String prefix:prefixes){
+            if(english.startsWith(prefix)){
+                String[] label=LABELS.get(prefix);
+                if(label!=null)return ("ca".equals(code)?label[0]:label[1])
+                    +english.substring(prefix.length());
+            }
+        }
+        return english;
     }
 }
