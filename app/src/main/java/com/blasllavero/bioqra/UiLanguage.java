@@ -12,6 +12,52 @@ public final class UiLanguage {
     private static final Map<String,String[]> LABELS=new HashMap<>();
     private static void add(String en,String ca,String es){LABELS.put(en,new String[]{ca,es});}
     static{
+        add("Language","Idioma","Idioma");
+        add("Device language (default)","Idioma del dispositiu (predeterminat)","Idioma del dispositivo (predeterminado)");
+        add("Catalan","Català","Catalán");
+        add("Spanish","Castellà","Español");
+        add("English","Anglès","Inglés");
+        add("Official statement saved locally","Enunciat oficial desat localment","Enunciado oficial guardado localmente");
+        add("Official statement retrieved","Enunciat oficial recuperat","Enunciado oficial recuperado");
+        add("Official challenge source unavailable","La font oficial del repte no està disponible","La fuente oficial del reto no está disponible");
+        add("Loading official challenge statement...","S'està carregant l'enunciat oficial del repte...","Cargando el enunciado oficial del reto...");
+        add("Official challenge statement unavailable","No s'ha pogut recuperar l'enunciat oficial del repte","No se ha podido recuperar el enunciado oficial del reto");
+        add("Official source","Font oficial","Fuente oficial");
+        add("Automatic Mode","Mode automàtic","Modo automático");
+        add("Manual Mode","Mode manual","Modo manual");
+        add("Processing challenge...","S'està processant el repte...","Procesando el reto...");
+        add("Preparing PDF and ZIP...","S'estan preparant el PDF i el ZIP...","Preparando el PDF y el ZIP...");
+        add("← Back to BIOQRA","← Torna a BIOQRA","← Volver a BIOQRA");
+        add("ChatGPT account","Compte de ChatGPT","Cuenta de ChatGPT");
+        add("ChatGPT login","Inicia sessió a ChatGPT","Iniciar sesión en ChatGPT");
+        add("Default model (new challenges / inherited selections)","Model predeterminat (reptes nous i heretats)","Modelo predeterminado (retos nuevos y heredados)");
+        add("Loading the model list for your ChatGPT account...","S'està carregant la llista de models del compte de ChatGPT...","Cargando los modelos de tu cuenta de ChatGPT...");
+        add("Refresh models from ChatGPT","Actualitza els models de ChatGPT","Actualizar modelos de ChatGPT");
+        add("Backup, Restore & PDF","Còpia de seguretat, restauració i PDF","Copia de seguridad, restauración y PDF");
+        add("No matching challenges. Change the filters or refresh.","No hi ha reptes coincidents. Canvia els filtres o actualitza.","No hay retos coincidentes. Cambia los filtros o actualiza.");
+        add("Loading verified public challenges...","Carregant els reptes públics verificats...","Cargando los retos públicos verificados...");
+        add("Open Bioinformatics Research & Patient Assistance","Recerca oberta en bioinformàtica i suport al pacient","Investigación abierta en bioinformática y apoyo al paciente");
+        add("Cancer Research","Recerca sobre el càncer","Investigación sobre el cáncer");
+        add("Refresh","Actualitza","Actualizar");
+        add("Hackathons","Hackatons","Hackatones");
+        add("App Description","Descripció de l'aplicació","Descripción de la aplicación");
+        add("How to Use","Com s'utilitza","Cómo se utiliza");
+        add("Home","Inici","Inicio");
+        add("Help","Ajuda","Ayuda");
+        add("AI model:","Model d'IA:","Modelo de IA:");
+        add("Official challenge statement unavailable","No es pot recuperar l'enunciat oficial del repte","No se puede recuperar el enunciado oficial del reto");
+        add("Processing error","Error de processament","Error de procesamiento");
+        add("AI attempt not completed; review required","Intent d'IA incomplet; cal revisar-lo","Intento de IA incompleto; requiere revisión");
+        add("Open challenge","Obre el repte","Abrir el reto");
+        add("Connecting...","S'està connectant...","Conectando...");
+        add("Cancel","Cancel·la","Cancelar");
+        add("Reconnect","Torna a connectar","Reconectar");
+        add("Sign out","Tanca la sessió","Cerrar sesión");
+        add("Processing completed:","Processament completat:","Procesamiento completado:");
+        add("AI plan usage authorized","Ús d'IA autoritzat","Uso de IA autorizado");
+        add("AI plan usage not authorized","Ús d'IA no autoritzat","Uso de IA no autorizado");
+        add("Account & sign out","Compte i tancament de sessió","Cuenta y cierre de sesión");
+        add("Choose ZIP","Tria el ZIP","Elegir ZIP");
         add("No real research data downloaded","No s’han descarregat dades científiques reals","No se han descargado datos científicos reales");
         add("Research data downloaded; scientific validation pending","Dades científiques descarregades; validació pendent","Datos científicos descargados; validación pendiente");
 
@@ -90,6 +136,10 @@ public final class UiLanguage {
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
     }
     public static String language(Context context){
+        String preference=context.getApplicationContext().getSharedPreferences(
+                "bioqra_language",Context.MODE_PRIVATE).getString("selection","device");
+        if("ca".equals(preference)||"es".equals(preference)||"en".equals(preference))
+            return preference;
         Configuration config=context.getResources().getConfiguration();
         Locale locale=config.getLocales().get(0);
         String code=locale.getLanguage();
