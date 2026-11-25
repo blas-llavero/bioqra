@@ -256,7 +256,8 @@ public final class AiPreferences {
         for(String key:prefs.getAll().keySet())if(key.matches("model_[a-f0-9]{32}"))edit.remove(key);
         edit.putString("global_model",model).putInt("daily_limit",limit)
                 .putBoolean("auto_consent",false)
-                .putBoolean("apply_model_to_all",json.optBoolean("apply_model_to_all",true));
+                .putBoolean("apply_model_to_all",json.optBoolean("apply_model_to_all",true))
+                .putBoolean("translate_display_text",json.optBoolean("translate_display_text",true));
         for(java.util.Map.Entry<String,String> entry:validated.entrySet())
             edit.putString(entry.getKey(),entry.getValue());
         if(!edit.commit())throw new Exception("Could not save restored settings.");
