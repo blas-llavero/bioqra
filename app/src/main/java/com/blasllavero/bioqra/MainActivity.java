@@ -197,7 +197,7 @@ public class MainActivity extends Activity {
         root.addView(status);
         search = new EditText(this);
         search.setSingleLine(true);
-        search.setHint("Search challenges...");
+        search.setHint(UiLanguage.tr(this,"Search challenges..."));
         search.setTextSize(16);
         root.addView(search);
         search.addTextChangedListener(new TextWatcher() {
@@ -206,11 +206,14 @@ public class MainActivity extends Activity {
             public void afterTextChanged(Editable s) {}
         });
         sourcePicker = new Spinner(this);
+        String[] displaySources=new String[ResearchCatalog.FILTERS.length];
+        for(int i=0;i<displaySources.length;i++)
+            displaySources[i]=UiLanguage.tr(this,ResearchCatalog.FILTERS[i]);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item,
-                ResearchCatalog.FILTERS);
+                displaySources);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         sourcePicker.setAdapter(adapter);
-        sourcePicker.setContentDescription("Filter bioinformatics challenges by source");
+        sourcePicker.setContentDescription(UiLanguage.tr(this,"Filter bioinformatics challenges by source"));
         root.addView(sourcePicker, new LinearLayout.LayoutParams(-1, dp(52)));
         sourcePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view,
@@ -218,11 +221,14 @@ public class MainActivity extends Activity {
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
         availabilityPicker = new Spinner(this);
+        String[] displayAvailability=new String[ResearchCatalog.AVAILABILITY_FILTERS.length];
+        for(int i=0;i<displayAvailability.length;i++)
+            displayAvailability[i]=UiLanguage.tr(this,ResearchCatalog.AVAILABILITY_FILTERS[i]);
         ArrayAdapter<String> availabilityAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, ResearchCatalog.AVAILABILITY_FILTERS);
+                android.R.layout.simple_spinner_item, displayAvailability);
         availabilityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         availabilityPicker.setAdapter(availabilityAdapter);
-        availabilityPicker.setContentDescription("Filter by competition availability");
+        availabilityPicker.setContentDescription(UiLanguage.tr(this,"Filter by competition availability"));
         root.addView(availabilityPicker, new LinearLayout.LayoutParams(-1, dp(52)));
         availabilityPicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view,
@@ -641,10 +647,13 @@ public class MainActivity extends Activity {
         List<ResultRow> rows=new ArrayList<>();
         if (section.equals("Challenges")) {
             String query=search.getText().toString().trim().toLowerCase(Locale.ROOT);
-            String source=(String) sourcePicker.getSelectedItem();
-            if (source==null) source="All sources";
-            String availability=(String) availabilityPicker.getSelectedItem();
-            if (availability==null) availability="Open / Upcoming";
+            int sourceIndex=sourcePicker.getSelectedItemPosition();
+            String source=sourceIndex>=0 && sourceIndex<ResearchCatalog.FILTERS.length
+                    ?ResearchCatalog.FILTERS[sourceIndex]:"All sources";
+            int availabilityIndex=availabilityPicker.getSelectedItemPosition();
+            String availability=availabilityIndex>=0
+                    && availabilityIndex<ResearchCatalog.AVAILABILITY_FILTERS.length
+                    ?ResearchCatalog.AVAILABILITY_FILTERS[availabilityIndex]:"Open / Upcoming";
 
             // Real competitions, research benchmarks and education are separated.
             if (availability.equals("Educational exercises") || availability.equals("All records")) {
