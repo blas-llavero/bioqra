@@ -317,7 +317,7 @@ public class MainActivity extends Activity {
             if(list!=null && "automatic".equals(challengeMode)){
                 showItems();
                 String message=AutomaticChallengeRunner.status();
-                if(message!=null&&!message.isEmpty())status.setText(message);
+                if(message!=null&&!message.isEmpty())status.setText(UiLanguage.tr(this,message));
             }
             uiRefresh.postDelayed(this,1500);
         }
@@ -397,7 +397,7 @@ public class MainActivity extends Activity {
         }
         AutomaticChallengeRunner.start(this,tasks);
         automaticStartAttempted=true;
-        status.setText(AutomaticChallengeRunner.status());
+        status.setText(UiLanguage.tr(this,AutomaticChallengeRunner.status()));
     }
 
     private void updateModeControls() {
@@ -416,8 +416,8 @@ public class MainActivity extends Activity {
         }
         // Use a short and readable confirmation in the existing status line.
         if(status!=null && status.getText().toString().startsWith("Mode:"))
-            status.setText("Mode: "+("automatic".equals(challengeMode)
-                    ? "Automatic — challenge processing starts from the main list" : "Manual — offline tools and no AI usage"));
+            status.setText(UiLanguage.tr(this,"Mode: ")+("automatic".equals(challengeMode)
+                    ? UiLanguage.tr(this,"Automatic — challenge processing starts from the main list") : UiLanguage.tr(this,"Manual — offline tools and no AI usage")));
     }
 
     private void refreshAiModels() {
@@ -514,13 +514,13 @@ public class MainActivity extends Activity {
         TextView processing=text(UiLanguage.tr(this,stageLabels[Math.max(0,Math.min(5,stage))]),14,true);
         String outcome=aiPreferences.processingOutcome(key);
         if("source_error".equals(outcome)){
-            processing.setText("Official challenge statement unavailable");
+            processing.setText(UiLanguage.tr(this,"Official challenge statement unavailable"));
             processing.setTextColor(Color.rgb(160,48,48));
         }else if("processing_error".equals(outcome)){
-            processing.setText("Processing error");
+            processing.setText(UiLanguage.tr(this,"Processing error"));
             processing.setTextColor(Color.rgb(160,48,48));
         }else if("attempt_pending".equals(outcome)){
-            processing.setText("AI attempt not completed; review required");
+            processing.setText(UiLanguage.tr(this,"AI attempt not completed; review required"));
             processing.setTextColor(Color.rgb(157,102,18));
         }else if("export_error".equals(outcome)){
             processing.setText(UiLanguage.tr(this,"PDF or ZIP export failed"));
