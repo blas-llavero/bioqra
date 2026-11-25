@@ -189,13 +189,14 @@ public final class ChallengeActivity extends Activity {
             });
         }
         root.addView(processingControls);
-        root.addView(text("Mode: "+("automatic".equals(mode)?"Automatic (ChatGPT)":"Manual (no AI)")
-                +" · Read-only · No contest submissions",14,false));
+        root.addView(text(UiLanguage.tr(this,"Mode: ")
+                +UiLanguage.tr(this,"automatic".equals(mode)?"Automatic (ChatGPT)":"Manual (no AI)")
+                +UiLanguage.tr(this," · Read-only · No contest submissions"),14,false));
         root.addView(text(url,12,false));
-        root.addView(text("AI model: configured for this challenge on the main list; "
-                +"otherwise inherits the global AI Settings model. "
-                +"Automatic use is limited to "+aiPreferences.dailyLimit()
-                +" requests per day on this device.",13,false));
+        root.addView(text(UiLanguage.tr(this,
+                "AI model: configured for this challenge on the main list; otherwise inherits the global AI Settings model. Automatic use is limited to ")
+                +aiPreferences.dailyLimit()
+                +UiLanguage.tr(this," requests per day on this device."),13,false));
         if(isFunding()) {
             root.addView(text("Research funding opportunity · Not a programming contest",17,true));
             root.addView(text("ChatGPT can prepare a research proposal and an unexecuted methodology, but it cannot establish that this cancer research challenge is solved. The organizer may require an eligible research team, experimental data and scientific validation.",14,false));
@@ -307,7 +308,7 @@ public final class ChallengeActivity extends Activity {
         if("automatic".equals(mode))aiButton.setVisibility(View.GONE);
         aiButton.setOnClickListener(v->confirmAI());
         String oldResult=aiPreferences.lastResult(challengeKey);
-        output=text(oldResult!=null ? "SAVED AI DRAFT (not reverified)\n\n"+oldResult
+        output=text(oldResult!=null ? UiLanguage.tr(this,"SAVED AI DRAFT (not reverified)")+"\n\n"+oldResult
                 : isFunding() ? "No research proposal or independent validation yet."
                 : "No solution proposal or independent verification yet.",14,false);
         output.setTextIsSelectable(true);
