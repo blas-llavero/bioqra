@@ -231,6 +231,9 @@ public class MainActivity extends Activity {
                 android.R.layout.simple_spinner_item, displayAvailability);
         availabilityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         availabilityPicker.setAdapter(availabilityAdapter);
+        // Load the entire catalog on every app launch. Other categories remain
+        // available as optional filters; there is no default OPEN-only restriction.
+        availabilityPicker.setSelection(ResearchCatalog.AVAILABILITY_FILTERS.length-1);
         availabilityPicker.setContentDescription(UiLanguage.tr(this,"Filter by competition availability"));
         root.addView(availabilityPicker, new LinearLayout.LayoutParams(-1, dp(52)));
         availabilityPicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -701,7 +704,7 @@ public class MainActivity extends Activity {
                     include=true;
                 if(include) addResearch(rows,item);
             }
-            TextView context=text("Current competitions are prioritized. Open / Upcoming is a dated snapshot, not a guarantee of registration. Use All records to include educational and historical entries.",13,false);
+            TextView context=text("All challenge records are shown by default, including educational, historical and unverified entries. Use the availability filter to narrow the list. Official registration and eligibility must be checked with the organizer.",13,false);
             context.setPadding(0,dp(8),0,dp(8));
             list.addView(context);
         } else if (section.equals("Cancer Research")) {
