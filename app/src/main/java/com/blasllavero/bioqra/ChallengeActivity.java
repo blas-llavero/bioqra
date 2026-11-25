@@ -25,6 +25,8 @@ import java.util.HashSet;
 import java.util.Set;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
@@ -90,6 +92,23 @@ public final class ChallengeActivity extends Activity {
     private boolean statementOriginalVisible=false,proposalOriginalVisible=false;
     private Button statementLanguageButton,proposalLanguageButton;
     private TextView statementTranslationStatus;
+    // Read-only live view of changes saved by the sequential background runner.
+    // The reader does not start, stop or repeat any research request.
+    private final Handler liveHandler=new Handler(Looper.getMainLooper());
+    private boolean detailVisible=false;
+    private String lastShownSavedResult=null;
+    private int lastShownStage=-1;
+    private String lastShownOutcome="";
+    private String lastShownError="";
+    private boolean completedPdfChecked=false;
+    private String verifiedLinkedSectionText="";
+    private final Runnable liveUpdates=new Runnable(){
+        @Override public void run(){
+            if(!detailVisible||isFinishing()||isDestroyed())return;
+            refreshLiveChallenge();
+            liveHandler.postDelayed(this,1800);
+        }
+    };
     private String verifiedPageUrl="";
     private boolean specificPage=false;
     private ChatGptConnection connection;
@@ -312,6 +331,7 @@ public final class ChallengeActivity extends Activity {
         if("automatic".equals(mode))aiButton.setVisibility(View.GONE);
         aiButton.setOnClickListener(v->confirmAI());
         String oldResult=aiPreferences.lastResult(challengeKey);
+        lastShownSavedResult=oldResult;
         output=text(oldResult!=null ? UiLanguage.tr(this,"SAVED AI DRAFT (not reverified)")+"\n\n"+oldResult
                 : isFunding() ? "No research proposal or independent validation yet."
                 : "No solution proposal or independent verification yet.",14,false);
@@ -499,7 +519,8 @@ public final class ChallengeActivity extends Activity {
         styleStatement(original);
         // Only translate verified public organizer text; fallback explanations
         // and error messages use local UI strings, without consuming AI calls.
-        boolean verifiedExcerpt=original.equals(fetchedText);
+        boolean verifiedExcerpt=original.equals(fetchedText)
+                || original.equals(verifiedLinkedSectionText);
         if(!verifiedExcerpt && navigation!=null){
             ChallengeSectionNavigator.Section selected=navigation.get(activeSection);
             verifiedExcerpt=selected!=null && original.equals(selected.body);
@@ -578,6 +599,7 @@ public final class ChallengeActivity extends Activity {
     }
 
     private void showSection(String key){
+        verifiedLinkedSectionText="";
         if(navigation==null){
             status.setText("First retrieve the official challenge statement.");
             return;
@@ -616,6 +638,9 @@ public final class ChallengeActivity extends Activity {
                         loadedOfficialSections.add(key);
                         if(key.equals(activeSection)){
                             if(loaded!=null){
+                                // The section reader follows only approved organizer URLs.
+                                if(TrustedChallengeReader.approved(loaded.url))
+                                    verifiedLinkedSectionText=loaded.body;
                                 renderStatement(loaded.body);
                                 setDocumentLink(loaded.url);
                                 resolvedLink.setText("Official source: "+loaded.url);
@@ -745,6 +770,74 @@ public final class ChallengeActivity extends Activity {
         super.onResume();
         if(aiPreferences!=null && lastSavedPdf==null
                 && !aiPreferences.automaticExportCompleted(challengeKey))updatePdfFeedback();
+        detailVisible=true;
+        liveHandler.removeCallbacks(liveUpdates);
+        liveHandler.post(liveUpdates);
+    }
+
+    @Override protected void onPause(){
+        detailVisible=false;
+        liveHandler.removeCallbacks(liveUpdates);
+        super.onPause();
+    }
+
+    /** Update only changed data already saved locally by automatic processing.
+     * Do not recreate this Activity: keep scroll position and section selection. */
+    private void refreshLiveChallenge(){
+        if(aiPreferences==null||statement==null||output==null)return;
+        String savedText=aiPreferences.officialStatement(challengeKey);
+        String savedUrl=aiPreferences.officialStatementUrl(challengeKey);
+        if(savedText!=null&&savedText.length()>=100&&savedUrl!=null
+                &&(!savedText.equals(fetchedText)||!savedUrl.equals(verifiedPageUrl))){
+            if(ChallengeSectionNavigator.FULL.equals(activeSection)){
+                displayOfficialStatement(savedText,savedUrl,
+                        UiLanguage.tr(this,"Official statement saved locally"));
+            }else{
+                // Update the underlying full document but preserve the section
+                // the user is currently reading (including its scroll position).
+                fetchedText=savedText;
+                specificPage=true;
+                verifiedPageUrl=savedUrl;
+                navigation=ChallengeSectionNavigator.fromText(savedUrl,savedText,"",
+                        java.util.Collections.emptyList());
+                updateButtons();
+            }
+        }
+
+        String saved=aiPreferences.lastResult(challengeKey);
+        if(!busy && saved!=null&&!saved.equals(lastShownSavedResult)){
+            lastShownSavedResult=saved;
+            renderProposal(UiLanguage.tr(this,"SAVED AI DRAFT (not reverified)")
+                    +"\n\n"+saved);
+        }
+
+        int stage=aiPreferences.processingStage(challengeKey);
+        String outcome=aiPreferences.processingOutcome(challengeKey);
+        String error=aiPreferences.processingError(challengeKey);
+        if(!busy && (stage!=lastShownStage
+                ||!outcome.equals(lastShownOutcome)
+                ||!error.equals(lastShownError))){
+            lastShownStage=stage;
+            lastShownOutcome=outcome;
+            lastShownError=error;
+            if(aiPreferences.automaticExportCompleted(challengeKey)){
+                status.setText(UiLanguage.tr(this,"Processing completed"));
+            }else if(!error.isEmpty()){
+                status.setText(UiLanguage.tr(this,"Processing error")
+                        +": "+UiLanguage.tr(this,error));
+            }else if(stage>0){
+                String[] stages={"Processing pending",
+                    "Challenge statement retrieved / in preparation",
+                    "Dataset search and analysis",
+                    "AI proposal in preparation",
+                    "PDF and ZIP export pending"};
+                status.setText(UiLanguage.tr(this,stages[Math.min(4,stage)]));
+            }
+        }
+        // The background runner finishes PDF/ZIP asynchronously. Refresh the
+        // view once without re-exporting or replaying the research workflow.
+        if(aiPreferences.automaticExportCompleted(challengeKey)
+                &&!completedPdfChecked)inspectCompletedPdf();
     }
 
     private void refreshPdfProgress(){
@@ -850,6 +943,7 @@ public final class ChallengeActivity extends Activity {
     }
 
     private void inspectCompletedPdf(){
+        completedPdfChecked=true;
         status.setText(UiLanguage.tr(this,"Processing completed"));
         pdfFeedback.setText(UiLanguage.tr(this,"Checking saved PDF..."));
         viewSavedPdf.setEnabled(false);
@@ -1172,6 +1266,7 @@ public final class ChallengeActivity extends Activity {
         fetchedText=content;
         specificPage=true;
         verifiedPageUrl=officialUrl;
+        verifiedLinkedSectionText="";
         navigation=ChallengeSectionNavigator.fromText(officialUrl,content,"",
                 java.util.Collections.emptyList());
         loadedOfficialSections.clear();
