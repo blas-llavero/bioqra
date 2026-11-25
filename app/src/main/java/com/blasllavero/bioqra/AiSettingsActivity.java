@@ -48,12 +48,12 @@ public final class AiSettingsActivity extends Activity {
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private TextView label(String content,int size){
         TextView t=new TextView(this);
-        t.setText(content);t.setTextSize(size);t.setTextColor(Color.rgb(24,72,91));
+        t.setText(UiLanguage.tr(this,content));t.setTextSize(size);t.setTextColor(Color.rgb(24,72,91));
         t.setPadding(dp(2),dp(12),dp(2),dp(9));
         return t;
     }
     private Button button(String title){
-        Button b=new Button(this);b.setText(title);b.setAllCaps(false);return b;
+        Button b=new Button(this);b.setText(UiLanguage.tr(this,title));b.setAllCaps(false);return b;
     }
 
     @Override public void onCreate(Bundle state){
@@ -80,6 +80,35 @@ public final class AiSettingsActivity extends Activity {
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(55)));
         TextView heading=label("AI Settings",25);heading.setTypeface(null,Typeface.BOLD);
         root.addView(heading);
+        root.addView(label("Language",17));
+        Spinner languagePicker=new Spinner(this);
+        final String[] languageCodes={"device","ca","es","en"};
+        final String[] languageNames={
+                UiLanguage.tr(this,"Device language (default)"),
+                UiLanguage.tr(this,"Catalan"),UiLanguage.tr(this,"Spanish"),
+                UiLanguage.tr(this,"English")};
+        ArrayAdapter<String> languageAdapter=new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item,languageNames);
+        languageAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languagePicker.setAdapter(languageAdapter);
+        String selected=getSharedPreferences("bioqra_language",MODE_PRIVATE)
+                .getString("selection","device");
+        for(int i=0;i<languageCodes.length;i++)if(languageCodes[i].equals(selected))
+            languagePicker.setSelection(i);
+        languagePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int index,long id){
+                String next=languageCodes[index];
+                String current=getSharedPreferences("bioqra_language",MODE_PRIVATE)
+                        .getString("selection","device");
+                if(!current.equals(next)){
+                    getSharedPreferences("bioqra_language",MODE_PRIVATE)
+                        .edit().putString("selection",next).apply();
+                    recreate();
+                }
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        });
+        root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(55)));
         TextView accountHeading=label("ChatGPT account",19);
         accountHeading.setTypeface(null,Typeface.BOLD);
         root.addView(accountHeading);
@@ -111,7 +140,9 @@ public final class AiSettingsActivity extends Activity {
 
         limitPicker=new Spinner(this);
         final int[] limits={1,3,5,10,20,40};
-        String[] limitLabels={"1 attempt","3 attempts","5 attempts","10 attempts","20 attempts","40 attempts (default)"};
+        String[] limitLabels={UiLanguage.tr(this,"1 attempt"),UiLanguage.tr(this,"3 attempts"),
+                UiLanguage.tr(this,"5 attempts"),UiLanguage.tr(this,"10 attempts"),
+                UiLanguage.tr(this,"20 attempts"),UiLanguage.tr(this,"40 attempts (default)")};
         ArrayAdapter<String> limitsAdapter=new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,limitLabels);
         limitsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -365,8 +396,7 @@ public final class AiSettingsActivity extends Activity {
                 getSharedPreferences("bioqra_mode",MODE_PRIVATE).edit()
                     .putString("mode","automatic").apply();
                 loadModels();
-                accountStatus.setText("ChatGPT connected. Automatic mode is ready. "
-                    +"Open a challenge to start automatic research and PDF saving.");
+                accountStatus.setText(UiLanguage.tr(this,"ChatGPT connected. Automatic mode starts research from the main challenge list."));
             }else{
                 new AlertDialog.Builder(this)
                     .setTitle("ChatGPT connection")
