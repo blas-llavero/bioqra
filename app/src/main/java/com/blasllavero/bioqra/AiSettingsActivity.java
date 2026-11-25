@@ -109,6 +109,13 @@ public final class AiSettingsActivity extends Activity {
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
         });
         root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(55)));
+        android.widget.CheckBox translateText=new android.widget.CheckBox(this);
+        translateText.setText(UiLanguage.tr(this,"Translate displayed text with ChatGPT"));
+        translateText.setChecked(settings.translateDisplayText());
+        root.addView(translateText,new LinearLayout.LayoutParams(-1,-2));
+        translateText.setOnCheckedChangeListener((button,checked)->
+                settings.setTranslateDisplayText(checked));
+        root.addView(label("Translation uses your authorized ChatGPT account and daily request allowance. Public source excerpts and saved AI proposals may be translated and cached locally. Original text is always retained. If ChatGPT is unavailable, the source text remains visible.",13));
         TextView accountHeading=label("ChatGPT account",19);
         accountHeading.setTypeface(null,Typeface.BOLD);
         root.addView(accountHeading);
