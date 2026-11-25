@@ -256,8 +256,8 @@ public final class AiSettingsActivity extends Activity {
         if(pdfFolderStatus==null)return;
         String folder=settings.pdfTreeUri();
         pdfFolderStatus.setText(folder==null
-                ? "Default PDF folder: Downloads/Bioqra/YYMMDD-Project/ (no setup needed)."
-                : "Custom PDF folder: "+Uri.parse(folder).getLastPathSegment()+"/Bioqra/YYMMDD-Project/");
+                ? UiLanguage.tr(this,"Default PDF folder: Downloads/Bioqra/YYMMDD-Project/ (no setup needed).")
+                : UiLanguage.tr(this,"Custom PDF folder: ")+Uri.parse(folder).getLastPathSegment()+"/Bioqra/YYMMDD-Project/");
     }
     private void exportAllPdfs(){
         String folder=settings.pdfTreeUri();
