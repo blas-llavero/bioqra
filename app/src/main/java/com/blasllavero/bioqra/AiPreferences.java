@@ -142,6 +142,12 @@ public final class AiPreferences {
         return prefs.edit().putString("usage_day",today()).putInt("usage_count",used+1).commit();
     }
 
+    public String processingError(String key){
+        return prefs.getString("processing_error_"+key,"");
+    }
+    public void setProcessingError(String key,String error){
+        prefs.edit().putString("processing_error_"+key,error==null?"":error).apply();
+    }
     public String processingOutcome(String key){return prefs.getString("processing_outcome_"+key,"");}
     public void setProcessingOutcome(String key,String outcome){
         prefs.edit().putString("processing_outcome_"+key,outcome).apply();
@@ -237,7 +243,7 @@ public final class AiPreferences {
     }
     public void storeResult(String key,String title,String url,String model,String answer){
         if(answer!=null && answer.length()<=90000){
-            SharedPreferences.Editor edit=prefs.edit().remove("auto_export_complete_"+key).remove("processing_outcome_"+key).putString("latest_"+key,answer)
+            SharedPreferences.Editor edit=prefs.edit().remove("auto_export_complete_"+key).remove("processing_outcome_"+key).remove("processing_error_"+key).putString("latest_"+key,answer)
                 .putString("last_date_"+key,today()).putString("title_"+key,
                     title==null?"Challenge":title);
             if(url!=null)edit.putString("source_"+key,url);
