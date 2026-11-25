@@ -89,6 +89,7 @@ public final class ChallengeActivity extends Activity {
     private String originalProposalText="",translatedProposalText="";
     private boolean statementOriginalVisible=false,proposalOriginalVisible=false;
     private Button statementLanguageButton,proposalLanguageButton;
+    private TextView statementTranslationStatus;
     private String verifiedPageUrl="";
     private boolean specificPage=false;
     private ChatGptConnection connection;
@@ -243,6 +244,9 @@ public final class ChallengeActivity extends Activity {
         statement.setLinksClickable(true);
         statement.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(statement);
+        statementTranslationStatus=text("",13,false);
+        statementTranslationStatus.setVisibility(View.GONE);
+        root.addView(statementTranslationStatus);
         statementLanguageButton=button("Show original official text");
         statementLanguageButton.setVisibility(View.GONE);
         statementLanguageButton.setOnClickListener(v->{
@@ -286,7 +290,7 @@ public final class ChallengeActivity extends Activity {
 
         root.addView(text("Public sample DNA/RNA data for local checks (optional)",16,true));
         sample=new EditText(this);
-        sample.setHint("Paste public sample DNA/RNA sequence (no patient records)");
+        sample.setHint(UiLanguage.tr(this,"Paste public sample DNA/RNA sequence (no patient records)"));
         sample.setTextSize(14);sample.setMinLines(3);sample.setMaxLines(8);
         sample.setGravity(Gravity.TOP);
         root.addView(sample,new LinearLayout.LayoutParams(-1,dp(112)));
@@ -491,6 +495,7 @@ public final class ChallengeActivity extends Activity {
         translatedStatementText="";
         statementOriginalVisible=false;
         if(statementLanguageButton!=null)statementLanguageButton.setVisibility(View.GONE);
+        if(statementTranslationStatus!=null)statementTranslationStatus.setVisibility(View.GONE);
         styleStatement(original);
         // Only translate verified public organizer text; fallback explanations
         // and error messages use local UI strings, without consuming AI calls.
@@ -499,18 +504,39 @@ public final class ChallengeActivity extends Activity {
             ChallengeSectionNavigator.Section selected=navigation.get(activeSection);
             verifiedExcerpt=selected!=null && original.equals(selected.body);
         }
-        if(!verifiedExcerpt||!specificPage||original.length()<100
-                ||!aiPreferences.translateDisplayText())return;
+        if(!verifiedExcerpt||!specificPage||original.length()<100)return;
+        if(!aiPreferences.translateDisplayText()){
+            showTranslationStatus("Translation is off in AI Settings; the original official statement is shown.");
+            return;
+        }
+        if(!connection.canUsePlan()||!aiPreferences.autoConsent()){
+            showTranslationStatus("Translation requires a connected and authorized ChatGPT account. Go to AI Settings to sign in.");
+            return;
+        }
+        showTranslationStatus("Translating official statement with ChatGPT...");
         DisplayTranslation.translate(this,challengeKey,original,translated->{
-            if(!original.equals(originalStatementText)
-                    ||translated.equals(original))return;
+            if(!original.equals(originalStatementText))return;
+            if(statementTranslationStatus!=null)statementTranslationStatus.setVisibility(View.GONE);
+            if(translated.equals(original))return;
             translatedStatementText=translated;
             if(statementLanguageButton!=null){
                 statementLanguageButton.setVisibility(View.VISIBLE);
                 statementLanguageButton.setText(UiLanguage.tr(this,"Show original official text"));
             }
             if(!statementOriginalVisible)styleStatement(translated);
+        },reason->{
+            if(!original.equals(originalStatementText))return;
+            if("connection".equals(reason)){
+                showTranslationStatus("Translation requires a connected and authorized ChatGPT account. Go to AI Settings to sign in.");
+            }else{
+                showTranslationStatus("Official statement could not be translated. The original remains visible. Check your ChatGPT connection and daily limit in AI Settings.");
+            }
         });
+    }
+    private void showTranslationStatus(String message){
+        if(statementTranslationStatus==null)return;
+        statementTranslationStatus.setText(UiLanguage.tr(this,message));
+        statementTranslationStatus.setVisibility(View.VISIBLE);
     }
     private void styleStatement(String content){
         if(content==null)content="";
@@ -710,9 +736,9 @@ public final class ChallengeActivity extends Activity {
     private void updatePdfFeedback(){
         if(pdfFeedback==null)return;
         String folder=aiPreferences.pdfTreeUri();
-        pdfFeedback.setText(folder==null
+        pdfFeedback.setText(UiLanguage.tr(this,folder==null
             ?"PDFs save automatically to Downloads/Bioqra/YYMMDD-Project/."
-            :"PDFs save to Bioqra/YYMMDD-Project/ inside your selected folder.");
+            :"PDFs save to Bioqra/YYMMDD-Project/ inside your selected folder."));
     }
 
     @Override protected void onResume(){
