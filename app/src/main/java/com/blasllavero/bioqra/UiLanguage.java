@@ -12,6 +12,22 @@ public final class UiLanguage {
     private static final Map<String,String[]> LABELS=new HashMap<>();
     private static void add(String en,String ca,String es){LABELS.put(en,new String[]{ca,es});}
     static{
+        add("Translate displayed text with ChatGPT","Tradueix amb ChatGPT el text que es mostra","Traducir con ChatGPT el texto mostrado");
+        add("Translation uses your authorized ChatGPT account and daily request allowance. Public source excerpts and saved AI proposals may be translated and cached locally. Original text is always retained. If ChatGPT is unavailable, the source text remains visible.","La traducció utilitza el compte de ChatGPT autoritzat i les peticions diàries disponibles. Els enunciats públics i les propostes es poden traduir i desar localment. Es conserva sempre el text original. Si ChatGPT no està disponible, es mostra l'original.","La traducción utiliza la cuenta de ChatGPT autorizada y las solicitudes diarias disponibles. Los enunciados públicos y las propuestas pueden traducirse y guardarse localmente. Se conserva siempre el texto original. Si ChatGPT no está disponible, se muestra el original.");
+        add("Show original official text","Mostra l'enunciat oficial original","Mostrar el enunciado oficial original");
+        add("Show original AI proposal","Mostra la proposta d'IA original","Mostrar la propuesta de IA original");
+        add("Show translated text","Mostra el text traduït","Mostrar el texto traducido");
+        add("SAVED AI DRAFT (not reverified)","ESBORRANY D'IA DESAT (sense tornar a verificar)","BORRADOR DE IA GUARDADO (sin volver a verificar)");
+        add("Manual (no AI)","Manual (sense IA)","Manual (sin IA)");
+        add("Automatic (ChatGPT)","Automàtic (ChatGPT)","Automático (ChatGPT)");
+        add(" · Read-only · No contest submissions"," · Només lectura · Sense enviar candidatures"," · Solo lectura · Sin enviar solicitudes");
+        add("AI model: configured for this challenge on the main list; otherwise inherits the global AI Settings model. Automatic use is limited to ","Model d'IA: configurat per al repte a la llista principal; si no, s'utilitza el model global de Configuració d'IA. Límit local en automàtic: ","Modelo de IA: configurado para el reto en la lista principal; si no, se utiliza el modelo global de Configuración de IA. Límite local en automático: ");
+        add(" requests per day on this device."," peticions diàries en aquest dispositiu."," solicitudes diarias en este dispositivo.");
+        add("No research proposal or independent validation yet.","Encara no hi ha cap proposta de recerca ni validació independent.","Todavía no hay propuesta de investigación ni validación independiente.");
+        add("No solution proposal or independent verification yet.","Encara no hi ha cap proposta de solució ni verificació independent.","Todavía no hay propuesta de solución ni verificación independiente.");
+        add("AI DRAFT — UNVERIFIED","ESBORRANY D'IA — SENSE VERIFICAR","BORRADOR DE IA — SIN VERIFICAR");
+        add("AI RESEARCH PROPOSAL — UNVERIFIED","PROPOSTA DE RECERCA AMB IA — SENSE VERIFICAR","PROPUESTA DE INVESTIGACIÓN CON IA — SIN VERIFICAR");
+        add("BIOQRA has not run any generated program or validated a benchmark.","BIOQRA no ha executat cap programa generat ni validat cap repte de referència.","BIOQRA no ha ejecutado ningún programa generado ni validado ninguna prueba de referencia.");
         add("Automatic — challenge processing starts from the main list","Automàtic — el processament comença des del llistat principal","Automático — el procesamiento comienza desde la lista principal");
         add("Manual — offline tools and no AI usage","Manual — eines locals sense utilitzar la IA","Manual — herramientas locales sin utilizar la IA");
         add("Current competitions are prioritized. Open / Upcoming is a dated snapshot, not a guarantee of registration. Use All records to include educational and historical entries.","Es prioritzen les convocatòries actuals. «Obert / Properament» és una instantània, no una garantia d'inscripció. Selecciona «Tots els registres» per incloure exercicis i reptes històrics.","Se priorizan las convocatorias actuales. «Abierto / Próximamente» es una instantánea, no una garantía de inscripción. Selecciona «Todos los registros» para incluir ejercicios y retos históricos.");
