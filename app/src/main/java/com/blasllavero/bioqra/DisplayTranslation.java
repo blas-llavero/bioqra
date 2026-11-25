@@ -21,11 +21,16 @@ import java.util.concurrent.Executors;
  */
 final class DisplayTranslation {
     interface Callback {void onTranslation(String translated);}
+    interface Failure {void onFailure(String reason);}
     private static final ExecutorService WORKER=Executors.newSingleThreadExecutor();
     private static final Handler UI=new Handler(Looper.getMainLooper());
     private DisplayTranslation(){}
 
     static void translate(Activity activity,String challengeKey,String original,Callback callback){
+        translate(activity,challengeKey,original,callback,null);
+    }
+    static void translate(Activity activity,String challengeKey,String original,Callback callback,
+                          Failure failure){
         if(original==null||original.trim().isEmpty()||callback==null)return;
         Context app=activity.getApplicationContext();
         AiPreferences prefs=new AiPreferences(app);
@@ -33,7 +38,7 @@ final class DisplayTranslation {
         if(!prefs.translateDisplayText())return;
         final String lang=UiLanguage.language(app);
         // Do not show a partly translated document mixed with untranslated text.
-        if(original.length()>100000)return;
+        if(original.length()>100000){reportFailure(activity,failure,"too_long");return;}
         final String source=original;
         WORKER.execute(()->{
             try{
@@ -47,12 +52,18 @@ final class DisplayTranslation {
                     String text=readCache(cached);
                     if(text==null){
                         if(!prefs.translateDisplayText()||!prefs.autoConsent()
-                                ||!chat.canUsePlan())return;
+                                ||!chat.canUsePlan()){
+                            reportFailure(activity,failure,"connection");return;
+                        }
                         if(model==null)model=AiPreferences.choose(chat.models(),
                                 prefs.selected(challengeKey)).slug;
-                        if(!prefs.reserve(true))return;
+                        if(!prefs.reserve(true)){
+                            reportFailure(activity,failure,"limit");return;
+                        }
                         text=chat.translateDisplayText(model,part,lang);
-                        if(text.isEmpty())return;
+                        if(text.isEmpty()){
+                            reportFailure(activity,failure,"unavailable");return;
+                        }
                         writeCache(folder,cached,text);
                     }
                     translated.append(text);
@@ -65,8 +76,15 @@ final class DisplayTranslation {
                         callback.onTranslation(result);
                 });
             }catch(Exception ignored){
-                // Preserve original content and never assert a translation was made.
+                // Preserve original content while explaining the failure to the user.
+                reportFailure(activity,failure,"unavailable");
             }
+        });
+    }
+    private static void reportFailure(Activity activity,Failure failure,String reason){
+        if(failure==null)return;
+        UI.post(()->{
+            if(!activity.isFinishing()&&!activity.isDestroyed())failure.onFailure(reason);
         });
     }
     private static List<String> split(String text,int limit){
