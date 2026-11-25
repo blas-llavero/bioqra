@@ -32,8 +32,9 @@ final class DisplayTranslation {
         ChatGptConnection chat=new ChatGptConnection(app);
         if(!prefs.translateDisplayText())return;
         final String lang=UiLanguage.language(app);
-        final String source=original.length()>40000?original.substring(0,40000):original;
-        final String extra=original.length()>40000?original.substring(40000):"";
+        // Do not show a partly translated document mixed with untranslated text.
+        if(original.length()>100000)return;
+        final String source=original;
         WORKER.execute(()->{
             try{
                 File folder=new File(app.getFilesDir(),"translations");
@@ -57,7 +58,6 @@ final class DisplayTranslation {
                     translated.append(text);
                 }
                 if(translated.length()==0)return;
-                translated.append(extra);
                 String result=translated.toString();
                 UI.post(()->{
                     if(!activity.isFinishing()&&!activity.isDestroyed()
