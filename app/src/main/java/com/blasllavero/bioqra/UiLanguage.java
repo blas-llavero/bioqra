@@ -118,6 +118,9 @@ public final class UiLanguage {
         add("No data files downloaded.","No s'han descarregat fitxers de dades.","No se han descargado archivos de datos.");
 
         // Entire visible system messages are translated locally, without ChatGPT.
+        add("Custom PDF folder: ","Carpeta de PDF personalitzada: ","Carpeta de PDF personalizada: ");
+        add("Connect a ChatGPT account first","Connecta primer un compte de ChatGPT","Conecta primero una cuenta de ChatGPT");
+        add(" · Session saved securely on this device. Automatic token renewal is used where supported."," · Sessió desada de manera segura al dispositiu. Renovació automàtica de credencials quan sigui compatible."," · Sesión guardada de forma segura en el dispositivo. Renovación automática de credenciales cuando sea compatible.");
         add("Not connected","No connectat","No conectado");
         add("Connected ChatGPT account","Compte de ChatGPT connectat","Cuenta de ChatGPT conectada");
         add("ChatGPT: ","ChatGPT: ","ChatGPT: ");
