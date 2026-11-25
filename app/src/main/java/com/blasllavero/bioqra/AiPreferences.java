@@ -110,6 +110,12 @@ public final class AiPreferences {
         return new Selection(preferred.slug,preferred.title);
     }
 
+    /** On by default. Translates only public statements and generated research
+     * explanations after an existing ChatGPT authorization; user input is excluded. */
+    public boolean translateDisplayText(){return prefs.getBoolean("translate_display_text",true);}
+    public void setTranslateDisplayText(boolean enabled){
+        prefs.edit().putBoolean("translate_display_text",enabled).apply();
+    }
     public boolean autoConsent(){return prefs.getBoolean("auto_consent",false);}
     public void setAutoConsent(boolean consent){prefs.edit().putBoolean("auto_consent",consent).apply();}
     public int dailyLimit(){return prefs.getInt("daily_limit_v2",40);}
@@ -213,6 +219,7 @@ public final class AiPreferences {
             root.put("global_model",globalModel());
             root.put("apply_model_to_all",applyModelToAll());
             root.put("daily_limit",dailyLimit());
+            root.put("translate_display_text",translateDisplayText());
             org.json.JSONObject overrides=new org.json.JSONObject();
             for(java.util.Map.Entry<String,?> e:prefs.getAll().entrySet()){
                 String k=e.getKey();
