@@ -282,7 +282,114 @@ public final class UiLanguage {
         add("Export all saved results as PDFs","Exporta tots els resultats en PDF","Exportar todos los resultados en PDF");
         add("Search text in the current section","Cerca text a la secció actual","Buscar texto en la sección actual");
         add("No statement retrieved yet.","Encara no s'ha recuperat cap enunciat.","Todavía no se ha recuperado ningún enunciado.");
+        add("The organizer redirects to another page. Open the official website manually; BIOQRA did not follow the redirect.","L'organitzador redirigeix cap a una altra pàgina. Obre manualment el web oficial; BIOQRA no ha seguit la redirecció.","El organizador redirige a otra página. Abre manualmente el sitio web oficial; BIOQRA no ha seguido la redirección.");
+        add("Verified detailed challenge statement unavailable","L'enunciat detallat i verificat del repte no està disponible","El enunciado detallado y verificado del reto no está disponible");
+        add("The public page is too large to inspect safely.","La pàgina pública és massa gran per examinar-la amb seguretat.","La página pública es demasiado grande para examinarla con seguridad.");
+        add("This page is not public HTML; private files and PDFs are not retrieved automatically.","Aquesta pàgina no és HTML públic; els fitxers privats i els PDF no es recuperen automàticament.","Esta página no es HTML público; los archivos privados y PDF no se recuperan automáticamente.");
+        add("No readable public problem statement. This challenge may need JavaScript, authentication or a separate dataset.","No s'ha trobat un enunciat públic llegible. El repte pot requerir JavaScript, autenticació o dades separades.","No se ha encontrado un enunciado público legible. El reto puede requerir JavaScript, autenticación o datos separados.");
+        add("Automatic retrieval blocked: this source is not in the reviewed HTTPS allowlist.","Recuperació automàtica bloquejada: aquesta font no és a la llista HTTPS autoritzada.","Recuperación automática bloqueada: esta fuente no está en la lista HTTPS autorizada.");
+        add("Educational exercise · ","Exercici educatiu · ","Ejercicio educativo · ");
+        add("Remove technical batch effects while preserving biology","Elimina els efectes tècnics de lot tot preservant els senyals biològics","Elimina los efectos técnicos de lote conservando las señales biológicas");
+        add("Predict intercellular signaling","Prediu la senyalització intercel·lular","Predice la señalización intercelular");
+        add("Compare cytometry integration algorithms","Compara algorismes d'integració de citometria","Compara algoritmos de integración de citometría");
+        add("Reduce noise in single-cell RNA counts","Redueix el soroll en els recomptes d'ARN de cèl·lula única","Reduce el ruido en los recuentos de ARN unicelular");
+        add("Visualize high-dimensional data","Visualitza dades d'alta dimensionalitat","Visualiza datos de alta dimensionalidad");
+        add("Evaluate foundation models for single-cell biology","Avalua models fundacionals per a biologia de cèl·lula única","Evalúa modelos fundacionales para biología unicelular");
+        add("Process imaging-based spatial transcriptomics","Processa transcriptòmica espacial basada en imatges","Procesa transcriptómica espacial basada en imágenes");
+        add("Transfer reference cell type annotations","Transfereix anotacions de tipus cel·lular de referència","Transfiere anotaciones de tipos celulares de referencia");
+        add("Match multiple single-cell modalities","Relaciona diferents modalitats de cèl·lula única","Relaciona distintas modalidades unicelulares");
+        add("Predict how small molecules alter gene expression","Prediu com les molècules petites modifiquen l'expressió gènica","Predice cómo las moléculas pequeñas modifican la expresión génica");
+        add("Predict one omics modality from another","Prediu una modalitat òmica a partir d'una altra","Predice una modalidad ómica a partir de otra");
+        add("Estimate spatial cell-type composition","Estima la composició espacial dels tipus cel·lulars","Estima la composición espacial de los tipos celulares");
+        add("Assess simulated spatial transcriptomics","Avalua simulacions de transcriptòmica espacial","Evalúa simulaciones de transcriptómica espacial");
+        add("Detect spatial expression patterns","Detecta patrons espacials d'expressió","Detecta patrones espaciales de expresión");
+        add("Study early tissue changes with the aim of preventing stomach and oesophageal cancer","Estudia canvis primerencs dels teixits per prevenir el càncer d'estómac i d'esòfag","Estudia cambios tempranos de los tejidos para prevenir el cáncer de estómago y esófago");
+        add("Find biological mechanisms behind differences in incidence between populations","Identifica mecanismes biològics de les diferències d'incidència entre poblacions","Identifica mecanismos biológicos de las diferencias de incidencia entre poblaciones");
+        add("Why are certain high-risk people resistant to cancer?","Per què algunes persones amb un risc alt són resistents al càncer?","¿Por qué algunas personas de alto riesgo son resistentes al cáncer?");
+        add("Find unexplored proteins relevant to cancer","Identifica proteïnes poc explorades relacionades amb el càncer","Identifica proteínas poco exploradas relacionadas con el cáncer");
+        add("Understand unexplained mutational patterns","Investiga patrons mutacionals encara no explicats","Investiga patrones mutacionales todavía no explicados");
+        add("Explore interactions between nerves and tumors","Estudia les interaccions entre nervis i tumors","Estudia las interacciones entre nervios y tumores");
+        add("Study ways to alter malignant cellular programs","Investiga com modificar programes cel·lulars malignes","Investiga cómo modificar programas celulares malignos");
+        add("Machine learning for drug discovery; confirm registration and evaluation on the official organizer page","Aprenentatge automàtic per descobrir fàrmacs; comprova la inscripció i l'avaluació al web oficial","Aprendizaje automático para descubrir fármacos; comprueba la inscripción y evaluación en la web oficial");
+        add("Quantum-inspired approaches for biomedical target challenges; verify eligibility","Mètodes inspirats en la computació quàntica per a reptes biomèdics; verifica els requisits","Métodos inspirados en computación cuántica para retos biomédicos; verifica los requisitos");
+        add("Analyze cognitive-assessment pen signals; check organizer dates","Analitza senyals de bolígrafs per a avaluació cognitiva; comprova les dates oficials","Analiza señales de bolígrafos para evaluación cognitiva; comprueba las fechas oficiales");
+        add("Reproducible multi-omics integration or knowledge-mining workflow for non-small-cell lung cancer; hybrid event 21 November 2026, applications closed","Flux de treball reproduïble d'integració multiòmica o extracció de coneixement sobre càncer de pulmó no microcític; jornada híbrida el 21 de novembre de 2026, inscripcions tancades","Flujo de trabajo reproducible de integración multiómica o extracción de conocimiento sobre cáncer de pulmón no microcítico; jornada híbrida el 21 de noviembre de 2026, inscripciones cerradas");
+        add("Crowdsourced prediction competitions; inspect official open listings","Concursos de predicció col·laborativa; consulta les convocatòries oficials obertes","Concursos de predicción colaborativa; consulta las convocatorias oficiales abiertas");
+        add("Annual ELIXIR bioinformatics coding projects; 2026 event has concluded","Projectes anuals de programació bioinformàtica d'ELIXIR; l'edició de 2026 ha finalitzat","Proyectos anuales de programación bioinformática de ELIXIR; la edición de 2026 ha finalizado");
+        add("Biomedical challenge day; application deadline has passed","Jornada de reptes biomèdics; el termini d'inscripció ha acabat","Jornada de retos biomédicos; el plazo de inscripción ha terminado");
+        add("Public machine learning competitions; check source organizer before applying","Competicions públiques d'aprenentatge automàtic; comprova l'organitzador abans de participar","Competiciones públicas de aprendizaje automático; comprueba el organizador antes de participar");
+        add("FDA-linked genomics, AI and biomedical data science challenges; inspect each official task and submission window.","Reptes de genòmica, IA i ciència de dades biomèdiques vinculats a l'FDA; consulta cada tasca i el termini oficial.","Retos de genómica, IA y ciencia de datos biomédicos vinculados a la FDA; consulta cada tarea y plazo oficial.");
+        add("Biomedical, cancer, neurological and data-science challenge discovery; confirm eligibility and dates on each challenge page.","Cerca de reptes biomèdics, oncològics, neurològics i de ciència de dades; verifica els requisits i les dates de cada repte.","Búsqueda de retos biomédicos, oncológicos, neurológicos y de ciencia de datos; verifica requisitos y fechas de cada reto.");
+        add("Open clinical signal processing and physiological AI challenges; confirm current submissions on each official site.","Reptes oberts de processament de senyals clínics i d'IA fisiològica; comprova si accepten propostes al web oficial.","Retos abiertos de procesamiento de señales clínicas y de IA fisiológica; comprueba si aceptan propuestas en la web oficial.");
+        add("Current and previous physiologic data analysis challenges; check the official timetable and evaluation instructions.","Reptes actuals i anteriors d'anàlisi de dades fisiològiques; consulta el calendari i les instruccions oficials d'avaluació.","Retos actuales y anteriores de análisis de datos fisiológicos; consulta el calendario y las instrucciones oficiales de evaluación.");
+        add("Benchmark competitions and evaluation tasks; check challenge-specific data, rules, scoring and deadline.","Competicions de referència i tasques d'avaluació; comprova les dades, les normes, la puntuació i el termini de cada repte.","Competiciones de referencia y tareas de evaluación; comprueba datos, reglas, puntuación y plazo de cada reto.");
+        add("Predict recurrence after prostate cancer surgery and explain the AI predictions; testing deadline 30 Nov 2026.","Prediu la recurrència després de cirurgia de càncer de pròstata i explica les prediccions de la IA; prova fins al 30 de novembre de 2026.","Predice la recurrencia tras cirugía de cáncer de próstata y explica las predicciones de IA; prueba hasta el 30 de noviembre de 2026.");
+        add("Predict fluorescence microscopy channels from transmitted-light images; submissions listed as accepted.","Prediu canals de microscòpia de fluorescència a partir d'imatges de llum transmesa; s'indica que s'accepten trameses.","Predice canales de microscopía de fluorescencia a partir de imágenes de luz transmitida; se indica que se aceptan envíos.");
+        add("Measure pulmonary nodule volume from CT. Restricted to vendors with CE-certified products; participation agreement required.","Mesura el volum de nòduls pulmonars mitjançant TC. Restringit a proveïdors amb productes certificats CE; cal un acord de participació.","Mide el volumen de nódulos pulmonares mediante TC. Restringido a proveedores con productos certificados CE; se requiere un acuerdo de participación.");
+        add("Build automated CT reconstruction for radiation planning. Training now; validation 1 Dec 2026 and final testing 29 Jan–15 Feb 2027.","Desenvolupa la reconstrucció automatitzada de TC per planificar radioteràpia. Entrenament actual; validació l'1 de desembre de 2026 i prova final del 29 de gener al 15 de febrer de 2027.","Desarrolla la reconstrucción automatizada de TC para planificar radioterapia. Entrenamiento actual; validación el 1 de diciembre de 2026 y prueba final del 29 de enero al 15 de febrero de 2027.");
+        add("Segment brain vascular structures; final-test submission phase opens 11 Dec 2026.","Segmenta estructures vasculars cerebrals; la fase de lliurament de la prova final s'obre l'11 de desembre de 2026.","Segmenta estructuras vasculares cerebrales; la fase de entrega de la prueba final se abre el 11 de diciembre de 2026.");
         add("No live dataset search has been performed.","Encara no s'ha fet cap cerca de dades en directe.","Todavía no se ha hecho ninguna búsqueda de datos en directo.");
+    }
+
+    /** Build locale-specific listing metadata while preserving official titles,
+     * source labels, identifiers, exact dates, and the original scientific record. */
+    public static String challengeLabel(Context context,ResearchCatalog.Item item){
+        String code=language(context);
+        if("en".equals(code))return item.label();
+        boolean ca="ca".equals(code);
+        String state=item.availability();
+        String checked=item.verifiedOn==null?"":item.verifiedOn;
+        String date=item.deadline==null?"":item.deadline;
+        if("OPEN".equals(state)){
+            if("funding".equals(item.kind))
+                return ca?"Sol·licituds de finançament · termini "+date
+                        +" · cal comprovar els requisits · revisat "+checked
+                        :"Solicitudes de financiación · plazo "+date
+                        +" · comprobar requisitos · revisado "+checked;
+            return ca?"S'accepten candidatures (comprovat el "+checked
+                    +") · confirma-ho al web oficial"
+                    :"Se aceptan solicitudes (comprobado el "+checked
+                    +") · confírmalo en la web oficial";
+        }
+        if("UPCOMING".equals(state)){
+            if("preregister".equals(item.kind))
+                return ca?"PROPERAMENT · preinscripció amb l'organitzador"
+                        :"PRÓXIMAMENTE · preinscripción con el organizador";
+            return ca?"PROPERAMENT · la fase següent de lliurament s'obre el "+date
+                    :"PRÓXIMAMENTE · la siguiente fase de entrega se abre el "+date;
+        }
+        if("BENCHMARK".equals(state))return ca?
+                "Repte de referència · sense termini de concurs":"Reto de referencia · sin plazo de concurso";
+        if("EDUCATIONAL".equals(state))return ca?"Exercici educatiu":"Ejercicio educativo";
+        if("RESEARCH".equals(state))return ca?"Projecte finançat · inscripcions tancades":
+                "Proyecto financiado · inscripciones cerradas";
+        if("CLOSED".equals(state))return ca?"Tancat · no s'accepten sol·licituds":
+                "Cerrado · no se aceptan solicitudes";
+        if("RESTRICTED".equals(state))return ca?
+                "Participació restringida · comprova els requisits de l'organitzador":
+                "Participación restringida · comprueba los requisitos del organizador";
+        return ca?"Estat no verificat o desactualitzat · confirma'l amb l'organitzador (revisió "+checked+")"
+                :"Estado sin verificar o desactualizado · confírmalo con el organizador (revisión "+checked+")";
+    }
+    /** Live organizer excerpts contain unpredictable scraping noise. Translate
+     * their known semantics using parsed metadata, never by changing dates. */
+    public static String challengeSummary(Context context,ResearchCatalog.Item item){
+        String code=language(context);
+        if("en".equals(code))return item.summary;
+        if(item.summary!=null && item.summary.startsWith("Official index: ")
+                && ("live_open".equals(item.kind)||"live_upcoming".equals(item.kind))){
+            boolean ca="ca".equals(code);
+            String date=item.deadline;
+            if("live_upcoming".equals(item.kind))
+                return (ca?"Índex oficial: s'anuncia una futura fase de lliurament":
+                        "Índice oficial: se anuncia una próxima fase de entrega")
+                        +(date==null?"":ca?" el "+date:" el "+date)
+                        +(ca?". Comprova la inscripció i els requisits al web de l'organitzador."
+                        :". Comprueba la inscripción y los requisitos en la web del organizador.");
+            return ca?"Índex oficial: s'hi anuncien lliuraments oberts. Comprova al web de l'organitzador les dates, la inscripció i els requisits."
+                    :"Índice oficial: se anuncian entregas abiertas. Comprueba en la web del organizador las fechas, la inscripción y los requisitos.";
+        }
+        return tr(context,item.summary);
     }
     public static String language(Context context){
         String preference=context.getApplicationContext().getSharedPreferences(
