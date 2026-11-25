@@ -549,8 +549,10 @@ public final class ChallengeActivity extends Activity {
             if(!original.equals(originalStatementText))return;
             if("connection".equals(reason)){
                 showTranslationStatus("Translation requires a connected and authorized ChatGPT account. Go to AI Settings to sign in.");
+            }else if("limit".equals(reason)){
+                showTranslationStatus("Translation paused: today's local ChatGPT request limit has been reached. The original remains visible; cached translations are preserved.");
             }else{
-                showTranslationStatus("Official statement could not be translated. The original remains visible. Check your ChatGPT connection and daily limit in AI Settings.");
+                showTranslationStatus("Official statement translation could not be completed. You can retry when ChatGPT is available; existing translated fragments remain saved.");
             }
         });
     }
