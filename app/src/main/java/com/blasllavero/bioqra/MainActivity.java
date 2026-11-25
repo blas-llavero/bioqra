@@ -186,12 +186,15 @@ public class MainActivity extends Activity {
         TextView title = text("BIOQRA", 30, true);
         title.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(58)));
+        // The project subtitle belongs immediately below the app name,
+        // not below the settings button.
+        TextView subtitle = text("Automatic Open Bioinformatics Research & Patient Assistance", 13, false);
+        subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
+        subtitle.setPadding(0,0,0,dp(12));
+        root.addView(subtitle,new LinearLayout.LayoutParams(-1,-2));
         Button aiSettingsButton=button("⚙ AI Settings · models & automation");
         root.addView(aiSettingsButton,new LinearLayout.LayoutParams(-1,dp(49)));
         aiSettingsButton.setOnClickListener(v->startActivity(new Intent(this,AiSettingsActivity.class)));
-        TextView subtitle = text("Open Bioinformatics Research & Patient Assistance", 13, false);
-        subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.addView(subtitle);
         status = text("Loading verified public challenges...", 13, false);
         status.setPadding(0, dp(12), 0, dp(12));
         root.addView(status);
@@ -316,8 +319,17 @@ public class MainActivity extends Activity {
             if(isFinishing()||isDestroyed())return;
             if(list!=null && "automatic".equals(challengeMode)){
                 showItems();
-                String message=AutomaticChallengeRunner.status();
-                if(message!=null&&!message.isEmpty())status.setText(UiLanguage.tr(MainActivity.this,message));
+                if(!chatGptConnection.canUsePlan()||!aiPreferences.autoConsent()){
+                    // Never display old queue progress as active when authorization
+                    // has been removed; never start an unauthenticated queue.
+                    if(AutomaticChallengeRunner.running())ProcessingControl.stop();
+                    status.setText(UiLanguage.tr(MainActivity.this,
+                            "Automatic Mode selected. Connect ChatGPT in Settings to start."));
+                }else{
+                    String message=AutomaticChallengeRunner.status();
+                    if(message!=null&&!message.isEmpty())
+                        status.setText(UiLanguage.tr(MainActivity.this,message));
+                }
             }
             uiRefresh.postDelayed(this,1500);
         }
@@ -346,36 +358,42 @@ public class MainActivity extends Activity {
             showItems();
             refreshAiModels();
             if("automatic".equals(challengeMode)){
-                if(chatGptConnection.canUsePlan() && aiPreferences.autoConsent()
-                        && !ProcessingControl.paused() && !ProcessingControl.stopped()
+                if(!chatGptConnection.canUsePlan()||!aiPreferences.autoConsent()){
+                    if(AutomaticChallengeRunner.running())ProcessingControl.stop();
+                    automaticStartAttempted=false;
+                    status.setText(UiLanguage.tr(this,
+                            "Automatic Mode selected. Connect ChatGPT in Settings to start."));
+                }else if(!ProcessingControl.paused() && !ProcessingControl.stopped()
                         && !automaticStartAttempted){
-                    // Start once after a login or restored session, without
-                    // restarting already processed failures on every navigation.
+                    // After the authorized sign-in, process the research queue
+                    // serially. Selecting the mode alone cannot start research.
                     startAutomaticQueue();
-                }else if(!chatGptConnection.canUsePlan()){
-                    status.setText("Automatic Mode selected. Connect ChatGPT in Settings to start.");
                 }
             }
         }
     }
 
     private void setChallengeMode(String next) {
-        if("automatic".equals(next) && !chatGptConnection.canUsePlan()){
-            // An account grant is needed before automatic AI requests.
-            startActivity(new Intent(this,AiSettingsActivity.class));
-            return;
-        }
         challengeMode = "automatic".equals(next) ? "automatic" : "manual";
-        if("automatic".equals(challengeMode))ProcessingControl.resume();
         getSharedPreferences("bioqra_mode",MODE_PRIVATE).edit()
                 .putString("mode",challengeMode).apply();
         updateModeControls();
         if("automatic".equals(challengeMode)){
             automaticStartAttempted=false;
+            if(!chatGptConnection.canUsePlan()||!aiPreferences.autoConsent()){
+                // Choosing Automatic Mode opens configuration first. Do not
+                // retrieve or process any challenge before authorized sign-in.
+                status.setText(UiLanguage.tr(this,
+                        "Automatic Mode selected. Connect ChatGPT in Settings to start."));
+                startActivity(new Intent(this,AiSettingsActivity.class));
+                return;
+            }
+            ProcessingControl.resume();
             showItems();
             startAutomaticQueue();
         }else{
             ProcessingControl.stop();
+            automaticStartAttempted=false;
         }
     }
 
