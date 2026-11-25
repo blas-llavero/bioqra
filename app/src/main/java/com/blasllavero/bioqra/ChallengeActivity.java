@@ -85,6 +85,10 @@ public final class ChallengeActivity extends Activity {
     private EditText sample;
     private Button aiButton, loadButton, offlineButton;
     private String fetchedText="";
+    private String originalStatementText="",translatedStatementText="";
+    private String originalProposalText="",translatedProposalText="";
+    private boolean statementOriginalVisible=false,proposalOriginalVisible=false;
+    private Button statementLanguageButton,proposalLanguageButton;
     private String verifiedPageUrl="";
     private boolean specificPage=false;
     private ChatGptConnection connection;
@@ -238,6 +242,15 @@ public final class ChallengeActivity extends Activity {
         statement.setLinksClickable(true);
         statement.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(statement);
+        statementLanguageButton=button("Show original official text");
+        statementLanguageButton.setVisibility(View.GONE);
+        statementLanguageButton.setOnClickListener(v->{
+            statementOriginalVisible=!statementOriginalVisible;
+            styleStatement(statementOriginalVisible?originalStatementText:translatedStatementText);
+            statementLanguageButton.setText(UiLanguage.tr(this,
+                    statementOriginalVisible?"Show translated text":"Show original official text"));
+        });
+        root.addView(statementLanguageButton,new LinearLayout.LayoutParams(-1,dp(48)));
         root.addView(text("Participation dates and supporting documents",18,true));
         deadlinesView=text("Not checked. Dates must be verified on the official organizer website.",13,false);
         deadlinesView.setTextIsSelectable(true);
@@ -304,6 +317,16 @@ public final class ChallengeActivity extends Activity {
         output.setLineSpacing(dp(5),1.12f);
         output.setPadding(dp(5),dp(12),dp(5),dp(20));
         root.addView(output);
+        proposalLanguageButton=button("Show original AI proposal");
+        proposalLanguageButton.setVisibility(View.GONE);
+        proposalLanguageButton.setOnClickListener(v->{
+            proposalOriginalVisible=!proposalOriginalVisible;
+            output.setText(ResearchMarkdownFormatter.format(proposalOriginalVisible
+                    ?originalProposalText:translatedProposalText));
+            proposalLanguageButton.setText(UiLanguage.tr(this,
+                    proposalOriginalVisible?"Show translated text":"Show original AI proposal"));
+        });
+        root.addView(proposalLanguageButton,new LinearLayout.LayoutParams(-1,dp(48)));
         renderProposal(output.getText().toString());
         savePdf=button("Save this challenge result as PDF");
         root.addView(savePdf,new LinearLayout.LayoutParams(-1,dp(52)));
@@ -462,6 +485,28 @@ public final class ChallengeActivity extends Activity {
     }
     /** Format a plain-text organizer excerpt without changing its wording or trusting HTML. */
     private void renderStatement(String content){
+        final String original=content==null?"":content;
+        originalStatementText=original;
+        translatedStatementText="";
+        statementOriginalVisible=false;
+        if(statementLanguageButton!=null)statementLanguageButton.setVisibility(View.GONE);
+        styleStatement(original);
+        // Only translate verified public organizer text; fallback explanations
+        // and error messages use local UI strings, without consuming AI calls.
+        if(!specificPage||original.length()<100||!new AiPreferences(this).translateDisplayText())
+            return;
+        DisplayTranslation.translate(this,challengeKey,original,translated->{
+            if(!original.equals(originalStatementText)
+                    ||translated.equals(original))return;
+            translatedStatementText=translated;
+            if(statementLanguageButton!=null){
+                statementLanguageButton.setVisibility(View.VISIBLE);
+                statementLanguageButton.setText(UiLanguage.tr(this,"Show original official text"));
+            }
+            if(!statementOriginalVisible)styleStatement(translated);
+        });
+    }
+    private void styleStatement(String content){
         if(content==null)content="";
         // The source text is unchanged; visual spans only improve readability.
         SpannableStringBuilder rich=new SpannableStringBuilder(content);
@@ -626,7 +671,28 @@ public final class ChallengeActivity extends Activity {
 
     /** Keep the stored draft unchanged while rendering its Markdown safely on screen. */
     private void renderProposal(String raw){
-        output.setText(ResearchMarkdownFormatter.format(raw));
+        originalProposalText=raw==null?"":raw;
+        translatedProposalText="";
+        proposalOriginalVisible=false;
+        if(proposalLanguageButton!=null)proposalLanguageButton.setVisibility(View.GONE);
+        output.setText(ResearchMarkdownFormatter.format(originalProposalText));
+        AiPreferences.SavedResult saved=findSavedRecord();
+        if(saved==null||saved.answer==null||saved.answer.trim().isEmpty()
+                ||!originalProposalText.contains(saved.answer.substring(0,
+                    Math.min(40,saved.answer.length())))
+                ||!aiPreferences.translateDisplayText())return;
+        final String expected=originalProposalText;
+        DisplayTranslation.translate(this,challengeKey,expected,translated->{
+            if(!expected.equals(originalProposalText)
+                    ||translated.equals(expected))return;
+            translatedProposalText=translated;
+            if(proposalLanguageButton!=null){
+                proposalLanguageButton.setVisibility(View.VISIBLE);
+                proposalLanguageButton.setText(UiLanguage.tr(this,"Show original AI proposal"));
+            }
+            if(!proposalOriginalVisible)output.setText(
+                    ResearchMarkdownFormatter.format(translated));
+        });
     }
 
     private void pdfNotice(String message){
