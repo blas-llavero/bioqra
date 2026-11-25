@@ -352,10 +352,11 @@ public final class AiSettingsActivity extends Activity {
         boolean connected=!"Not connected".equals(account.accountLabel());
         String scope=account.canUsePlan() ? "AI plan usage authorized"
                 : "AI plan usage not authorized";
-        accountStatus.setText("ChatGPT: "+account.accountLabel()
-                +"\n"+(connected?scope+" · Session saved securely on this device. Automatic token renewal is used where supported.":"Log in once to connect this device."));
-        accountButton.setText(signingIn?"Connecting..."
-                : connected?"ChatGPT ✓ · Account & sign out":"ChatGPT login");
+        accountStatus.setText(UiLanguage.tr(this,"ChatGPT: ")
+                +UiLanguage.tr(this,account.accountLabel())
+                +"\n"+(connected?UiLanguage.tr(this,scope)+UiLanguage.tr(this," · Session saved securely on this device. Automatic token renewal is used where supported."):UiLanguage.tr(this,"Log in once to connect this device.")));
+        accountButton.setText(UiLanguage.tr(this,signingIn?"Connecting..."
+                : connected?"ChatGPT ✓ · Account & sign out":"ChatGPT login"));
         accountButton.setEnabled(!signingIn);
     }
 
@@ -415,20 +416,20 @@ public final class AiSettingsActivity extends Activity {
 
     private void updateRemaining(){
         if(remaining!=null)
-            remaining.setText("Local AI attempts remaining today: "+settings.remaining());
+            remaining.setText(UiLanguage.tr(this,"Local AI attempts remaining today: ")+settings.remaining());
     }
     private void populateModels(List<ChatGptConnection.Model> source){
         available=new ArrayList<>(source);
         modelKeys.clear();
         List<String> titles=new ArrayList<>();
-        titles.add("Auto · highest-tier model available");
+        titles.add(UiLanguage.tr(this,"Auto · highest-tier model available"));
         modelKeys.add(AiPreferences.AUTO);
         for(ChatGptConnection.Model m:available){
             titles.add(m.title);modelKeys.add(m.slug);
         }
         String chosen=settings.globalModel();
         if(!modelKeys.contains(chosen)){
-            titles.add("Unavailable saved global model: "+chosen);
+            titles.add(UiLanguage.tr(this,"Unavailable saved global model: ")+chosen);
             modelKeys.add(chosen);
         }
         ArrayAdapter<String> adapter=new ArrayAdapter<>(this,
@@ -447,20 +448,20 @@ public final class AiSettingsActivity extends Activity {
         });
     }
     private void loadModels(){
-        info.setText("Refreshing available ChatGPT models...");
+        info.setText(UiLanguage.tr(this,"Refreshing available ChatGPT models..."));
         WORKER.execute(()->{
             try{
                 List<ChatGptConnection.Model> got=account.models();
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     populateModels(got);
-                    info.setText(got.size()+" models offered by the connected account. Auto prefers the highest-tier available model by name and reasoning mode; not an official capability ranking.");
+                    info.setText(got.size()+UiLanguage.tr(this," models offered by the connected account. Auto prefers the highest-tier available model by name and reasoning mode; not an official capability ranking."));
                 });
             }catch(Exception ex){
                 runOnUiThread(()->{
                     if(isFinishing()||isDestroyed())return;
                     populateModels(new ArrayList<>());
-                    info.setText("Model list unavailable: "+ex.getMessage());
+                    info.setText(UiLanguage.tr(this,"Model list unavailable: ")+UiLanguage.tr(this,ex.getMessage()));
                 });
             }
         });
