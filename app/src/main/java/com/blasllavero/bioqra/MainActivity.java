@@ -60,6 +60,7 @@ public class MainActivity extends Activity {
     private boolean loadingModels=false;
     private boolean automaticStartAttempted=false;
     private String challengeMode = "automatic";
+    private String renderedLanguage="";
     private Button manualModeButton, automaticModeButton;
     private EditText search;
     private Spinner sourcePicker, availabilityPicker;
@@ -89,6 +90,7 @@ public class MainActivity extends Activity {
         researchItems.addAll(ResearchCatalog.initial());
         mergeGrand(GrandChallengeDiscovery.load(this));
         loadCached();
+        renderedLanguage=UiLanguage.language(this);
         buildUi();
         if("automatic".equals(challengeMode) && chatGptConnection.canUsePlan()
                 && aiPreferences.autoConsent() && !ProcessingControl.stopped()
@@ -322,6 +324,12 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        if(!renderedLanguage.isEmpty() && !renderedLanguage.equals(UiLanguage.language(this))){
+            // Rebuild static labels after returning from language selection.
+            renderedLanguage=UiLanguage.language(this);
+            recreate();
+            return;
+        }
         uiRefresh.removeCallbacks(pollAutomation);
         uiRefresh.postDelayed(pollAutomation,500);
         if(list!=null){
@@ -629,7 +637,7 @@ public class MainActivity extends Activity {
     private void showItems() {
         if (list == null) return;
         list.removeAllViews();
-        heading.setText(section);
+        heading.setText(UiLanguage.tr(this,section));
         List<ResultRow> rows=new ArrayList<>();
         if (section.equals("Challenges")) {
             String query=search.getText().toString().trim().toLowerCase(Locale.ROOT);
